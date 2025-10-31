@@ -1,0 +1,7 @@
+version: '3.8'
+services:
+  producscan:
+    image: iotdepartment/producscan:latest
+    ports:
+      - "9000:9000"
+    restart: always
