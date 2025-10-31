@@ -1,0 +1,47 @@
+﻿@{
+    ViewData["Title"] = "Iniciar sesión";
+
+}
+
+<div class="d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card shadow-lg border-0 rounded-4" style="width: 400px;">
+        <div class="card-header bg-primary text-white text-center rounded-top-4">
+            <h4 class="mb-0"><i class="bi bi-box-arrow-in-right"></i> Iniciar sesión</h4>
+        </div>
+        <div class="card-body p-4">
+            <form asp-action="Login" method="post">
+                @Html.AntiForgeryToken()
+
+                <div class="mb-3">
+                    <label class="form-label">Usuario</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-person"></i></span>
+                        <input type="text" name="usuario" class="form-control" placeholder="Ingresa tu usuario" required />
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                        <input type="password" name="password" class="form-control" placeholder="Ingresa tu contraseña" required />
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-box-arrow-in-right"></i> Entrar
+                </button>
+            </form>
+
+            @if (TempData["Error"] != null)
+            {
+                <div class="alert alert-danger mt-3 text-center">
+                    <i class="bi bi-exclamation-triangle"></i> @TempData["Error"]
+                </div>
+            }
+        </div>
+        <div class="card-footer text-muted text-center small">
+            &copy; @DateTime.Now.Year - ProducScan
+        </div>
+    </div>
+</div>

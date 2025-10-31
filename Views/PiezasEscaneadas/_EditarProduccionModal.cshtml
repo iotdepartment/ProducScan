@@ -1,0 +1,54 @@
+﻿@model ProducScan.Models.RegistrodePiezasEscaneada
+
+<form id="formUpdate" method="post" action="@Url.Action("Update","PiezasEscaneadas")">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="Id" />
+
+    <div class="modal-header bg-warning">
+        <h5 class="modal-title">Editar Registro</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+
+    <div class="modal-body">
+        <div class="mb-3 position-relative">
+            <label class="form-label">Mandrel</label>
+            <input asp-for="Mandrel" class="form-control" id="editMandrel" autocomplete="off" />
+            <!-- contenedor para sugerencias -->
+            <div id="mandrelSuggestions" class="list-group position-absolute w-100" style="z-index: 1050;"></div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Piezas</label>
+            <input asp-for="Ndpiezas" class="form-control" type="number" required />
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Turno</label>
+            <select asp-for="Turno" class="form-select" required>
+                <option value="1">Turno 1</option>
+                <option value="2">Turno 2</option>
+                <option value="3">Turno 3</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Mesa</label>
+                <select asp-for="NuMesa" class="form-select" required>
+                    @for (int i = 3; i <= 24; i++)
+                    {
+                        <option value="MESA#@i">Mesa @i</option>
+                    }
+                </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Hora</label>
+            <input asp-for="Hora" class="form-control" type="time" required />
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-success rounded-pill">Actualizar</button>
+    </div>
+</form>

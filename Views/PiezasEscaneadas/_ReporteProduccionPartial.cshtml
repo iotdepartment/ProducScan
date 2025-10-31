@@ -1,0 +1,166 @@
+﻿@using ProducScan.ViewModels
+@model ProduccionFiltroViewModel
+
+@if (Model.Reporte.Any())
+{
+    <div class="accordion" id="reporteAccordion">
+        @for (int i = 0; i < Model.Reporte.Count; i++)
+        {
+            var grupo = Model.Reporte[i];
+            var headerId = $"heading{i}";
+            var collapseId = $"collapse{i}";
+
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="@headerId">
+
+
+                    <button class="accordion-button collapsed  d-flex flex-wrap gap-4" type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#@collapseId"
+                            aria-expanded="false"
+                            aria-controls="@collapseId">
+                        <span><strong>Mesa:</strong> @grupo.NuMesa</span>
+                        <span><strong>Turno:</strong> @grupo.Turno</span>
+                        <span><strong>Defectos:</strong> <span class="badge bg-danger rounded-pill">@grupo.TotalDefectos</span></span>
+                        <span><strong>Producción:</strong> <span class="badge bg-primary rounded-pill">@grupo.TotalPiezas</span></span>
+                        <span><strong>TM:</strong> @string.Join(", ", grupo.TeamMembers ?? new List<string>())</span>
+                    </button>
+                </h2>
+
+                <div id="@collapseId" class="accordion-collapse collapse"
+                     aria-labelledby="@headerId"
+                     data-bs-parent="#reporteAccordion">
+                    <div class="accordion-body">
+                        <div class="row">
+                            <div class="col-3">
+                                <strong class="text-primary">Producción por Mesa:</strong>
+                                <ul>
+                                    @foreach (var mandrel in grupo.Mandriles)
+                                    {
+                                        <li>
+                                            <strong>@mandrel.Mandrel</strong>:
+                                            <span class="badge bg-primary rounded-pill">@mandrel.TotalPiezas</span>
+                                        </li>
+                                    }
+                                </ul>
+                            </div>
+
+                            <div class="col-9">
+                                @if (grupo.TeamMembersProduccion.Any())
+                                {
+                                    <div class="row">
+                                        @foreach (var tm in grupo.TeamMembersProduccion)
+                                        {
+                                            <div class="col-6">
+                                                <strong class="text-primary">Producción por TM:</strong>
+                                                <ul>
+                                                    <li>
+                                                        <strong>@tm.TM</strong>:
+                                                        <span class="badge bg-primary rounded-pill">@tm.TotalPiezas</span> piezas
+                                                    </li>
+                                                    <ul>
+                                                        @foreach (var mandrel in tm.Mandriles)
+                                                        {
+                                                            <li>
+                                                                @mandrel.Mandrel:
+                                                                <span class="badge bg-primary rounded-pill">@mandrel.TotalPiezas</span>
+                                                            </li>
+                                                        }
+                                                    </ul>
+                                                </ul>
+                                            </div>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        </div>
+
+                        @if (grupo.DefectosPorMandrel?.Any() == true || grupo.DefectosPorTM?.Any() == true)
+                        {
+                            <div class="row mt-3">
+                                <div class="col-3">
+                                    <strong class="text-danger">Defectos por Mandrel:</strong>
+                                    <ul>
+                                        @foreach (var d in grupo.DefectosPorMandrel)
+                                        {
+                                            <li>
+                                                <strong>@d.Mandrel</strong>:
+                                                <span class="badge bg-danger rounded-pill">@d.TotalDefectos</span>
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                                <div class="col-9">
+                                    <strong class="text-danger">Defectos por TM:</strong>
+                                    <ul>
+                                        @foreach (var d in grupo.DefectosPorTM)
+                                        {
+                                            <li>
+                                                <strong>@d.TM</strong>:
+                                                <span class="badge bg-danger rounded-pill">@d.TotalDefectos</span> defectos
+                                            </li>
+                                        }
+                                    </ul>
+                                </div>
+                            </div>
+                        }
+
+                        <hr />
+                        <strong>Detalles de producción:</strong>
+                        <ul>
+                            @foreach (var tm in grupo.TeamMembers)
+                            {
+                                <li>
+                                    <a asp-action="DetallePorUsuario"
+                                       asp-route-fecha="@($"{Model.Año}-{Model.Mes:00}-{Model.Dia:00}")"
+                                       asp-route-usuario="@tm"
+                                       asp-route-turno="@grupo.Turno"
+                                       class="btn btn-sm btn-outline-primary rounded-pill mb-1"
+                                       target="_blank">
+                                        Ver producción de @tm
+                                    </a>
+                                </li>
+                            }
+                            <li>
+                                <a asp-action="DetalleProduccionMesa"
+                                   asp-route-fecha="@($"{Model.Año:0000}-{Model.Mes:00}-{Model.Dia:00}")"
+                                   asp-route-mesa="@grupo.NuMesa"
+                                   asp-route-turno="@grupo.Turno"
+                                   class="btn btn-sm btn-outline-info rounded-pill"
+                                   target="_blank">
+                                    Ver producción por Mesa
+                                </a>
+                            </li>
+                        </ul>
+
+                        @if (grupo.DefectosPorTM?.Any() == true)
+                        {
+                            <hr />
+                            <strong>Detalles de defectos:</strong>
+                            <ul>
+                                @foreach (var d in grupo.DefectosPorTM)
+                                {
+                                    <li>
+                                        <a asp-controller="RegistrodeDefectos"
+                                           asp-action="DetalleDefectosPorUsuarios"
+                                           asp-route-fecha="@($"{Model.Año}-{Model.Mes:00}-{Model.Dia:00}")"
+                                           asp-route-usuario="@d.TM"
+                                           asp-route-turno="@grupo.Turno"
+                                           class="btn btn-sm btn-outline-danger rounded-pill"
+                                           target="_blank">
+                                            Ver defectos de @d.TM
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+else
+{
+    <p>No hay datos para el filtro seleccionado.</p>
+}

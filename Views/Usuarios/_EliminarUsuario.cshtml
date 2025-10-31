@@ -1,0 +1,37 @@
+﻿@model ProducScan.Models.Usuario
+@{
+    var usuarioActual = User.Identity?.Name;
+    bool esUsuarioActual = Model.NombreUsuario == usuarioActual;
+}
+
+<div class="modal-header bg-danger text-white">
+    <h5 class="modal-title">Eliminar Usuario</h5>
+    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+    @if (esUsuarioActual)
+    {
+        <div class="alert alert-warning">
+            No puedes eliminar tu propio usuario mientras estás conectado.
+        </div>
+    }
+    else
+    {
+        <p>¿Seguro que deseas eliminar al usuario <strong>@Model.NombreUsuario</strong> con rol <strong>@Model.Rol</strong>?</p>
+    }
+</div>
+<div class="modal-footer">
+    @if (!esUsuarioActual)
+    {
+        <form asp-action="EliminarConfirmado" method="post" class="ajaxForm">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="id" value="@Model.Id" />
+            <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </form>
+    }
+    else
+    {
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+    }
+</div>

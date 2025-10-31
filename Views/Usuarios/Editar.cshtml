@@ -1,0 +1,34 @@
+﻿@model ProducScan.Models.Usuario
+@{
+    ViewData["Title"] = "Editar Usuario";
+}
+
+<h3>Editar usuario</h3>
+
+<form asp-action="Editar" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" value="@Model.Id" />
+
+    <div class="mb-3">
+        <label class="form-label">Nombre de usuario</label>
+        <input type="text" name="nombreUsuario" value="@Model.NombreUsuario" class="form-control" required />
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Rol</label>
+        <select name="rol" class="form-select" required>
+            <option value="Admin" selected="@(Model.Rol == "Admin")">Admin</option>
+            <option value="Editor" selected="@(Model.Rol == "Editor")">Editor</option>
+            <option value="Visual" selected="@(Model.Rol == "Visual")">Visual</option>
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Nueva contraseña (opcional)</label>
+        <input type="password" name="password" class="form-control" />
+        <small class="text-muted">Déjalo vacío si no deseas cambiar la contraseña.</small>
+    </div>
+
+    <button type="submit" class="btn btn-success">Guardar cambios</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancelar</a>
+</form>

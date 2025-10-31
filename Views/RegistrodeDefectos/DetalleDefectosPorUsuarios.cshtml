@@ -1,0 +1,245 @@
+﻿@model ProducScan.ViewModels.DetalleDefectosPorUsuarioViewModel
+
+@{
+    var usuario = ViewBag.Usuario as string;
+    var fecha = ViewBag.Fecha as string;
+
+
+    ViewData["Title"] = "Defectos por TM";
+    ViewData["PageTitle"] = "DEFECTOS POR TEAM MEMBER";
+    ViewData["PageDescription"] = "Defectos desglozados por día del TM.";
+}
+
+
+
+@if (Model.Defectos.Any())
+{
+
+
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">Defectos del día</h5>
+        <p class="card-text"><strong>Fecha laboral:</strong> @Model.Fecha</p>
+        <p class="card-text"><strong>Team Member:</strong> @Model.Usuario</p>
+    </div>
+</div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Fecha laboral</th>
+                <th>Fecha real</th>
+                <th>Hora</th>
+                <th>Mesa</th>
+                <th>Turno</th>
+                <th>Mandrel</th>
+                <th>Defecto</th>
+                @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                {
+                    <th>Acciones</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var d in Model.Defectos)
+            {
+                <tr id="row-@d.Id">
+                    <td>@d.FechaLaboral.ToString("yyyy-MM-dd")</td>
+                    <td>@d.Fecha.ToString("yyyy-MM-dd")</td>
+                    <td>@d.Hora</td>
+                    <td>@d.NuMesa</td>
+                    <td>@d.Turno</td>
+                    <td>@d.Mandrel</td>
+                    <td>@d.CodigodeDefecto - @d.Defecto</td>
+
+                    @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                    {
+                        <td>
+                            @if (User.IsInRole("Admin"))
+                            {
+                                <!-- Botón Editar -->
+                                <button class="btnEditarDefecto btn btn-sm btn-warning rounded-circle"
+                                        data-id="@d.Id"
+                                        data-mesa="@d.NuMesa"
+                                        data-turno="@d.Turno"
+                                        data-mandrel="@d.Mandrel"
+                                        data-codigodefecto="@d.CodigodeDefecto"
+                                        data-defecto="@d.Defecto"
+                                        data-hora="@d.Hora.ToString("HH:mm")">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+                            }
+
+                            <!-- Botón Borrar -->
+                            <button class="btn btn-sm btn-danger rounded-circle"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#borrarDefectoModal"
+                                    data-id="@d.Id">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No se encontraron defectos para este TM en la fecha seleccionada.</p>
+}
+<a asp-action="ReporteProduccion" class="btn btn-secondary mt-3 rounded-pill">← Volver</a>
+
+<!-- B O R R A R     C O N T E N E D O R -->
+<!-- Contenedor del modal -->
+<div id="modalContainer">
+    @await Html.PartialAsync("_EditarDefectoModal", new ProducScan.Models.RegistrodeDefecto())
+</div>
+
+<div class="modal fade" id="borrarDefectoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formBorrarDefecto">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar eliminación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="id" id="deleteId" />
+                    <p>¿Estás seguro de que deseas borrar este defecto?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger rounded-pill">Sí, borrar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+@section scripts{
+<script>
+
+            $(document).on("click", ".btnEditarDefecto", function () {
+            var btn = $(this);
+            var valor = btn.data("codigodefecto") + "|" + btn.data("defecto");
+            $("#editId").val(btn.data("id"));
+            $("#editMesa").val(btn.data("mesa"));
+            $("#editTurno").val(btn.data("turno"));
+            $("#editMandrel").val(btn.data("mandrel"));
+            $("#editDefectoSelect").val(valor);
+            $("#editHora").val(btn.data("hora"));
+
+            const modal = new bootstrap.Modal(document.getElementById('editarDefectoModal'));
+            modal.show();
+        });
+
+        // Guardar cambios
+        $(document).on("submit", "#formEditarDefecto", function (e) {
+            e.preventDefault();
+
+            $.ajax({
+                url: '/RegistrodeDefectos/EditarDefecto',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function (resp) {
+                    $('#editarDefectoModal').modal('hide');
+
+                    if (resp.success) {
+                        mostrarToast('success', resp.message);
+
+                        var id = $("#editId").val();
+                        var fila = $("#row-" + id);
+                        var valor = $("#editDefectoSelect").val().split("|");
+                        var codigo = valor[0];
+                        var defecto = valor[1];
+
+                        // Actualizar celdas
+                        fila.find(".col-mesa").text($("#editMesa").val());
+                        fila.find(".col-turno").text($("#editTurno").val());
+                        fila.find(".col-mandrel").text($("#editMandrel").val());
+                        fila.find(".col-defecto").text(codigo + " | " + defecto);
+                        fila.find(".col-hora").text($("#editHora").val());
+
+                        // Actualizar data-* del botón
+                        var btnEditar = fila.find(".btnEditarDefecto");
+                        btnEditar.data("mesa", $("#editMesa").val());
+                        btnEditar.data("turno", $("#editTurno").val());
+                        btnEditar.data("mandrel", $("#editMandrel").val());        
+                        btnEditar.data("codigodefecto", codigo);
+                        btnEditar.data("defecto", defecto);
+                        btnEditar.data("hora", $("#editHora").val());
+
+                    } else {
+                        mostrarToast('danger', resp.message);
+                    }
+                },
+                error: function () {
+                    $('#editarDefectoModal').modal('hide');
+                    mostrarToast('danger', 'Error inesperado al procesar la solicitud.');
+                }
+            });
+        });
+
+        function mostrarToast(tipo, mensaje) {
+            var toastId = "toast-" + Date.now();
+            var toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-bg-${tipo} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${mensaje}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+
+            $("#toastContainer").append(toastHtml);
+
+            var toastEl = document.getElementById(toastId);
+            var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            toast.show();
+
+            // Eliminar del DOM cuando se oculta
+            toastEl.addEventListener('hidden.bs.toast', function () {
+                $(toastEl).remove();
+            });
+        }   
+
+
+        // Capturar id al abrir modal
+        var borrarModal = document.getElementById('borrarDefectoModal');
+        borrarModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            document.getElementById('deleteId').value = button.getAttribute('data-id');
+        });
+
+        // Enviar por AJAX
+        $(document).on("submit", "#formBorrarDefecto", function (e) {
+            e.preventDefault();
+
+            $.ajax({
+                url: '/RegistrodeDefectos/BorrarDefecto',
+                type: 'POST',
+                data: $(this).serialize(),
+                success: function (resp) {
+                    $('#borrarDefectoModal').modal('hide');
+
+                    if (resp.success) {
+                        mostrarToast('success', resp.message);
+
+                        var id = $("#deleteId").val();
+                        $("#row-" + id).remove(); // 👈 elimina la fila de la tabla
+                    } else {
+                        mostrarToast('danger', resp.message);
+                    }
+                },
+                error: function () {
+                    $('#borrarDefectoModal').modal('hide');
+                    mostrarToast('danger', 'Error inesperado al procesar la solicitud.');
+                }
+            });
+        });
+</script>
+}

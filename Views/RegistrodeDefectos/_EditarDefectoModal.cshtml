@@ -1,0 +1,55 @@
+﻿@model ProducScan.Models.RegistrodeDefecto
+
+<div class="modal fade" id="editarDefectoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-controller="RegistrodeDefectos" asp-action="EditarDefecto" method="post" id="formEditarDefecto">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title">Editar Defecto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" asp-for="Id" id="editId" />
+
+                    <div class="mb-2">
+                        <label>Mesa</label>
+                        <input asp-for="NuMesa" class="form-control" id="editMesa" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Turno</label>
+                        <input asp-for="Turno" class="form-control" id="editTurno" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Mandrel</label>
+                        <input asp-for="Mandrel" class="form-control" id="editMandrel" />
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Defecto</label>
+                        <select class="form-select" name="CodigodeDefecto" id="editDefectoSelect" required>
+                            <option value="">-- Selecciona un defecto --</option>
+                            @foreach (var item in ViewBag.DefectosCatalogo)
+                            {
+                                <option value="@item.Value">@item.Text</option>
+                            }
+                        </select>
+
+                    </div>
+
+                    <div class="mb-2">
+                        <label>Hora</label>
+                        <input asp-for="Hora" type="time" class="form-control" id="editHora" />
+                    </div>
+                </div>
+
+                <div asp-validation-summary="All" class="text-danger"></div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-success">Guardar cambios</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

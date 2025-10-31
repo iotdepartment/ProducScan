@@ -1,0 +1,43 @@
+﻿@model List<ProducScan.ViewModels.DefectoPorTMViewModel>
+
+<h2>Defectos por TM - @Model.FirstOrDefault()?.Fecha.ToString("dd/MM/yyyy")</h2>
+
+@if (Model.Any())
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>TM</th>
+                <th>Mesa</th>
+                <th>Turno</th>
+                <th>Total Defectos</th>
+                <th>Detalle</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var tm in Model)
+            {
+                <tr>
+                    <td>@tm.TM</td>
+                    <td>@tm.NuMesa</td>
+                    <td>@tm.Turno</td>
+                    <td class="text-danger fw-bold">@tm.TotalDefectos</td>
+                    <td>
+                        <ul>
+                            @foreach (var d in tm.Defectos)
+                            {
+                                <li>
+                                    <strong>@d.Defecto</strong> (Mandrel: @d.Mandrel) → @d.Cantidad
+                                </li>
+                            }
+                        </ul>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No se encontraron defectos para la fecha seleccionada.</p>
+}

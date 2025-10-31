@@ -1,0 +1,33 @@
+﻿@model ProducScan.Models.Usuario
+
+<div class="modal-header">
+    <h5 class="modal-title">Editar Usuario</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+<div class="modal-body">
+    <form asp-action="Editar" method="post" class="ajaxForm">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <div class="mb-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" name="nombreUsuario" value="@Model.NombreUsuario" class="form-control" required />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Rol</label>
+            <select name="rol" class="form-select" required>
+                <option value="Admin" selected="@(Model.Rol == "Admin")">Admin</option>
+                <option value="Editor" selected="@(Model.Rol == "Editor")">Editor</option>
+                <option value="Visual" selected="@(Model.Rol == "Visual")">Visual</option>
+            </select>
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Nueva contraseña (opcional)</label>
+            <input type="password" name="password" class="form-control" />
+        </div>
+        <div class="text-end">
+            <button type="submit" class="btn btn-success">Guardar cambios</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+    </form>
+</div>

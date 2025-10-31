@@ -1,0 +1,194 @@
+﻿@model List<ProducScan.ViewModels.ProduccionDetalleViewModel>
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+
+@{
+    var usuario = ViewBag.Usuario as string;
+    var fecha = ViewBag.Fecha as string;
+
+    ViewData["Title"] = "Producción por TM";
+    ViewData["PageTitle"] = "PRODUCCION POR TEAM MEMBER";
+    ViewData["PageDescription"] = "Producción desglozada por día de cada TM.";
+}
+
+@if (Model.Any())
+{
+    <div class="card mb-3">
+       <div class="card-body">
+            <h5 class="card-title">Producción del día</h5>
+            <p class="card-text">
+                <strong>Fecha laboral:</strong> @ViewBag.FechaLaboral
+            </p>
+            <p class="card-text">
+                <strong>Team Member:</strong> @usuario
+            </p>
+        </div>
+    </div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Fecha laboral</th>
+                <th>Fecha real</th>
+                <th>Hora</th>
+                <th>Mesa</th>
+                <th>Turno</th>
+                <th>Mandrel</th>
+                <th>Piezas</th>
+                @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                {
+                    <th>Acciones</th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.FechaLaboral.ToString("yyyy-MM-dd")</td>
+                    <td>@item.FechaReal.ToString("yyyy-MM-dd")</td>
+                    <td>@item.Hora</td>
+                    <td>@item.NuMesa</td>
+                    <td>@item.Turno</td>
+                    <td>@item.Mandrel</td>
+                    <td>@item.NumeroDePiezas</td>
+
+                    @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                    {
+                        <td>
+
+                        <button class="btn btn-warning btn-sm btnEditar rounded-circle"
+                                data-id="@item.Id">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+
+                        <button class="btn btn-danger btn-sm btnEliminar rounded-circle"
+                                data-id="@item.Id">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+
+                    </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No hay datos disponibles para este usuario en esta fecha.</p>
+}
+<a asp-action="ReporteProduccion" class="btn btn-secondary mt-3 rounded-pill">← Volver</a>
+
+<!-- Modal -->
+<div class="modal fade" id="modalCrud" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+</div>
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+
+@section Scripts {
+<script>
+           
+
+        $(document).on("click", ".btnEditar", function () {
+            var id = $(this).data("id");
+
+            $.get("/PiezasEscaneadas/EditarModal", { id: id }, function (html) {
+                $("#modalContent").html(html);
+                $("#modalCrud").modal("show");
+            });
+        });
+
+        $(document).on("submit", "#formUpdate, #formDelete", function (e) {
+            e.preventDefault();
+
+            $.ajax({
+                type: "POST",
+                url: $(this).attr("action"),
+                data: $(this).serialize(),
+                success: function (res) {
+                    if (res.success) {
+                        $("#modalCrud").modal("hide");
+                        mostrarToast("success", res.message || "Operación realizada correctamente");
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        mostrarToast("danger", res.error || "Ocurrió un error inesperado");
+                    }
+                },
+                error: function (xhr) {
+                    mostrarToast("danger", "Error en AJAX: " + xhr.responseText);
+                }
+            });
+        });
+
+        $(document).on("keyup", "#editMandrel", function () {
+            var query = $(this).val();
+            if (query.length < 2) {
+                $("#mandrelSuggestions").empty();
+                return;
+            }
+
+            $.get("/PiezasEscaneadas/BuscarMandrels", { term: query }, function (data) {
+                var suggestions = $("#mandrelSuggestions");
+                suggestions.empty();
+
+                if (data.length === 0) {
+                    suggestions.append('<div class="list-group-item">Sin resultados</div>');
+                } else {
+                    data.forEach(function (item) {
+                        suggestions.append('<button type="button" class="list-group-item list-group-item-action mandrel-option">' + item + '</button>');
+                    });
+                }
+            });
+        });
+
+    // Al hacer clic en una sugerencia
+    $(document).on("click", ".mandrel-option", function () {
+        var value = $(this).text();
+        $("#editMandrel").val(value);
+        $("#mandrelSuggestions").empty();
+    });
+
+        function mostrarToast(tipo, mensaje) {
+            var toastId = "toast-" + Date.now();
+            var toastHtml = `
+                <div id="${toastId}" class="toast align-items-center text-bg-${tipo} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            ${mensaje}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>`;
+
+            $("#toastContainer").append(toastHtml);
+
+            var toastEl = document.getElementById(toastId);
+            var toast = new bootstrap.Toast(toastEl, { delay: 4000 });
+            toast.show();
+
+            toastEl.addEventListener('hidden.bs.toast', function () {
+                $(toastEl).remove();
+            });
+        }
+
+
+    // Abrir modal de Eliminar
+    $(document).on("click", ".btnEliminar", function () {
+        var data = $(this).data();
+        var token = '@Antiforgery.GetTokens(ViewContext.HttpContext).RequestToken';
+        var html = `
+            <div class="modal-header"><h5>Eliminar</h5></div>
+            <div class="modal-body">
+                <form id="formDelete" method="post" action="@Url.Action("Delete","PiezasEscaneadas")">
+                    <input type="hidden" name="__RequestVerificationToken" value="${token}" />
+                    <input type="hidden" name="Id" value="${data.id}" />
+                    <p>¿Seguro que deseas eliminar?</p>
+                        <button type="submit" class="btn btn-danger rounded-pill">Eliminar</button>
+                </form>
+            </div>`;
+        $("#modalContent").html(html);
+        $("#modalCrud").modal("show");
+    });
+</script>
+}

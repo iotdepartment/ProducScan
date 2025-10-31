@@ -1,0 +1,15 @@
+﻿@model User
+
+<h2>Crear Usuario</h2>
+
+<form asp-action="Create" method="post">
+    <div class="mb-3">
+        <label asp-for="NumerodeEmpleado" class="form-label"></label>
+        <input asp-for="NumerodeEmpleado" class="form-control" />
+    </div>
+    <div class="mb-3">
+        <label asp-for="Nombre" class="form-label"></label>
+        <input asp-for="Nombre" class="form-control" />
+    </div>
+    <button type="submit" class="btn btn-primary">Guardar</button>
+</form>

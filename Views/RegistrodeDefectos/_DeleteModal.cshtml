@@ -1,0 +1,24 @@
+﻿@{
+    Layout = null;
+}
+
+<div class="modal fade" id="borrarDefectoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="formBorrarDefecto" asp-controller="RegistrodeDefectos" asp-action="BorrarDefecto" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmar eliminación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="Id" id="deleteId" />
+                    <p>¿Estás seguro de que deseas borrar este defecto?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Sí, borrar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

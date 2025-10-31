@@ -1,0 +1,69 @@
+﻿@model List<ProducScan.ViewModels.ProduccionDetalleViewModel>
+
+@{
+    var fechaLaboral = ViewBag.FechaLaboral as string;
+    var fechaRealMin = ViewBag.FechaRealMin as string;
+    var fechaRealMax = ViewBag.FechaRealMax as string;
+    var turno = ViewBag.Turno as string;
+    var mesa = ViewBag.Mesa as string;
+    var total = ViewBag.TotalPiezas;
+
+    ViewData["Title"] = "Producción por Mesa";
+    ViewData["PageTitle"] = "PRODUCCION POR MESA";
+    ViewData["PageDescription"] = "Producción desglosada por turno de cada mesa.";
+}
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5>Producción del turno</h5>
+
+        <p><strong>Fecha laboral:</strong> @fechaLaboral</p>
+       
+
+        <div class="row">
+            <div class="col-2">
+                <p><strong>@mesa</strong></p>
+            </div>
+            <div class="col-2">
+                <p><strong>Turno:</strong> @turno</p>
+            </div>
+        </div>
+
+        <p><strong>Total de piezas:</strong> @total</p>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <table class="table table-bordered table-striped">
+        <thead>
+            <tr>
+                <th>Fecha laboral</th>
+                <th>Fecha real</th>
+                <th>Hora</th>
+                <th>Mandrel</th>
+                <th>Piezas</th>
+                <th>Team Member</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.FechaLaboral.ToString("yyyy-MM-dd")</td>
+                    <td>@item.Fecha.ToString("yyyy-MM-dd")</td>
+                    <td>@item.Hora</td>
+                    <td>@item.Mandrel</td>
+                    <td>@item.NumeroDePiezas</td>
+                    <td>@item.TM</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>No hay producción registrada para esta mesa en este turno.</p>
+}
+
+<a asp-action="ReporteProduccion" class="btn btn-secondary mt-3">← Volver</a>

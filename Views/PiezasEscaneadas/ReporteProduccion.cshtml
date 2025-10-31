@@ -1,0 +1,262 @@
+﻿@using ProducScan.ViewModels
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@model ProduccionFiltroViewModel
+@{
+    ViewData["Title"] = "Reporte Produccion";
+    ViewData["PageTitle"] = "Reporte Produccion";
+    ViewData["PageDescription"] = "Reporte de Produccion Inspeccion";
+
+}
+@{
+    var fecha = Model.Año.HasValue && Model.Mes.HasValue && Model.Dia.HasValue
+        ? $"{Model.Año:0000}-{Model.Mes:00}-{Model.Dia:00}"
+        : "";
+    var mesas = ViewBag.Mesas as List<string>;
+}
+<link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
+
+</style>
+@if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+{
+    <div class="row">
+        @if (User.IsInRole("Admin"))
+        {
+            <div class="col-2 mb-3">
+                <button class="btn btn-danger rounded-pill" id="btnNuevoDefecto">
+                    + Nuevo Defecto
+                </button>
+            </div>
+        }
+        <div class="col-2 mb-3">
+            <button class="btn btn-success rounded-pill" id="btnNuevo">+ Nuevo Registro</button>
+        </div>
+
+    </div>
+
+    <!-- Modal de Producción -->
+    <div class="modal-content" id="modalContent">
+
+    </div>
+
+    @if (User.IsInRole("Admin"))
+    {
+        <!-- Modal de Defecto -->
+        <div class="modal-content" id="modalDefectoContent">
+
+        </div>
+    }
+}
+<form method="get" class="mb-4">
+    <div class="row">
+        <div class="col-md-3">
+            <strong>Fecha</strong>
+            <input type="date" name="fecha" class="form-control rounded-pill" value="@fecha" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+        </div>
+        <div class="col-md-2">
+            <strong>Turno</strong>
+            <select name="turno" class="form-control rounded-pill">
+                <option value="">Todos</option>
+                <option value="1" selected="@(Model.Turno == "1")">1</option>
+                <option value="2" selected="@(Model.Turno == "2")">2</option>
+                <option value="3" selected="@(Model.Turno == "3")">3</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <strong>Mesa</strong>
+            <select name="mesa" class="form-control rounded-pill">
+                <option value="">Todas</option>
+                @foreach (var m in (IEnumerable<string>)ViewBag.Mesas ?? new List<string>())
+                {
+                    if (string.Equals(Model.Mesa?.Trim(), m.Trim(), StringComparison.OrdinalIgnoreCase))
+                    {
+                        <option value="@m" selected>@m</option>
+                    }
+                    else
+                    {
+                        <option value="@m">@m</option>
+                    }
+                }
+            </select>
+        </div>
+
+        <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100 rounded-pill">Filtrar</button>
+        </div>
+
+        <div class="col-md-3">
+            
+            <strong>Buscar:</strong>
+            <input type="text" id="busqueda" class="rounded-pill form-control" placeholder="Buscar por TM o mesa">
+        </div>
+
+
+    </div>
+</form>
+
+<div id="accordionContainer">
+    @await Html.PartialAsync("_ReporteProduccionPartial")
+</div>
+
+
+<div class="toast-container position-fixed top-0 end-0 p-3">
+    <div id="liveToast" class="toast align-items-center border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastMessage"></div>
+            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+@section Scripts {
+
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
+    <!-- Asegúrate de tener Bootstrap JS bundle cargado en tu layout:
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> -->
+
+    <script>
+
+
+        // Se dispara cuando cualquiera de los dos modales se muestra
+        $(document).on("shown.bs.modal", "#createProduccModal, #createDefectoModal", function () {
+            const $modal = $(this);
+
+            // TM autocomplete (scoped al modal)
+            const $tm = $modal.find(".tm-input");
+            if ($tm.length) {
+                $tm.autocomplete({
+                    source: function (request, response) {
+                        $.getJSON("/PiezasEscaneadas/BuscarTM", { term: request.term }, response);
+                    },
+                    minLength: 2,
+                    appendTo: $modal, // asegura que el menú quede dentro del modal
+                });
+            }
+
+            // Mandrel autocomplete (scoped al modal)
+            const $mandrel = $modal.find(".mandrel-input");
+            if ($mandrel.length) {
+                $mandrel.autocomplete({
+                    source: function (request, response) {
+                        $.getJSON("/PiezasEscaneadas/BuscarMandrel", { term: request.term }, response);
+                    },
+                    minLength: 2,
+                    appendTo: $modal,
+                });
+            }
+        });
+
+        // Modal de Producción
+        $("#btnNuevo").click(function () {
+            $.get("/PiezasEscaneadas/Create", function (data) {
+                $("#modalContent").html(data);
+                const modal = new bootstrap.Modal(document.getElementById('createProduccModal'));
+                modal.show();
+            });
+        });
+
+        // Modal de Defecto
+        $("#btnNuevoDefecto").click(function () {
+            $.get("/RegistrodeDefectos/Create", function (data) {
+                $("#modalDefectoContent").html(data);
+                const modal = new bootstrap.Modal(document.getElementById('createDefectoModal'));
+                modal.show();
+
+                // Cargar lista de defectos
+                $.get("/RegistrodeDefectos/List")
+                    .done(function (items) {
+                        var $sel = $("#ddlDefecto");
+                        $sel.empty().append('<option value="">-- Selecciona un defecto --</option>');
+                        items.forEach(x => $sel.append(`<option value="${x.value}">${x.text}</option>`));
+                    })
+                    .fail(function (xhr) {
+                        console.error("Error cargando defectos:", xhr.responseText);
+                        alert("No se pudieron cargar los defectos.");
+                    });
+            })
+            .fail(function (xhr) {
+                console.error("Error cargando modal:", xhr.responseText);
+                alert("No se pudo cargar el formulario de defecto.");
+            });
+        });
+
+         function showToast(type, message) {
+            var toastEl = document.getElementById('liveToast');
+            var toastBody = document.getElementById('toastMessage');
+
+            toastEl.className = "toast align-items-center text-bg-" + type + " border-0";
+            toastBody.textContent = message;
+
+            new bootstrap.Toast(toastEl).show();
+        }
+
+        // Refrescar acordeón desde la misma página
+        function refreshAccordion() {
+            $("#accordionContainer").load(window.location.href + " #accordionContainer>*");
+        }
+
+        // Manejo genérico de formularios AJAX
+        function handleAjaxForm(formSelector) {
+            $(document).on("submit", formSelector, function (e) {
+                e.preventDefault();
+                const $form = $(this);
+
+                $.ajax({
+                    type: $form.attr("method"),
+                    url: $form.attr("action"),
+                    data: $form.serialize(),
+                    success: function (res) {
+                        if (res.success) {
+                            showToast("success", res.message || "Operación exitosa");
+                            $form.closest(".modal").modal("hide");
+                            refreshAccordion();
+                        } else {
+                            // 👇 mostramos el mensaje principal
+                            let msg = res.message || "Error desconocido";
+
+                            // 👇 si hay errores de modelo, los concatenamos
+                            if (res.errors && res.errors.length > 0) {
+                                msg += " → " + res.errors.join(", ");
+                            }
+
+                            // 👇 si hay stacktrace, lo mandamos a consola para debug
+                            if (res.stack) {
+                                console.error("StackTrace:", res.stack);
+                            }
+
+                            showToast("danger", msg);
+                        }
+                    },
+                    error: function (xhr) {
+                        console.error("Error AJAX:", xhr.responseText);
+                        showToast("danger", "Error inesperado: " + xhr.statusText);
+                    }
+                });
+            });
+        }
+
+        // Inicializar para ambos formularios
+        handleAjaxForm("#formProduccion");
+        handleAjaxForm("#formDefecto");
+        document.addEventListener("DOMContentLoaded", function () {
+        const rows = document.querySelectorAll("[data-bs-toggle='collapse']");
+        rows.forEach(row => {
+        row.addEventListener("click", function () {
+                    const targetId = row.getAttribute("data-bs-target").replace("#", "");
+                    const icon = row.querySelector(".toggle-icon");
+                    const target = document.getElementById(targetId);
+
+                    // Espera a que Bootstrap maneje el collapse y luego rota el ícono
+                    target.addEventListener("shown.bs.collapse", () => {
+                        icon.classList.add("rotate-180");
+                    });
+                    target.addEventListener("hidden.bs.collapse", () => {
+                        icon.classList.remove("rotate-180");
+                    });
+                });
+            });
+        });
+    </script>
+
+}
+
+
+

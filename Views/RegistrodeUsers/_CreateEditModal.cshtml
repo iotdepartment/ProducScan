@@ -1,0 +1,38 @@
+﻿@model ProducScan.Models.User
+
+<!-- Modal Create/Edit -->
+<div class="modal fade" id="createEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form id="createEditForm" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Crear Usuario</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="userId" name="Id" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Número de Empleado</label>
+                        <input type="text" class="form-control" id="numeroEmpleado" name="NumerodeEmpleado" required />
+                        <div class="invalid-feedback">
+                            El número de empleado es obligatorio.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" class="form-control" id="nombre" name="Nombre" required />
+                        <div class="invalid-feedback">
+                            El nombre es obligatorio.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,207 @@
+﻿@model ProducScan.ViewModels.Dashboard.DashboardResumenViewModel
+@{
+    ViewData["Title"] = "Dashboard";
+    ViewData["PageTitle"] = "Resumen Produccion — ";
+    ViewData["PageDescription"] = "Resumen de la producción del día.";
+}
+
+<div class="container  mt-4">
+
+<div class="row">
+	@* <div class="col-6">
+        <h2 class="mb-4">Resumen Producción — @ViewBag.FechaTitulo</h2>
+    </div> *@
+    <div class="col-6">
+        <form method="get">
+            <div class="row mb-3 d-flex justify-content-end">
+                <div class="col-md-10">
+                    <label for="fecha">Seleccionar fecha:</label>
+                    <input type="date" id="fecha" name="fecha" class="form-control"
+                           value="@ViewBag.FechaSeleccionada" />
+                </div>
+                <div class="col-md-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h5>Total Piezas</h5>
+                <h3>@Model.TotalPiezas</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h5>Total Defectos</h5>
+                <h3>@Model.TotalDefectos</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <h5>Top 3 Team Members</h5>
+        <ul class="list-group">
+            @foreach (var tm in Model.TopTeamMembers)
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    @tm.TM <span>@tm.TotalPiezas piezas</span>
+                </li>
+            }
+        </ul>
+    </div>
+    <div class="col-md-6">
+        <h5>Top 3 Defectos</h5>
+        <ul class="list-group">
+            @foreach (var def in Model.TopDefectos)
+            {
+                <li class="list-group-item d-flex justify-content-between">
+                    @def.Defecto <span>@def.Cantidad</span>
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+<hr />
+
+<div class="row">
+    <div class="col-md-12">
+        <h5>Producción por Turno</h5>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Turno</th>
+                    <th>Total Piezas</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var turno in Model.ProduccionPorTurno)
+                {
+                    <tr>
+                        <td>@turno.Turno</td>
+                        <td>@turno.TotalPiezas</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<hr />
+<div class="mb-3">
+    <strong for="tipoGrafica" class="form-label">Ver producción por:</strong>
+        <select id="tipoGrafica" class="form-select w-auto">
+            <option value="turno">Turno</option>
+            <option value="mesa">Mesa</option>
+            <option value="tm">Team Member</option>
+        </select>
+
+</div>
+
+<canvas id="graficaProduccion" height="100"></canvas>
+
+</div>
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const ctx = document.getElementById('graficaProduccion').getContext('2d');
+        let chart;
+
+        // Labels
+        const mesaLabels = @Html.Raw(Json.Serialize(ViewBag.MesaLabels));
+        const tmLabels = @Html.Raw(Json.Serialize(ViewBag.TMLabels));
+        const turnoLabels = @Html.Raw(Json.Serialize(ViewBag.ProduccionTurnoLabels));
+        const turnoData = @Html.Raw(Json.Serialize(ViewBag.ProduccionTurnoData));
+
+        // Por Mesa
+        const turno1PorMesa = @Html.Raw(Json.Serialize(ViewBag.Turno1PorMesa));
+        const turno2PorMesa = @Html.Raw(Json.Serialize(ViewBag.Turno2PorMesa));
+        const turno3PorMesa = @Html.Raw(Json.Serialize(ViewBag.Turno3PorMesa));
+
+        // Por TM
+        const turno1PorTM = @Html.Raw(Json.Serialize(ViewBag.Turno1PorTM));
+        const turno2PorTM = @Html.Raw(Json.Serialize(ViewBag.Turno2PorTM));
+        const turno3PorTM = @Html.Raw(Json.Serialize(ViewBag.Turno3PorTM));
+
+        function renderStackedBar(labels, datasets, title) {
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                        options: {
+            plugins: {
+                title: {
+                    display: true,
+                    text: title
+                }
+            },
+            responsive: true,
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, beginAtZero: true }
+            },
+            onClick: function (evt, elements) {
+                if (elements.length === 0) return;
+
+                const chartType = document.getElementById("tipoGrafica").value;
+                const index = elements[0].index;
+
+                const fecha = '@ViewBag.FechaSeleccionada'; // desde el backend
+
+                if (chartType === "mesa") {
+                    const mesa = mesaLabels[index];
+                    window.open(`/PiezasEscaneadas/DetalleProduccionMesa?fecha=${fecha}&mesa=${encodeURIComponent(mesa)}`, '_blank');
+                } else if (chartType === "tm") {
+                    const tm = tmLabels[index];
+                     console.log("Usuario clickeado:", tm);
+                    window.open(`/PiezasEscaneadas/DetallePorUsuario?fecha=${fecha}&usuario=${encodeURIComponent(tm)}`, '_blank');
+                }
+            }
+        }
+
+            });
+        }
+
+        function actualizarGrafica(tipo) {
+            if (tipo === "mesa") {
+                renderStackedBar(mesaLabels, [
+                    { label: 'Turno 1', data: turno1PorMesa, backgroundColor: '#4e73df' },
+                    { label: 'Turno 2', data: turno2PorMesa, backgroundColor: '#1cc88a' },
+                    { label: 'Turno 3', data: turno3PorMesa, backgroundColor: '#f6c23e' },
+                ], "Producción por Mesa (Apilado por Turno)");
+            } else if (tipo === "tm") {
+                renderStackedBar(tmLabels, [
+                    { label: 'Turno 1', data: turno1PorTM, backgroundColor: '#4e73df' },
+                    { label: 'Turno 2', data: turno2PorTM, backgroundColor: '#1cc88a' },
+                    { label: 'Turno 3', data: turno3PorTM, backgroundColor: '#f6c23e' },
+                ], "Producción por TM (Apilado por Turno)");
+            } else {
+                // Por Turno (simple bar)
+                renderStackedBar(turnoLabels, [{
+                    label: 'Total Piezas',
+                    data: turnoData,
+                    backgroundColor: '#36b9cc'
+                }], "Producción por Turno");
+            }
+        }
+
+        actualizarGrafica("turno"); // inicial
+
+        document.getElementById('tipoGrafica').addEventListener('change', function () {
+            actualizarGrafica(this.value);
+        });
+    </script>
+}
+
