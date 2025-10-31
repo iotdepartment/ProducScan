@@ -3,5 +3,5 @@ services:
   producscan:
     image: iotdepartment/producscan:latest
     ports:
-      - "9000:9000"
+      - "10000:10000"
     restart: always
