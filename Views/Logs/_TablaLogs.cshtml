@@ -1,0 +1,92 @@
+﻿@model IEnumerable<ProducScan.Models.Log>
+
+@{
+    // Variables que vienen del controlador
+    int pagina = ViewBag.Page ?? 1;
+    int tamPagina = ViewBag.PageSize ?? 10;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+
+    string nivelSel = ViewBag.Nivel ?? "all";
+    string categoriaSel = ViewBag.Categoria ?? "all";
+    string fechaSel = ViewBag.Fecha ?? "";
+}
+
+<!-- Metadatos para que el JS reconstruya la paginación -->
+<div id="logsMeta"
+     data-page="@pagina"
+     data-pagesize="@tamPagina"
+     data-totalpaginas="@totalPaginas"
+     data-nivel="@nivelSel"
+     data-categoria="@categoriaSel"
+     data-fecha="@fechaSel">
+</div>
+
+<div class="accordion" id="accordionLogs">
+    <table class="table table-hover align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th style="width:40px;"></th>
+                <th>Fecha</th>
+                <th>Usuario</th>
+                <th>Acción</th>
+                <th>Nivel</th>
+                <th>Categoría</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var log in Model)
+            {
+                var collapseId = $"collapse_{log.Id}";
+                <tr class="log-row" data-nivel="@log.Nivel" data-cat="@log.Categoria" data-fecha="@log.Fecha.ToString("yyyy-MM-dd")">
+                    <td>
+                        <button class="accordion-button collapsed p-0 bg-transparent shadow-none"
+                                type="button"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#@collapseId"
+                                aria-expanded="false"
+                                aria-controls="@collapseId"
+                                style="width:25px; height:25px;">
+                        </button>
+                    </td>
+                    <td>@log.Fecha.ToString("dd/MM/yyyy HH:mm:ss")</td>
+                    <td>@log.Usuario</td>
+                    <td>@log.Accion</td>
+                    <td>
+                        @if (log.Nivel == "Info")
+                        {
+                            <span class="badge bg-primary">Info</span>
+                        }
+                        else if (log.Nivel == "Warning")
+                        {
+                            <span class="badge bg-warning text-dark">Warning</span>
+                        }
+                        else if (log.Nivel == "Error")
+                        {
+                            <span class="badge bg-danger">Error</span>
+                        }
+                        else if (log.Nivel == "Critical")
+                        {
+                            <span class="badge bg-dark">Critical</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-success">@log.Nivel</span>
+                        }
+                    </td>
+                    <td>@log.Categoria</td>
+                </tr>
+                <tr>
+                    <td colspan="6" class="p-0">
+                        <div id="@collapseId" class="accordion-collapse collapse"
+                             data-bs-parent="#accordionLogs">
+                            <div class="accordion-body bg-light">
+                                <strong>Detalles:</strong><br />
+                                @log.Detalles
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
