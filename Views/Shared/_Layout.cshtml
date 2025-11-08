@@ -6,7 +6,10 @@
 }
 @using ProducScan.Helpers
 @{
-    var fechaActual = DateTime.Now;
+    // Usa la zona horaria de Matamoros
+    var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+    var fechaActual = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
     var horaActual = fechaActual.TimeOfDay;
 
     string turnoActual;

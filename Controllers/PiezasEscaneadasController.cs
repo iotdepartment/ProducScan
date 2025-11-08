@@ -612,9 +612,9 @@ public class PiezasEscaneadasController : Controller
             .ToList();
 
         // --- Totales ---
-        var totalPiezas = producciones.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0);
+        var totalBuenas = producciones.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0);
         var totalDefectos = defectos.Count;
-        var totalBuenas = totalPiezas - totalDefectos;
+        var totalPiezas = totalBuenas + totalDefectos;
 
         // --- FPY y Scrap ---
         double fpy = totalPiezas > 0 ? (double)totalBuenas / totalPiezas * 100 : 0;
