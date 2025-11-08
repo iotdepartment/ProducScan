@@ -177,8 +177,10 @@
                                     <span class="ms-2 sidebar-text">Reporte de producción</span>
                                 </a>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                            @if (User.IsInRole("Admin") && User.Identity.Name == "Angelito")
+                        {
+                            <li class="nav-item ">
+                                <a class="nav-link d-flex align-items-center w-100  @(currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM" ? "active fw-bold bg-secondary text-white" : "text-dark")"
                                    asp-controller="PiezasEscaneadas" asp-action="InspeccionTM">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-list-ul"></i>
@@ -186,6 +188,7 @@
                                     <span class="ms-2 sidebar-text">Inspección por TM</span>
                                 </a>
                             </li>
+                            }
                             @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                                 {
                                     <li class="nav-item">
