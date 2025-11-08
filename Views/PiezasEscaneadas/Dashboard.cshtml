@@ -5,99 +5,163 @@
     ViewData["PageDescription"] = "Resumen de la producción del día.";
 }
 
+<style>
+    .card-hover {
+        transition: all 0.3s ease; /* animación suave */
+    }
+
+        .card-hover:hover {
+            cursor: pointer;
+            box-shadow: 0 0.75rem 1.25rem rgba(0,0,0,.25); /* sombra más fuerte */
+            transform: translateY(-3px); /* efecto de levantar */
+        }
+
+        /* Colores vivos en hover */
+        .card-hover.bg-primary-subtle:hover {
+            background-color: var(--bs-primary) !important;
+        }
+
+        .card-hover.bg-success-subtle:hover {
+            background-color: var(--bs-success) !important;
+        }
+
+        .card-hover.bg-danger-subtle:hover {
+            background-color: var(--bs-danger) !important;
+        }
+
+        /* Forzar texto claro en hover */
+        .card-hover:hover h5,
+        .card-hover:hover h6,
+        .card-hover:hover h3,
+        .card-hover:hover p {
+            color: var(--bs-light) !important;
+        }
+    </style>
 <div class="container  mt-4">
 
 <div class="row">
-	@* <div class="col-6">
-        <h2 class="mb-4">Resumen Producción — @ViewBag.FechaTitulo</h2>
-    </div> *@
-    <div class="col-6">
+
         <form method="get">
-            <div class="row mb-3 d-flex justify-content-end">
-                <div class="col-md-10">
-                    <label for="fecha">Seleccionar fecha:</label>
-                    <input type="date" id="fecha" name="fecha" class="form-control"
-                           value="@ViewBag.FechaSeleccionada" />
+            <div class="row mb-3 d-flex justify-content-start">
+                <div class="col-md-6 col-lg-4">
+                    <h6 for="fecha" class="fw-bold">Seleccionar fecha:</h6>
+                    <input type="date" id="fecha" name="fecha" class="form-control rounded-pill"
+                           value="@ViewBag.FechaSeleccionada"
+                           max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                 </div>
-                <div class="col-md-2 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary w-100">Buscar</button>
+                <div class="mt-2 col-md-6 col-xl-2 d-flex align-items-end ">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill"> <i class="bi bi-search"></i> Buscar</button>
                 </div>
             </div>
         </form>
-    </div>
-</div>
 
-<div class="row mb-3">
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <h5>Total Piezas</h5>
-                <h3>@Model.TotalPiezas</h3>
-            </div>
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card bg-danger text-white">
-            <div class="card-body">
-                <h5>Total Defectos</h5>
-                <h3>@Model.TotalDefectos</h3>
-            </div>
-        </div>
-    </div>
 </div>
 
 <div class="row mb-4">
-    <div class="col-md-6">
-        <h5>Top 3 Team Members</h5>
-        <ul class="list-group">
-            @foreach (var tm in Model.TopTeamMembers)
-            {
-                <li class="list-group-item d-flex justify-content-between">
-                    @tm.TM <span>@tm.TotalPiezas piezas</span>
-                </li>
-            }
-        </ul>
-    </div>
-    <div class="col-md-6">
-        <h5>Top 3 Defectos</h5>
-        <ul class="list-group">
-            @foreach (var def in Model.TopDefectos)
-            {
-                <li class="list-group-item d-flex justify-content-between">
-                    @def.Defecto <span>@def.Cantidad</span>
-                </li>
-            }
-        </ul>
-    </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card  card-hover bg-primary-subtle shadow-sm border-0 text-white rounded-4">
+                <div class="card-body m-1">
+                    <h5 class="fw-bold text-primary-emphasis"><i class="bi bi-box-seam me-2"></i>Piezas Recibidas</h5>
+                    <h3 class="fw-bold text-primary-emphasis">@Model.TotalPiezas</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card bg-success-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h5 class="fw-bold text-success-emphasis">
+                        <i class="bi bi-check-circle me-2"></i> Total Piezas Buenas
+                    </h5>
+                    <h3 class="fw-bold text-success-emphasis">@Model.TotalPiezasBuenas</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h5 class="fw-bold text-danger-emphasis">
+                        <i class="bi bi-exclamation-triangle me-2"></i> Total Defectos
+                    </h5>
+                    <h3 class="fw-bold text-danger-emphasis">@Model.TotalDefectos</h3>
+                </div>
+            </div>
+        </div>
+
 </div>
 
-<hr />
+    <div class="row mb-4 justify-content-center d-flex">
 
-<div class="row">
-    <div class="col-md-12">
-        <h5>Producción por Turno</h5>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Turno</th>
-                    <th>Total Piezas</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var turno in Model.ProduccionPorTurno)
-                {
-                    <tr>
-                        <td>@turno.Turno</td>
-                        <td>@turno.TotalPiezas</td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="col-md-6 col-xl-4">
+            <div class="card bg-success-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h5 class="fw-bold text-success-emphasis">
+                        <i class="bi bi-graph-up-arrow me-2"></i> FPY
+                    </h5>
+                    <h3 class="fw-bold text-success-emphasis">@Model.FPY.ToString("F2") %</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-4">
+            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h6 class="fw-bold text-danger-emphasis">
+                        <i class="bi bi-trash me-2"></i> Porcentaje de Scrap
+                    </h6>
+                    <h3 class="fw-bold text-danger-emphasis">@Model.Scrap.ToString("F2") %</h3>
+                </div>
+            </div>
+        </div>
+
     </div>
-</div>
+
+    <div class="row mb-3">
+        <div class="col-md-3 col-xl-3">
+            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h6 class="fw-bold text-danger-emphasis">
+                        <i class="bi bi-eye-slash me-2"></i> Without Print Illegible
+                    </h6>
+                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajePrintIllegible.ToString("F2") %</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-xl-3">
+            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h6 class="fw-bold text-danger-emphasis">
+                        <i class="bi bi-droplet-half me-2"></i> Without Material With Lub
+                    </h6>
+                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajeMaterialLub.ToString("F2") %</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-xl-3">
+            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h6 class="fw-bold text-danger-emphasis">
+                        <i class="bi bi-fire me-2"></i> Without Vulcanization
+                    </h6>
+                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajeVulcanization.ToString("F2") %</h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-xl-3">
+            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+                <div class="card-body m-1">
+                    <h6 class="fw-bold text-danger-emphasis">
+                        <i class="bi bi-x-circle me-2"></i> Without Uncured
+                    </h6>
+                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajeUncured.ToString("F2") %</h3>
+                </div>
+            </div>
+        </div>
+    </div>
 <hr />
 <div class="mb-3">
-    <strong for="tipoGrafica" class="form-label">Ver producción por:</strong>
+        <strong for="tipoGrafica" class="form-label">Ver Inspección por:</strong>
         <select id="tipoGrafica" class="form-select w-auto">
             <option value="turno">Turno</option>
             <option value="mesa">Mesa</option>
@@ -134,66 +198,75 @@
         function renderStackedBar(labels, datasets, title) {
             if (chart) chart.destroy();
 
+            const fechaSeleccionada = '@ViewBag.FechaSeleccionada';
+
+
             chart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: datasets
                 },
-                        options: {
-            plugins: {
-                title: {
-                    display: true,
-                    text: title
+                options: {
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `${title} - Fecha: ${fechaSeleccionada}`
+
+                        }
+                    },
+                    responsive: true,
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true }
+                    },
+                    onClick: function (evt, elements) {
+                        if (elements.length === 0) return;
+
+                        const chartType = document.getElementById("tipoGrafica").value;
+                        const index = elements[0].index;
+
+                        const fecha = '@ViewBag.FechaSeleccionada'; // desde el backend
+
+                        if (chartType === "mesa") {
+                            const mesa = mesaLabels[index];
+                            window.open(`/PiezasEscaneadas/DetalleProduccionMesa?fecha=${fecha}&mesa=${encodeURIComponent(mesa)}`, '_blank');
+                        } else if (chartType === "tm") {
+                            const tm = tmLabels[index];
+                             console.log("Usuario clickeado:", tm);
+                            window.open(`/PiezasEscaneadas/DetallePorUsuario?fecha=${fecha}&usuario=${encodeURIComponent(tm)}`, '_blank');
+                        }
+                    }
                 }
-            },
-            responsive: true,
-            scales: {
-                x: { stacked: true },
-                y: { stacked: true, beginAtZero: true }
-            },
-            onClick: function (evt, elements) {
-                if (elements.length === 0) return;
-
-                const chartType = document.getElementById("tipoGrafica").value;
-                const index = elements[0].index;
-
-                const fecha = '@ViewBag.FechaSeleccionada'; // desde el backend
-
-                if (chartType === "mesa") {
-                    const mesa = mesaLabels[index];
-                    window.open(`/PiezasEscaneadas/DetalleProduccionMesa?fecha=${fecha}&mesa=${encodeURIComponent(mesa)}`, '_blank');
-                } else if (chartType === "tm") {
-                    const tm = tmLabels[index];
-                     console.log("Usuario clickeado:", tm);
-                    window.open(`/PiezasEscaneadas/DetallePorUsuario?fecha=${fecha}&usuario=${encodeURIComponent(tm)}`, '_blank');
-                }
-            }
-        }
 
             });
         }
-
-        function actualizarGrafica(tipo) {
+               function actualizarGrafica(tipo) {
             if (tipo === "mesa") {
                 renderStackedBar(mesaLabels, [
                     { label: 'Turno 1', data: turno1PorMesa, backgroundColor: '#4e73df' },
                     { label: 'Turno 2', data: turno2PorMesa, backgroundColor: '#1cc88a' },
                     { label: 'Turno 3', data: turno3PorMesa, backgroundColor: '#f6c23e' },
-                ], "Producción por Mesa (Apilado por Turno)");
+                ], "Inspección por Mesa (Apilado por Turno)");
             } else if (tipo === "tm") {
                 renderStackedBar(tmLabels, [
                     { label: 'Turno 1', data: turno1PorTM, backgroundColor: '#4e73df' },
                     { label: 'Turno 2', data: turno2PorTM, backgroundColor: '#1cc88a' },
                     { label: 'Turno 3', data: turno3PorTM, backgroundColor: '#f6c23e' },
-                ], "Producción por TM (Apilado por Turno)");
+                ], "Inspección por TM (Apilado por Turno)");
             } else {
-                // Por Turno (simple bar)
-                renderStackedBar(turnoLabels, [{
-                    label: 'Total Piezas',
-                    data: turnoData,
-                    backgroundColor: '#36b9cc'
-                }], "Producción por Turno");
+                // Etiquetas con total: "Turno 1 (123)"
+                const turnoLabelsWithTotals = turnoLabels.map((t, i) => `${t} (${turnoData[i]})`);
+
+                renderStackedBar(
+                    turnoLabelsWithTotals,
+                    [{
+                        label: 'Total Piezas',
+                        data: turnoData,
+                        backgroundColor: '#36b9cc'
+                    }],
+                    "Inspección por Turno"
+                );
             }
         }
 

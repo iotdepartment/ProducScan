@@ -2,8 +2,26 @@
 @{
     ViewData["Title"] = "Administrar Usuarios";
 }
+<style>
+    td.details-control {
+        background: url('https://www.datatables.net/examples/resources/details_open.png') no-repeat center center;
+        cursor: pointer;
+    }
 
+    tr.shown td.details-control {
+        background: url('https://www.datatables.net/examples/resources/details_close.png') no-repeat center center;
+    }
 
+    td.details-control {
+        background: url('https://www.datatables.net/examples/resources/details_open.png') no-repeat center center;
+        cursor: pointer;
+    }
+
+    tr.shown td.details-control {
+        background: url('https://www.datatables.net/examples/resources/details_close.png') no-repeat center center;
+    }
+
+</style>
 
 <ul class="nav nav-tabs" id="usuariosLogsTabs" role="tablist">
     <li class="nav-item" role="presentation">
@@ -15,9 +33,9 @@
 </ul>
 
 <div class="tab-content mt-3">
+
     <div class="tab-pane fade show active" id="usuarios" role="tabpanel">
         <div class="d-flex justify-content-between mb-3">
-            <h3>Usuarios</h3>
             <button class="btn btn-primary rounded-pill" id="btnNuevo">
                 <i class="bi bi-person-plus"></i> Nuevo Usuario
             </button>
@@ -26,6 +44,7 @@
         @await Html.PartialAsync("_TablaUsuarios", Model.Usuarios)
         </div>
     </div>
+
     <div class="tab-pane fade" id="logs" role="tabpanel">
         <div class="row mb-3">
             <div class="col-md-3">
@@ -51,37 +70,13 @@
                 <input type="date" id="filtroFecha" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
             </div>
         </div>
-        <div id="logsContainer" class="p-2 text-center text-muted">
-            
+        <div id="logsContainer" class="p-2 text-muted">
             <i class="bi bi-arrow-repeat"></i> Cargando logs...
-
-
         </div>
-
-        <!-- Paginación debajo del accordion -->
-        <div class="d-flex justify-content-between align-items-center mt-3">
-            <div>
-                <label for="pageSizeSelect" class="form-label me-2">Registros por página:</label>
-                <select id="pageSizeSelect" class="form-select form-select-sm d-inline-block" style="width:auto;">
-                    <option value="5">5</option>
-                    <option value="10" selected>10</option>
-                    <option value="30">30</option>
-                    <option value="50">50</option>
-                </select>
-            </div>
-
-            <nav>
-                <ul class="pagination pagination-sm mb-0" id="paginationControls">
-                    @* Aquí el JS dibuja los botones dinámicamente *@
-                </ul>
-            </nav>
-        </div>
-
-
-
+        
     </div>
-</div>
 
+</div>
 
 <!-- Modal genérico -->
 <div class="modal fade" id="modalUsuario" tabindex="-1" aria-hidden="true">
@@ -110,15 +105,18 @@
 
 @section Scripts {
 
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
     <script>
-        // State
+        // State (solo filtros, ya no page ni pageSize)
         let state = {
-                nivel: "all",
-                categoria: "all",
-                fecha: "",
-                page: 1,
-                pageSize: 10
-            };
+            nivel: "all",
+            categoria: "all",
+            fecha: ""
+        };
+
         // Guardar qué accordions están abiertos
         let openAccordions = new Set();
 
@@ -129,163 +127,142 @@
         $(document).on('hidden.bs.collapse', '.accordion-collapse', function () {
             openAccordions.delete(this.id);
         });
-            function cargarLogs() {
-                const { nivel, categoria, fecha, page, pageSize } = state;
-                const qNivel = encodeURIComponent(nivel);
-                const qCat = encodeURIComponent(categoria);
-                const qFecha = encodeURIComponent(fecha || "");
 
-                $("#logsContainer").load(`/Logs/TablaLogs?nivel=${qNivel}&categoria=${qCat}&fecha=${qFecha}&page=${page}&pageSize=${pageSize}`, function () {
-                    const meta = $("#logsMeta");
-                    state.page = parseInt(meta.data("page")) || 1;
-                    state.pageSize = parseInt(meta.data("pagesize")) || state.pageSize;
-                    const totalPaginas = parseInt(meta.data("totalpaginas")) || 1;
+        function cargarLogs() {
+            const { nivel, categoria, fecha } = state;
+            const qNivel = encodeURIComponent(nivel);
+            const qCat = encodeURIComponent(categoria);
+            const qFecha = encodeURIComponent(fecha || "");
 
-                    $("#filtroNivel").val(state.nivel);
-                    $("#filtroCategoria").val(state.categoria);
-                    $("#filtroFecha").val(state.fecha);
-                    $("#pageSizeSelect").val(state.pageSize);
-
-                    renderPaginacion(totalPaginas);
-
-                    // 👇 Reabrir los accordions que estaban abiertos
-                    openAccordions.forEach(id => {
-                        $("#" + id).addClass("show");
-                        $("[data-bs-target='#" + id + "']")
-                            .removeClass("collapsed")
-                            .attr("aria-expanded", "true");
-                    });
+            $("#logsContainer").load(`/Logs/TablaLogs?nivel=${qNivel}&categoria=${qCat}&fecha=${qFecha}`, function () {
+                var table = $('#logsTable').DataTable({
+                    destroy: true,
+                    pageLength: 10,
+                    lengthMenu: [10, 20, 50, 100],
+                    order: [[0, "desc"]],
+                    language: {
+                        url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                    },
+                    columnDefs: [
+                        { orderable: false, targets: 0 }
+                    ]
                 });
-            }
 
-            function renderPaginacion(totalPaginas) {
-                let html = "";
-                html += `<li class="page-item ${state.page === 1 ? "disabled" : ""}">
-                            <a class="page-link" href="#" data-page="${state.page - 1}">Anterior</a>
-                         </li>`;
-                for (let i = 1; i <= totalPaginas; i++) {
-                    html += `<li class="page-item ${i === state.page ? "active" : ""}">
-                                <a class="page-link" href="#" data-page="${i}">${i}</a>
-                             </li>`;
-                }
-                html += `<li class="page-item ${state.page === totalPaginas ? "disabled" : ""}">
-                            <a class="page-link" href="#" data-page="${state.page + 1}">Siguiente</a>
-                         </li>`;
-                $("#paginationControls").html(html);
-            }
 
-            // Eventos de filtros
-            $(document).on("change", "#filtroNivel", function () {
-                state.nivel = $(this).val();
-                state.page = 1;
-                cargarLogs();
+
+                // Evento para expandir detalles con animación
+                $('#logsTable tbody').on('click', 'td.details-control', function () {
+                    var tr = $(this).closest('tr');
+                    var row = table.row(tr);
+
+                    if (row.child.isShown()) {
+                        // Animación de cierre
+                        $('div.slider', row.child()).slideUp(300, function () {
+                            row.child.hide();
+                            tr.removeClass('shown');
+                        });
+                    } else {
+                        // Contenido de detalles
+                        var detalles = tr.data('detalles');
+                        row.child(
+                            `<div class="slider bg-light p-2">
+                                <strong>Detalles:</strong><br/>${detalles}
+                             </div>`
+                        ).show();
+
+                        // Animación de apertura
+                        $('div.slider', row.child()).hide().slideDown(300);
+                        tr.addClass('shown');
+                        }
+                });
+
+
             });
+        }
+            // Eventos de filtros
+        $(document).on("change", "#filtroNivel", function () {
+            state.nivel = $(this).val();
+            cargarLogs();
+        });
+
 
             $(document).on("change", "#filtroCategoria", function () {
-                state.categoria = $(this).val();
-                state.page = 1;
-                cargarLogs();
-            });
+            state.categoria = $(this).val();
+            cargarLogs();
+        });
+
 
             $(document).on("change", "#filtroFecha", function () {
-                state.fecha = $(this).val();
-                state.page = 1;
-                cargarLogs();
-            });
+            state.fecha = $(this).val();
+            cargarLogs();
+        });
 
-            // Cambio de tamaño de página
-            $(document).on("change", "#pageSizeSelect", function () {
-                state.pageSize = parseInt($(this).val());
-                state.page = 1;
-                cargarLogs();
-            });
 
-            // Paginación dinámica
-            $(document).on("click", "#paginationControls .page-link", function (e) {
-                e.preventDefault();
-                const target = parseInt($(this).data("page"));
-                if (!isNaN(target) && target > 0) {
-                    state.page = target;
-                    cargarLogs();
-                }
-            });
+        // Toasts
+        const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
+        const toastSuccess = new bootstrap.Toast(document.getElementById('toastSuccess'));
+        const toastError = new bootstrap.Toast(document.getElementById('toastError'));
 
-            // Intervalo de refresco solo cuando estás en la pestaña de logs
-            let logsInterval;
-            document.getElementById('logs-tab').addEventListener('shown.bs.tab', function () {
-                cargarLogs();
-                logsInterval = setInterval(() => cargarLogs(), 3000);
-            });
-
-            document.getElementById('usuarios-tab').addEventListener('shown.bs.tab', function () {
-                clearInterval(logsInterval);
-            });
-
-            // Toasts
-            const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
-            const toastSuccess = new bootstrap.Toast(document.getElementById('toastSuccess'));
-            const toastError = new bootstrap.Toast(document.getElementById('toastError'));
-
-            function showToast(success, message) {
-                if (success) {
-                    document.querySelector("#toastSuccess .toast-body").innerText = message;
-                    toastSuccess.show();
-                } else {
-                    document.querySelector("#toastError .toast-body").innerText = message;
-                    toastError.show();
-                }
+        function showToast(success, message) {
+            if (success) {
+                document.querySelector("#toastSuccess .toast-body").innerText = message;
+                toastSuccess.show();
+            } else {
+                document.querySelector("#toastError .toast-body").innerText = message;
+                toastError.show();
             }
+        }
 
-            // Nuevo usuario
-            $("#btnNuevo").click(function () {
-                $("#modalContent").load("/Usuarios/Crear", function () {
-                    modal.show();
+        // Nuevo usuario
+        $("#btnNuevo").click(function () {
+            $("#modalContent").load("/Usuarios/Crear", function () {
+                modal.show();
+            });
+        });
+
+        // Editar usuario
+        $(document).on("click", ".btnEditar", function () {
+            let id = $(this).data("id");
+            $("#modalContent").load("/Usuarios/Editar/" + id, function () {
+                modal.show();
+            });
+        });
+
+        // Eliminar usuario
+        $(document).on("click", ".btnEliminar", function () {
+            let id = $(this).data("id");
+            $("#modalContent").load("/Usuarios/Eliminar/" + id, function () {
+                modal.show();
+            });
+        });
+
+        function refreshTabla() {
+            $("#tablaUsuariosContainer").load("/Usuarios/TablaUsuarios");
+        }
+
+        $(document).on("submit", "form.ajaxForm", function (e) {
+            e.preventDefault();
+            let form = $(this);
+            $.post(form.attr("action"), form.serialize())
+                .done(function (res) {
+                    if (res.success) {
+                        modal.hide();
+                        refreshTabla();
+                        showToast(true, res.message);
+                    } else {
+                        showToast(false, res.message);
+                    }
+                })
+                .fail(function () {
+                    showToast(false, "Error en la petición.");
                 });
-            });
+        });
 
-            // Editar usuario
-            $(document).on("click", ".btnEditar", function () {
-                let id = $(this).data("id");
-                $("#modalContent").load("/Usuarios/Editar/" + id, function () {
-                    modal.show();
-                });
-            });
+        // ⚡ Cargar logs al abrir la pestaña
+        document.getElementById('logs-tab').addEventListener('shown.bs.tab', function () {
+            cargarLogs();
+        });
 
-            // Eliminar usuario
-            $(document).on("click", ".btnEliminar", function () {
-                let id = $(this).data("id");
-                $("#modalContent").load("/Usuarios/Eliminar/" + id, function () {
-                    modal.show();
-                });
-            });
-
-            function refreshTabla() {
-                $("#tablaUsuariosContainer").load("/Usuarios/TablaUsuarios");
-            }
-
-            $(document).on("submit", "form.ajaxForm", function (e) {
-                e.preventDefault();
-                let form = $(this);
-                $.post(form.attr("action"), form.serialize())
-                    .done(function (res) {
-                        if (res.success) {
-                            modal.hide();
-                            refreshTabla();
-                            showToast(true, res.message);
-                        } else {
-                            showToast(false, res.message);
-                        }
-                    })
-                    .fail(function () {
-                        showToast(false, "Error en la petición.");
-                    });
-            });
-
-            // Carga inicial si estás en logs
-            if (document.getElementById('logs-tab').classList.contains('active')) {
-                cargarLogs();
-                logsInterval = setInterval(() => cargarLogs(), 3000);
-            }
 
     </script>
 }

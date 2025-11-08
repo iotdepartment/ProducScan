@@ -40,6 +40,12 @@ public class PiezasEscaneadasController : Controller
     }
 
 
+    [HttpGet]
+    public async Task<IActionResult> InspeccionTM(int page = 1)
+    { 
+        return View();
+    }
+
     //METODOS PARA CREAR, ACTUALIZAR Y ELIMINAR PRODUCCION
     [Authorize(Roles = "Admin,Editor")]
     [HttpGet]
@@ -274,7 +280,7 @@ public class PiezasEscaneadasController : Controller
         // Traer rango en SQL y luego aplicar helper en memoria
         var registros = _context.RegistrodePiezasEscaneadas
             .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
-            .ToList() // 👈 materializamos
+            .ToList() // materializamos
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date);
 
@@ -294,8 +300,6 @@ public class PiezasEscaneadasController : Controller
             .Where(d => !string.IsNullOrEmpty(d.Defecto) && !string.IsNullOrEmpty(d.Mandrel))
             .ToList();
 
-
-        // 👇 Mesas disponibles (solo las que tienen producción o defectos en la fecha/turno)
         // Mesas disponibles (solo las que tienen producción o defectos en la fecha/turno)
         var mesasDisponibles = registros
             .Select(r => r.NuMesa.Trim())
@@ -607,55 +611,38 @@ public class PiezasEscaneadasController : Controller
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
             .ToList();
 
+        // --- Totales ---
         var totalPiezas = producciones.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0);
         var totalDefectos = defectos.Count;
+        var totalBuenas = totalPiezas - totalDefectos;
 
-        // --- Top TMs ---
-        var topTMs = producciones
-            .Where(r => !string.IsNullOrWhiteSpace(r.Tm))
-            .GroupBy(r => r.Tm.Trim())
-            .Select(g => new TopTMViewModel
-            {
-                TM = g.Key,
-                TotalPiezas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0)
-            })
-            .OrderByDescending(t => t.TotalPiezas)
-            .Take(3)
-            .ToList();
+        // --- FPY y Scrap ---
+        double fpy = totalPiezas > 0 ? (double)totalBuenas / totalPiezas * 100 : 0;
+        double scrap = totalPiezas > 0 ? (double)totalDefectos / totalPiezas * 100 : 0;
 
-        // --- Top Defectos ---
-        var topDefectos = defectos
-            .Where(d => !string.IsNullOrWhiteSpace(d.Defecto))
-            .GroupBy(d => d.Defecto.Trim())
-            .Select(g => new TopDefectoViewModel
-            {
-                Defecto = g.Key,
-                Cantidad = g.Count()
-            })
-            .OrderByDescending(d => d.Cantidad)
-            .Take(3)
-            .ToList();
+        // --- Defectos por categoría ---
+        int defectosPrintIllegible = defectos.Count(d => new[] { "17a", "17b", "21" }.Contains(d.CodigodeDefecto));
+        int defectosMaterialLub = defectos.Count(d => new[] { "17a", "17b", "21", "54" }.Contains(d.CodigodeDefecto));
+        int defectosVulcanization = defectos.Count(d => new[] { "17a", "17b", "21", "54", "59" }.Contains(d.CodigodeDefecto));
+        int defectosUncured = defectos.Count(d => new[] { "17a", "17b", "21", "54", "59", "23" }.Contains(d.CodigodeDefecto));
 
-        // --- Producción por turno ---
-        var porTurno = producciones
-            .Where(r => !string.IsNullOrWhiteSpace(r.Turno))
-            .GroupBy(r => r.Turno.Trim())
-            .Select(g => new ProduccionPorTurnoViewModel
-            {
-                Turno = g.Key,
-                TotalPiezas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0)
-            })
-            .OrderBy(g => int.TryParse(g.Turno, out var turnoNum) ? turnoNum : int.MaxValue)
-            .ToList();
+        double porcPrintIllegible = totalDefectos > 0 ? (double)defectosPrintIllegible / totalDefectos * 100 : 0;
+        double porcMaterialLub = totalDefectos > 0 ? (double)defectosMaterialLub / totalDefectos * 100 : 0;
+        double porcVulcanization = totalDefectos > 0 ? (double)defectosVulcanization / totalDefectos * 100 : 0;
+        double porcUncured = totalDefectos > 0 ? (double)defectosUncured / totalDefectos * 100 : 0;
 
         var viewModel = new DashboardResumenViewModel
         {
             TotalPiezas = totalPiezas,
             TotalDefectos = totalDefectos,
-            TopTeamMembers = topTMs,
-            TopDefectos = topDefectos,
-            ProduccionPorTurno = porTurno
+            FPY = fpy,
+            Scrap = scrap,
+            PorcentajePrintIllegible = porcPrintIllegible,
+            PorcentajeMaterialLub = porcMaterialLub,
+            PorcentajeVulcanization = porcVulcanization,
+            PorcentajeUncured = porcUncured
         };
+
 
         // --- Producción por turno (para Chart.js) ---
         var produccionPorTurno = producciones
@@ -700,6 +687,9 @@ public class PiezasEscaneadasController : Controller
             );
 
         // --- Preparar datos para Chart.js ---
+        ViewBag.FechaSeleccionada = fechaSeleccionada.ToString("yyyy-MM-dd");
+        ViewBag.FechaTitulo = fechaSeleccionada.ToString("dd MMMM yyyy");
+
         ViewBag.MesaLabels = produccionPorMesaYTurno.Keys.ToList();
         ViewBag.Turno1PorMesa = produccionPorMesaYTurno.Values.Select(m => m.ContainsKey("1") ? m["1"] : 0).ToList();
         ViewBag.Turno2PorMesa = produccionPorMesaYTurno.Values.Select(m => m.ContainsKey("2") ? m["2"] : 0).ToList();
@@ -718,7 +708,6 @@ public class PiezasEscaneadasController : Controller
 
         return View(viewModel);
     }
-
 
     [HttpPost]
     public async Task<IActionResult> GetProduccion([FromForm] DataTablesRequest request, string fecha, string turno)
@@ -758,12 +747,12 @@ public class PiezasEscaneadasController : Controller
             query = query.Where(x => x.Turno == turno);
         }
 
-        // Filtro global
+        // Filtro global busqueda
         if (!string.IsNullOrEmpty(request.Search?.Value))
         {
             var search = request.Search.Value.ToLower();
             query = query.Where(x =>
-                x.Mandrel.ToString().Contains(search) ||
+                x.Mandrel.ToLower().Contains(search) ||
                 x.Tm.ToLower().Contains(search) ||
                 x.NuMesa.ToLower().Contains(search));
         }
@@ -794,8 +783,6 @@ public class PiezasEscaneadasController : Controller
             data = data
         });
     }
-
-
 
 }
 

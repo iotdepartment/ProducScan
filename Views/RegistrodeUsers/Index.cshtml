@@ -1,12 +1,12 @@
 ﻿@{
-    ViewData["Title"] = "Usuarios";
+    ViewData["Title"] = "Team Members";
+    ViewData["Subtitle"] = "Team Members registrados en el Sistema de escaneo de Inspección.";
 }
-
-<h2>Usuarios</h2>
 
 <button class="btn btn-success mb-3 rounded rounded-pill" data-bs-toggle="modal" data-bs-target="#createEditModal"
         onclick="openCreateModal()">
-    Nuevo Usuario
+    <i class="bi bi-person-plus"></i>
+    Nuevo Team Member
 </button>
 
 <table id="usersTable" class="table table-striped table-bordered">
@@ -76,10 +76,11 @@
                     { data: "nombre" },
                     {
                         data: "id",
+                                                
                         render: function (data, type, row) {
                             return `
-                                <button class="btn btn-sm btn-warning" onclick="openEditModal(${data}, '${row.numerodeEmpleado}', '${row.nombre}')">Editar</button>
-                                <button class="btn btn-sm btn-danger" onclick="openDeleteModal(${data})">Eliminar</button>
+                                <button class="btn btn-sm btn-warning rounded-pill" onclick="openEditModal(${data}, '${row.numerodeEmpleado}', '${row.nombre}')"> <i class="bi bi-pencil-fill"></i></button>
+                                <button class="btn btn-sm btn-danger rounded-pill" onclick="openDeleteModal(${data})"><i class="bi bi-trash-fill"></i></button>
                             `;
                         }
                     }
@@ -148,7 +149,7 @@
             $(this).find('form').removeClass('was-validated');
         });
 
-                  function openCreateModal() {
+        function openCreateModal() {
             document.getElementById("modalTitle").innerText = "Crear Usuario";
             document.getElementById("createEditForm").action = "/RegistrodeUsers/Create";
             document.getElementById("userId").value = ""; // 👈 vacío en create
@@ -157,7 +158,7 @@
         }
 
 
-                    function openEditModal(id, numero, nombre) {
+        function openEditModal(id, numero, nombre) {
             document.getElementById("modalTitle").innerText = "Editar Usuario";
             document.getElementById("createEditForm").action = "/RegistrodeUsers/Edit";
             document.getElementById("userId").value = id; // 👈 aquí sí existe

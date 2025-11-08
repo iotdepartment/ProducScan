@@ -2,9 +2,9 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @model ProduccionFiltroViewModel
 @{
-    ViewData["Title"] = "Reporte Produccion";
-    ViewData["PageTitle"] = "Reporte Produccion";
-    ViewData["PageDescription"] = "Reporte de Produccion Inspeccion";
+    ViewData["Title"] = "Reporte Inspección";
+    ViewData["PageTitle"] = "Reporte Inspección";
+    ViewData["Subtitle"] = "Reporte del sistema de Escaneo de Inspección.";
 
 }
 @{
@@ -21,13 +21,13 @@
     <div class="row">
         @if (User.IsInRole("Admin"))
         {
-            <div class="col-2 mb-3">
+            <div class="col-sm-6 col-md-4 col-lg-3 col-xxl-2 mb-3">
                 <button class="btn btn-danger rounded-pill" id="btnNuevoDefecto">
                     + Nuevo Defecto
                 </button>
             </div>
         }
-        <div class="col-2 mb-3">
+        <div class="col-sm-6 col-md-4 col-lg-3 col-xxl-2  mb-3">
             <button class="btn btn-success rounded-pill" id="btnNuevo">+ Nuevo Registro</button>
         </div>
 
@@ -80,7 +80,7 @@
         </div>
 
         <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100 rounded-pill">Filtrar</button>
+            <button type="submit" class="btn btn-primary w-100 rounded-pill">Filtrar <i class="bi bi-search"></i></button>
         </div>
 
         <div class="col-md-3">
@@ -108,12 +108,29 @@
 </div>
 @section Scripts {
 
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <!-- Asegúrate de tener Bootstrap JS bundle cargado en tu layout:
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script> -->
+    <!-- Asegúrate de tener Bootstrap JS bundle cargado en tu layout:-->
+
 
     <script>
 
+
+                $(document).ready(function () {
+            $("#busqueda").on("keyup", function () {
+                var value = $(this).val().toLowerCase();
+
+                // Recorre cada item del acordeón
+                $("#reporteAccordion .accordion-item").filter(function () {
+                    // Tomamos todo el texto del encabezado y del cuerpo
+                    var text = $(this).text().toLowerCase();
+
+                    // Mostrar/ocultar según si contiene el texto buscado
+                    $(this).toggle(text.indexOf(value) > -1);
+                });
+            });
+        });
 
         // Se dispara cuando cualquiera de los dos modales se muestra
         $(document).on("shown.bs.modal", "#createProduccModal, #createDefectoModal", function () {
@@ -209,15 +226,15 @@
                             $form.closest(".modal").modal("hide");
                             refreshAccordion();
                         } else {
-                            // 👇 mostramos el mensaje principal
+                            // mostramos el mensaje principal
                             let msg = res.message || "Error desconocido";
 
-                            // 👇 si hay errores de modelo, los concatenamos
+                            // si hay errores de modelo, los concatenamos
                             if (res.errors && res.errors.length > 0) {
                                 msg += " → " + res.errors.join(", ");
                             }
 
-                            // 👇 si hay stacktrace, lo mandamos a consola para debug
+                            // si hay stacktrace, lo mandamos a consola para debug
                             if (res.stack) {
                                 console.error("StackTrace:", res.stack);
                             }
@@ -257,6 +274,3 @@
     </script>
 
 }
-
-
-

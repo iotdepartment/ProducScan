@@ -8,6 +8,7 @@ public class ProduccionFiltroViewModel
 
     public DateOnly Fecha { get; set; }
 
+    public string? Tm { get; set; }
     public TimeOnly Hora { get;  set; }
     public string? Turno { get; set; }
     public string? Mesa { get; set; }

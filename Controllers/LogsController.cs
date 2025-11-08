@@ -36,51 +36,30 @@ namespace ProducScan.Controllers
         }
 
         [Authorize(Roles = "Admin")]
-        public IActionResult TablaLogs(string? nivel = "all", string? categoria = "all", DateTime? fecha = null, int page = 1, int pageSize = 10)
+        public IActionResult TablaLogs(string? nivel = "all", string? categoria = "all", DateTime? fecha = null)
+        {
+            var query = _context.Logs.AsQueryable();
+
+            if (!string.IsNullOrWhiteSpace(nivel) && nivel != "all")
+                query = query.Where(l => l.Nivel == nivel);
+
+            if (!string.IsNullOrWhiteSpace(categoria) && categoria != "all")
+                query = query.Where(l => l.Categoria == categoria);
+
+            if (fecha.HasValue)
             {
-                // Base query
-                var query = _context.Logs.AsQueryable();
-
-                // Filtros
-                if (!string.IsNullOrWhiteSpace(nivel) && nivel != "all")
-                    query = query.Where(l => l.Nivel == nivel);
-
-                if (!string.IsNullOrWhiteSpace(categoria) && categoria != "all")
-                    query = query.Where(l => l.Categoria == categoria);
-
-                if (fecha.HasValue)
-                {
-                    var day = fecha.Value.Date;
-                    var nextDay = day.AddDays(1);
-                    query = query.Where(l => l.Fecha >= day && l.Fecha < nextDay);
-                }
-
-                // Total después de filtros
-                var totalFiltrados = query.Count();
-
-                // Paginación sobre el conjunto filtrado
-                var logs = query
-                    .OrderByDescending(l => l.Fecha)
-                    .Skip((page - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToList();
-
-                // Calcular total de páginas
-                var totalPaginas = (int)Math.Ceiling(totalFiltrados / (double)pageSize);
-
-                // Pasar datos a la vista parcial
-                ViewBag.Page = page;
-                ViewBag.PageSize = pageSize;
-                ViewBag.TotalPaginas = totalPaginas;
-                ViewBag.TotalFiltrados = totalFiltrados;
-
-                // Echo de filtros para que el JS los restaure
-                ViewBag.Nivel = nivel ?? "all";
-                ViewBag.Categoria = categoria ?? "all";
-                ViewBag.Fecha = fecha?.ToString("yyyy-MM-dd") ?? "";
-
-                return PartialView("_TablaLogs", logs);
+                var day = fecha.Value.Date;
+                var nextDay = day.AddDays(1);
+                query = query.Where(l => l.Fecha >= day && l.Fecha < nextDay);
             }
+
+            var logs = query
+            .OrderByDescending(l => l.Fecha)
+            .ToList();
+
+            return PartialView("_TablaLogs", logs);
+        }
+
 
     }
 }

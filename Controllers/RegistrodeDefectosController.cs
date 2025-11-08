@@ -392,13 +392,10 @@ public class RegistrodeDefectosController : Controller
         {
             var search = request.Search.Value.ToLower();
             query = query.Where(x =>
-                x.Mandrel.ToString().Contains(search) ||
+                x.Mandrel.ToLower().Contains(search) ||
                 x.CodigodeDefecto.ToLower().Contains(search) ||
                 x.NuMesa.ToLower().Contains(search) ||
-                x.Tm.ToLower().Contains(search) ||
-                x.Turno.ToString().Contains(search) ||
-                x.Fecha.ToString().Contains(search) ||
-                x.Hora.ToString().Contains(search)
+                x.Tm.ToLower().Contains(search)
             );
         }
 

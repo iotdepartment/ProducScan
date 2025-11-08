@@ -80,8 +80,6 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=PiezasEscaneadas}/{action=Dashboard}/{id?}");
 
-
-
 app.Run();
 
 // Función de hashing simple (sin librerías externas)

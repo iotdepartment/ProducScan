@@ -4,6 +4,20 @@
     bool isLoginPage = currentController == "Auth" && currentAction == "Login";
 
 }
+@using ProducScan.Helpers
+@{
+    var fechaActual = DateTime.Now;
+    var horaActual = fechaActual.TimeOfDay;
+
+    string turnoActual;
+    if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+        turnoActual = "Turno 1";
+    else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+        turnoActual = "Turno 2";
+    else
+        turnoActual = "Turno 3";
+}
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -91,10 +105,6 @@
             </a>
 
             <hr />
-
-
-
-
                 <ul class="navbar-nav">
 
                     <!-- Dashboard -->
@@ -115,7 +125,7 @@
                             bool produccionOpen =
                             (currentController == "PiezasEscaneadas" && (currentAction == "Index" || currentAction == "ReporteProduccion" || currentAction == "DetalleProduccionMesa" || currentAction == "DetallePorUsuario"))
                             || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios"))
-                            || (currentController == "RegistrodeUsers" && (currentAction == "Index"));
+                            || (currentController == "RegistrodeUsers" && (currentAction == "Index") || currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
                         }
                             <a class="nav-link d-flex align-items-center w-100 @(produccionOpen ? "active fw-bold bg-primary text-white" : "text-dark")"
                                 data-bs-toggle="collapse" href="#produccionSubmenu" role="button"
@@ -167,6 +177,15 @@
                                     <span class="ms-2 sidebar-text">Reporte de producción</span>
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                                   asp-controller="PiezasEscaneadas" asp-action="InspeccionTM">
+                                    <span class="d-flex justify-content-center" style="width:40px;">
+                                        <i class="bi bi-list-ul"></i>
+                                    </span>
+                                    <span class="ms-2 sidebar-text">Inspección por TM</span>
+                                </a>
+                            </li>
                             @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                                 {
                                     <li class="nav-item">
@@ -196,8 +215,6 @@
                         </li>
                     }
                 </ul>
-
-
 
                 <hr />
                 <div class="mt-auto">
@@ -289,14 +306,45 @@
                 </div>
             </nav>
 
+
             <!-- Contenido principal -->
             <div id="mainContent" class="flex-grow-1 p-4">
-                <div class="container bg-body rounded-4 shadow-lg mb-3">
-                    <main role="main" class="p-5">
-                        @RenderBody()
-                    </main>
+
+                <!-- Card de título de la vista -->
+                <div class="container mb-3">
+                    <div class="card shadow-sm border-0 rounded-pill">
+                        <div class="card-body d-flex align-items-center justify-content-between m-3">
+                            <div>
+                                <h4 class="card-title mb-0 fw-bold">
+                                    <i class="bi bi-window me-2 text-primary"></i> @ViewData["Title"]
+                                </h4>
+                                <small class="text-muted">@ViewData["Subtitle"]</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="fw-semibold text-primary">
+                                    <i class="bi bi-calendar-date me-1"></i> @fechaActual.ToString("dd MMMM yyyy HH:mm")
+                                </span><br />
+                                <span class="fw-semibold text-success">
+                                    <i class="bi bi-clock-history me-1"></i> @turnoActual
+                                </span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Card principal de contenido -->
+                <div class="container  mb-3">
+                    <div class="card shadow-sm border-0 rounded-4">
+                        <main role="main" class="p-5">
+                            @RenderBody()
+                        </main>
+                    </div>
+                </div>
+
             </div>
+
+
+
         </div>
     }
     else
