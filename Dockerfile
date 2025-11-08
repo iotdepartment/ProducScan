@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Copiar solo el csproj primero
+# Copiar el archivo de proyecto primero y restaurar dependencias
 COPY ProducScan.csproj .
 RUN dotnet restore ProducScan.csproj
 
