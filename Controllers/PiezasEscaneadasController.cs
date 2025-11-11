@@ -100,11 +100,24 @@ public class PiezasEscaneadasController : Controller
             string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
 
             string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
-            string fotoPath = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.JPG");
 
-            string fotoUrl = System.IO.File.Exists(fotoPath)
-                ? $"/images/tm/{numeroEmpleadoFoto}.JPG"
-                : "/images/tm/thumbnail.png";
+            // Rutas posibles
+            string fotoPathJPG = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.JPG");
+            string fotoPathjpg = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.jpg");
+
+            string fotoUrl;
+            if (System.IO.File.Exists(fotoPathJPG))
+            {
+                fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.JPG";
+            }
+            else if (System.IO.File.Exists(fotoPathjpg))
+            {
+                fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.jpg";
+            }
+            else
+            {
+                fotoUrl = "/images/tm/thumbnail.png";
+            }
 
             int piezasMalas = defectos.FirstOrDefault(d => d.TM == p.TM)?.PiezasMalas ?? 0;
             int total = p.PiezasBuenas + piezasMalas;
