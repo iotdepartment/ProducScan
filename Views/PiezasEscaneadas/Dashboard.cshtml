@@ -47,7 +47,7 @@
                     <h6 for="fecha" class="fw-bold">Seleccionar fecha:</h6>
                     <input type="date" id="fecha" name="fecha" class="form-control rounded-pill"
                            value="@ViewBag.FechaSeleccionada"
-                           max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                           max="@TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)")).ToString("yyyy-MM-dd")" />
                 </div>
                 <div class="mt-2 col-md-6 col-xl-2 d-flex align-items-end ">
                     <button type="submit" class="btn btn-primary w-100 rounded-pill"> <i class="bi bi-search"></i> Buscar</button>

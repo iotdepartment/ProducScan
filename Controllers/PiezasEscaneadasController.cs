@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using Azure;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -40,11 +41,97 @@ public class PiezasEscaneadasController : Controller
     }
 
 
-    [HttpGet]
-    public async Task<IActionResult> InspeccionTM(int page = 1)
-    { 
-        return View();
+    public IActionResult InspeccionTM(DateTime? fecha, string turno)
+    {
+        // Zona horaria de Matamoros
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        var fechaSeleccionada = fecha ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
+
+        // Determinar turno
+        string turnoSeleccionado = turno;
+        if (string.IsNullOrEmpty(turnoSeleccionado))
+        {
+            var horaActual = fechaSeleccionada.TimeOfDay;
+            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+                turnoSeleccionado = "1";
+            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+                turnoSeleccionado = "2";
+            else
+                turnoSeleccionado = "3";
+        }
+
+        // Meta según turno
+        int meta = turnoSeleccionado == "1" ? 1800 :
+                   turnoSeleccionado == "2" ? 1800 : 1200;
+
+        var usuarios = _context.Users.ToList();
+
+        // --- Producciones ---
+        var producciones = _context.RegistrodePiezasEscaneadas
+            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
+            .ToList()
+            .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+                        && r.Turno == turnoSeleccionado)
+            .GroupBy(r => r.Tm)
+            .Select(g => new
+            {
+                TM = g.Key,
+                PiezasBuenas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0)
+            })
+            .ToList();
+
+        // --- Defectos ---
+        var defectos = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
+            .ToList()
+            .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+                        && d.Turno == turnoSeleccionado)
+            .GroupBy(d => d.Tm)
+            .Select(g => new { TM = g.Key, PiezasMalas = g.Count() })
+            .ToList();
+
+        // --- ViewModel ---
+        var model = producciones.Select(p =>
+        {
+            var usuario = usuarios.FirstOrDefault(u => u.Nombre == p.TM);
+            string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
+
+            string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
+            string fotoPath = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.JPG");
+
+            string fotoUrl = System.IO.File.Exists(fotoPath)
+                ? $"/images/tm/{numeroEmpleadoFoto}.JPG"
+                : "/images/tm/thumbnail.png";
+
+            int piezasMalas = defectos.FirstOrDefault(d => d.TM == p.TM)?.PiezasMalas ?? 0;
+            int total = p.PiezasBuenas + piezasMalas;
+
+            string color = total >= meta ? "bg-success-subtle text-success"
+                         : total >= meta * 0.8 ? "bg-warning-subtle"
+                         : "bg-danger-subtle text-white";
+
+            return new InspeccionTMViewModel
+            {
+                TM = p.TM,
+                NumeroEmpleado = numeroEmpleadoBD,
+                FotoUrl = fotoUrl,
+                PiezasBuenas = p.PiezasBuenas,
+                PiezasMalas = piezasMalas,
+                TotalPiezas = total,
+                Meta = meta,
+                ColorCard = color
+            };
+        }).ToList();
+
+        ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
+        ViewBag.TurnoSeleccionado = turnoSeleccionado;
+
+        return View(model);
     }
+
 
     //METODOS PARA CREAR, ACTUALIZAR Y ELIMINAR PRODUCCION
     [Authorize(Roles = "Admin,Editor")]
@@ -592,7 +679,10 @@ public class PiezasEscaneadasController : Controller
     //DASHBOARD DINAMICO
     public IActionResult Dashboard(DateTime? fecha)
     {
-        var fechaSeleccionada = fecha ?? DateTime.Today;
+        // Zona horaria de Matamoros
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        // Si no se seleccionó fecha, usar la fecha local de Matamoros
+        var fechaSeleccionada = fecha ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
         // --- Producciones ---
@@ -620,16 +710,20 @@ public class PiezasEscaneadasController : Controller
         double fpy = totalPiezas > 0 ? (double)totalBuenas / totalPiezas * 100 : 0;
         double scrap = totalPiezas > 0 ? (double)totalDefectos / totalPiezas * 100 : 0;
 
-        // --- Defectos por categoría ---
-        int defectosPrintIllegible = defectos.Count(d => new[] { "17a", "17b", "21" }.Contains(d.CodigodeDefecto));
-        int defectosMaterialLub = defectos.Count(d => new[] { "17a", "17b", "21", "54" }.Contains(d.CodigodeDefecto));
-        int defectosVulcanization = defectos.Count(d => new[] { "17a", "17b", "21", "54", "59" }.Contains(d.CodigodeDefecto));
-        int defectosUncured = defectos.Count(d => new[] { "17a", "17b", "21", "54", "59", "23" }.Contains(d.CodigodeDefecto));
+        // --- Defectos por categoría (excluyendo los códigos indicados) ---
+        int defectosPrintIllegible = defectos.Count(d => !new[] { "17a", "17b", "21" }.Contains(d.CodigodeDefecto));
+        int defectosMaterialLub = defectos.Count(d => !new[] { "17a", "17b", "21", "54" }.Contains(d.CodigodeDefecto));
+        int defectosVulcanization = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24" }.Contains(d.CodigodeDefecto));
+        int defectosUncured = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24", "23" }.Contains(d.CodigodeDefecto));
 
-        double porcPrintIllegible = totalDefectos > 0 ? (double)defectosPrintIllegible / totalDefectos * 100 : 0;
-        double porcMaterialLub = totalDefectos > 0 ? (double)defectosMaterialLub / totalDefectos * 100 : 0;
-        double porcVulcanization = totalDefectos > 0 ? (double)defectosVulcanization / totalDefectos * 100 : 0;
-        double porcUncured = totalDefectos > 0 ? (double)defectosUncured / totalDefectos * 100 : 0;
+        // --- Porcentajes (respecto al total de defectos) ---
+        double porcPrintIllegible = totalDefectos > 0 ? (double)defectosPrintIllegible / totalPiezas * 100 : 0;
+        double porcMaterialLub = totalDefectos > 0 ? (double)defectosMaterialLub / totalPiezas * 100 : 0;
+        double porcVulcanization = totalDefectos > 0 ? (double)defectosVulcanization / totalPiezas * 100 : 0;
+        double porcUncured = totalDefectos > 0 ? (double)defectosUncured / totalPiezas * 100 : 0;
+
+
+
 
         var viewModel = new DashboardResumenViewModel
         {
@@ -687,9 +781,6 @@ public class PiezasEscaneadasController : Controller
             );
 
         // --- Preparar datos para Chart.js ---
-        ViewBag.FechaSeleccionada = fechaSeleccionada.ToString("yyyy-MM-dd");
-        ViewBag.FechaTitulo = fechaSeleccionada.ToString("dd MMMM yyyy");
-
         ViewBag.MesaLabels = produccionPorMesaYTurno.Keys.ToList();
         ViewBag.Turno1PorMesa = produccionPorMesaYTurno.Values.Select(m => m.ContainsKey("1") ? m["1"] : 0).ToList();
         ViewBag.Turno2PorMesa = produccionPorMesaYTurno.Values.Select(m => m.ContainsKey("2") ? m["2"] : 0).ToList();
@@ -704,7 +795,7 @@ public class PiezasEscaneadasController : Controller
         ViewBag.ProduccionTurnoData = produccionPorTurno.Select(x => x.Total).ToList();
 
         ViewBag.FechaSeleccionada = fechaSeleccionada.ToString("yyyy-MM-dd");
-        ViewBag.FechaTitulo = fechaSeleccionada.ToString("dd MMMM yyyy");
+        //ViewBag.FechaTitulo = fechaSeleccionada.ToString("dd MMMM yyyy");
 
         return View(viewModel);
     }
