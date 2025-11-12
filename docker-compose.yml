@@ -6,6 +6,13 @@ services:
     container_name: producscan
     ports:
       - "10000:8080"   # Expones el puerto 8080 del contenedor en el 10000 del servidor
-    environment:
+    environment:    
       - ConnectionStrings__DefaultConnection=Server=10.195.10.166,1433;Database=ScanSystemDB;User Id=manu; Password=2022.Tgram2;TrustServerCertificate=True;
+    restart: always
+    
+  hora:
+    image: iotdepartment/mi-hora-app:latest
+    container_name: mi-hora-app
+    ports:
+      - "14000:8080"   # Expones el puerto 8080 del contenedor en el 10000 del servidor
     restart: always
