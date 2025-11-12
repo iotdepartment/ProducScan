@@ -8,6 +8,7 @@ using ProducScan.Models;
 using ProducScan.Services;
 using ProducScan.ViewModels;
 using ProducScan.ViewModels.Dashboard;
+using System.Drawing;
 using System.Globalization;
 using System.Linq.Dynamic.Core;
 
@@ -35,24 +36,46 @@ public class PiezasEscaneadasController : Controller
         ViewBag.Mesas = _context.Mesas.ToList();
         ViewBag.Usuarios = _context.Users.ToList();
 
+        // --- Determinar turno actual ---
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        var horaActual = ahora.TimeOfDay;
+
+        string turnoSeleccionado;
+        if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+            turnoSeleccionado = "1";
+        else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+            turnoSeleccionado = "2";
+        else
+            turnoSeleccionado = "3";
+
+        // --- Fecha laboral (usando ProduccionHelper) ---
+        var fechaLaboral = DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora));
+
+        // ✅ Pasar turno y fecha laboral a la vista
+        ViewBag.TurnoSeleccionado = turnoSeleccionado;
+        ViewBag.FechaSeleccionada = fechaLaboral.ToString("yyyy-MM-dd");
+
         var paginated = await PaginatedList<RegistrodePiezasEscaneada>.CreateAsync(Escaneadas, page, pageSize);
 
         return View(paginated);
     }
 
-
     public IActionResult InspeccionTM(DateTime? fecha, string turno)
     {
         // Zona horaria de Matamoros
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        var fechaSeleccionada = fecha ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+        // Si no se seleccionó fecha, usar la fecha laboral local de Matamoros
+        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
         // Determinar turno
         string turnoSeleccionado = turno;
         if (string.IsNullOrEmpty(turnoSeleccionado))
         {
-            var horaActual = fechaSeleccionada.TimeOfDay;
+            var horaActual = ahora.TimeOfDay; // 👈 usar la hora actual local
             if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
                 turnoSeleccionado = "1";
             else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
@@ -61,10 +84,8 @@ public class PiezasEscaneadasController : Controller
                 turnoSeleccionado = "3";
         }
 
-        // Meta según turno
-        int meta = turnoSeleccionado == "1" ? 1800 :
-                   turnoSeleccionado == "2" ? 1800 : 1200;
-
+        // Meta fija para todos los turnos
+        int meta = 1800;
         var usuarios = _context.Users.ToList();
 
         // --- Producciones ---
@@ -74,10 +95,11 @@ public class PiezasEscaneadasController : Controller
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
                         && r.Turno == turnoSeleccionado)
-            .GroupBy(r => r.Tm)
+            .GroupBy(r => new { r.NuMesa, r.Tm })
             .Select(g => new
             {
-                TM = g.Key,
+                Mesa = g.Key.NuMesa,
+                TM = g.Key.Tm,
                 PiezasBuenas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0)
             })
             .ToList();
@@ -89,16 +111,14 @@ public class PiezasEscaneadasController : Controller
             .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
                         && d.Turno == turnoSeleccionado)
-            .GroupBy(d => d.Tm)
-            .Select(g => new { TM = g.Key, PiezasMalas = g.Count() })
+            .GroupBy(d => new { d.NuMesa, d.Tm })
+            .Select(g => new { Mesa = g.Key.NuMesa, TM = g.Key.Tm, PiezasMalas = g.Count() })
             .ToList();
 
-        // --- ViewModel ---
         var model = producciones.Select(p =>
         {
             var usuario = usuarios.FirstOrDefault(u => u.Nombre == p.TM);
             string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
-
             string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
 
             // Rutas posibles
@@ -107,28 +127,31 @@ public class PiezasEscaneadasController : Controller
 
             string fotoUrl;
             if (System.IO.File.Exists(fotoPathJPG))
-            {
                 fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.JPG";
-            }
             else if (System.IO.File.Exists(fotoPathjpg))
-            {
                 fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.jpg";
-            }
             else
-            {
                 fotoUrl = "/images/tm/thumbnail.png";
-            }
 
-            int piezasMalas = defectos.FirstOrDefault(d => d.TM == p.TM)?.PiezasMalas ?? 0;
+            int piezasMalas = defectos.FirstOrDefault(d => d.TM == p.TM && d.Mesa == p.Mesa)?.PiezasMalas ?? 0;
             int total = p.PiezasBuenas + piezasMalas;
 
-            string color = total >= meta ? "bg-success-subtle text-success"
-                         : total >= meta * 0.8 ? "bg-warning-subtle"
-                         : "bg-danger-subtle text-white";
+            string color;
+            if (total >= meta + 400)
+                color = "bg-danger-subtle text-danger"; // Sobreproducción
+            else if (total >= meta)
+                color = "bg-success-subtle text-success"; // Cumple meta
+            else if (total >= meta - 400 && total < meta - 100)
+                color = "bg-warning-subtle text-dark"; // Entre 100 y 400 piezas menos
+            else if (total < meta - 400)
+                color = "bg-danger-subtle text-white"; // Más de 400 piezas menos
+            else
+                color = "bg-success-subtle text-success"; // Dentro de la meta
 
             return new InspeccionTMViewModel
             {
                 TM = p.TM,
+                Mesa = p.Mesa,
                 NumeroEmpleado = numeroEmpleadoBD,
                 FotoUrl = fotoUrl,
                 PiezasBuenas = p.PiezasBuenas,
@@ -137,14 +160,19 @@ public class PiezasEscaneadasController : Controller
                 Meta = meta,
                 ColorCard = color
             };
-        }).ToList();
+        })
+        .OrderBy(m =>
+        {
+            var digits = new string(m.Mesa.Where(char.IsDigit).ToArray());
+            return int.TryParse(digits, out int num) ? num : int.MaxValue;
+        })
+        .ToList();
 
         ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
         ViewBag.TurnoSeleccionado = turnoSeleccionado;
 
         return View(model);
     }
-
 
     //METODOS PARA CREAR, ACTUALIZAR Y ELIMINAR PRODUCCION
     [Authorize(Roles = "Admin,Editor")]
@@ -372,35 +400,59 @@ public class PiezasEscaneadasController : Controller
     //REPORTE DE PRODUCCION GENERAL
     public IActionResult ReporteProduccion(DateOnly? fecha, string? turno, string? mesa)
     {
+        // --- Fecha laboral ---
         if (!fecha.HasValue)
-            fecha = DateOnly.FromDateTime(DateTime.Today);
+        {
+            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+            fecha = DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora));
+        }
 
         var fechaFiltro = fecha.Value;
 
-        // Traer rango en SQL y luego aplicar helper en memoria
+        // --- Determinar turno actual si no se seleccionó ---
+        string turnoSeleccionado = turno;
+        if (string.IsNullOrWhiteSpace(turnoSeleccionado))
+        {
+            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+            var horaActual = ahora.TimeOfDay;
+
+            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+                turnoSeleccionado = "1";
+            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+                turnoSeleccionado = "2";
+            else
+                turnoSeleccionado = "3";
+        }
+
+        // --- Producciones ---
         var registros = _context.RegistrodePiezasEscaneadas
             .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
-            .ToList() // materializamos
+            .ToList()
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date);
-
-        if (!string.IsNullOrWhiteSpace(turno))
-            registros = registros.Where(r => r.Turno.Trim().ToLower() == turno.Trim().ToLower());
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
+            .Where(r => r.Turno.Trim().Equals(turnoSeleccionado, StringComparison.OrdinalIgnoreCase));
 
         if (!string.IsNullOrWhiteSpace(mesa))
-            registros = registros.Where(r => r.NuMesa.Trim().ToLower() == mesa.Trim().ToLower());
+            registros = registros.Where(r => r.NuMesa.Trim().Equals(mesa.Trim(), StringComparison.OrdinalIgnoreCase));
 
+        // --- Defectos ---
         var defectos = _context.RegistrodeDefectos
             .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
             .ToList()
             .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
-            .Where(d => string.IsNullOrWhiteSpace(turno) || d.Turno.Trim().Equals(turno.Trim(), StringComparison.OrdinalIgnoreCase))
+            .Where(d => d.Turno.Trim().Equals(turnoSeleccionado, StringComparison.OrdinalIgnoreCase))
             .Where(d => string.IsNullOrWhiteSpace(mesa) || d.NuMesa.Trim().Equals(mesa.Trim(), StringComparison.OrdinalIgnoreCase))
             .Where(d => !string.IsNullOrEmpty(d.Defecto) && !string.IsNullOrEmpty(d.Mandrel))
             .ToList();
 
-        // Mesas disponibles (solo las que tienen producción o defectos en la fecha/turno)
+        // --- ViewBag ---
+        ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
+        ViewBag.TurnoSeleccionado = turnoSeleccionado;
+
+        // --- Mesas disponibles ---
         var mesasDisponibles = registros
             .Select(r => r.NuMesa.Trim())
             .Union(defectos.Select(d => d.NuMesa.Trim()))
@@ -415,13 +467,10 @@ public class PiezasEscaneadasController : Controller
             })
             .ToList();
 
-
         ViewBag.Mesas = mesasDisponibles;
-
 
         // --- Producción agrupada por Mesa+Turno ---
         var datosProduccion = registros
-            .ToList()
             .Where(r => !string.IsNullOrEmpty(r.Ndpiezas) && !string.IsNullOrEmpty(r.Mandrel))
             .Select(r => new
             {
@@ -544,7 +593,7 @@ public class PiezasEscaneadasController : Controller
                         }).ToList(),
                     DefectosPorMandrel = defectosMesa
                         .Where(d => !string.IsNullOrEmpty(d.Mandrel))
-                        .GroupBy(d => d.Mandrel.Trim())
+                            .GroupBy(d => d.Mandrel.Trim())
                         .Select(grp => new DefectoPorMandrelViewModel
                         {
                             Mandrel = grp.Key,
@@ -573,7 +622,7 @@ public class PiezasEscaneadasController : Controller
             Dia = fecha?.Day,
             Mes = fecha?.Month,
             Año = fecha?.Year,
-            Turno = turno,
+            Turno = turnoSeleccionado, // ✅ aquí debe ir el turno calculado
             Mesa = mesa,
             Reporte = datos
         };
@@ -694,8 +743,10 @@ public class PiezasEscaneadasController : Controller
     {
         // Zona horaria de Matamoros
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        // Si no se seleccionó fecha, usar la fecha local de Matamoros
-        var fechaSeleccionada = fecha ?? TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+        // Si no se seleccionó fecha, usar la fecha laboral local de Matamoros
+        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
         // --- Producciones ---
@@ -817,12 +868,10 @@ public class PiezasEscaneadasController : Controller
     public async Task<IActionResult> GetProduccion([FromForm] DataTablesRequest request, string fecha, string turno)
     {
         var baseQuery = _context.RegistrodePiezasEscaneadas.AsQueryable();
-
         List<RegistrodePiezasEscaneada> registros;
 
         if (!string.IsNullOrEmpty(fecha) && DateOnly.TryParse(fecha, out var fechaFiltro))
         {
-            // Traemos un rango de +/-1 día en SQL (solo con DateOnly)
             var fechaInicio = fechaFiltro.AddDays(-1);
             var fechaFin = fechaFiltro.AddDays(1);
 
@@ -830,7 +879,6 @@ public class PiezasEscaneadasController : Controller
                 .Where(x => x.Fecha >= fechaInicio && x.Fecha <= fechaFin)
                 .ToListAsync();
 
-            // Ahora aplicamos el helper en memoria
             registros = registros
                 .Where(x => ProduccionHelper
                     .GetFechaProduccion(x.Fecha.ToDateTime(x.Hora)).Date
@@ -842,16 +890,31 @@ public class PiezasEscaneadasController : Controller
             registros = await baseQuery.ToListAsync();
         }
 
-        // Convertimos a IQueryable para que DataTables pueda seguir aplicando filtros
-        var query = registros.AsQueryable();
-
-        // Filtro por turno
-        if (!string.IsNullOrEmpty(turno))
+        // --- Determinar turno actual si no se seleccionó ---
+        string turnoSeleccionado = turno;
+        if (string.IsNullOrWhiteSpace(turnoSeleccionado))
         {
-            query = query.Where(x => x.Turno == turno);
+            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+            var horaActual = ahora.TimeOfDay;
+
+            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+                turnoSeleccionado = "1";
+            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+                turnoSeleccionado = "2";
+            else
+                turnoSeleccionado = "3";
         }
 
-        // Filtro global busqueda
+        var query = registros.AsQueryable();
+
+        // Filtro por turno (solo si no es "Todos")
+        if (!string.IsNullOrEmpty(turnoSeleccionado))
+        {
+            query = query.Where(x => x.Turno == turnoSeleccionado);
+        }
+
+        // Filtro global búsqueda
         if (!string.IsNullOrEmpty(request.Search?.Value))
         {
             var search = request.Search.Value.ToLower();
@@ -873,7 +936,6 @@ public class PiezasEscaneadasController : Controller
             query = query.OrderBy($"{columnName} {direction}");
         }
 
-        // Paginación
         var data = query
             .Skip(request.Start)
             .Take(request.Length)
@@ -884,7 +946,8 @@ public class PiezasEscaneadasController : Controller
             draw = request.Draw,
             recordsTotal = totalRecords,
             recordsFiltered = filteredRecords,
-            data = data
+            data = data,
+            turnoSeleccionado // ✅ lo devolvemos para que la vista pueda marcar el select
         });
     }
 

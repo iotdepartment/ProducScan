@@ -32,6 +32,29 @@ public class RegistrodeDefectosController : Controller
         ViewBag.Mesas = _context.Mesas.ToList();
         ViewBag.Usuarios = _context.Users.ToList();
 
+        // --- Determinar turno actual ---
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        var horaActual = ahora.TimeOfDay;
+
+        string turnoSeleccionado;
+        if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+            turnoSeleccionado = "1";
+        else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+            turnoSeleccionado = "2";
+        else
+            turnoSeleccionado = "3";
+
+        // Normalizar con ProduccionHelper
+        var fechaLaboral = DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora));
+
+
+        // ✅ Pasar turno y fecha laboral a la vista
+        ViewBag.FechaSeleccionada = fechaLaboral.ToString("yyyy-MM-dd");
+        ViewBag.TurnoSeleccionado = turnoSeleccionado;
+
+
+
         var paginated = await PaginatedList<RegistrodeDefecto>.CreateAsync(registros, page, pageSize);
 
         return View(paginated);
@@ -349,6 +372,7 @@ public class RegistrodeDefectosController : Controller
 
         return View(vm);
     }
+
     [HttpPost]
     public async Task<IActionResult> GetDefectos([FromForm] DataTablesRequest request, string fecha, string turno)
     {
@@ -378,13 +402,29 @@ public class RegistrodeDefectosController : Controller
             registros = await baseQuery.ToListAsync();
         }
 
+        // --- Determinar turno actual si no se seleccionó ---
+        string turnoSeleccionado = turno;
+        if (string.IsNullOrWhiteSpace(turnoSeleccionado))
+        {
+            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+            var horaActual = ahora.TimeOfDay;
+
+            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+                turnoSeleccionado = "1";
+            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+                turnoSeleccionado = "2";
+            else
+                turnoSeleccionado = "3";
+        }
+
         // Convertimos a IQueryable para seguir aplicando filtros
         var query = registros.AsQueryable();
 
-        // Filtro por turno
-        if (!string.IsNullOrEmpty(turno))
+        // ✅ Filtro por turno (solo si no es "Todos")
+        if (!string.IsNullOrEmpty(turnoSeleccionado))
         {
-            query = query.Where(x => x.Turno == turno);
+            query = query.Where(x => x.Turno == turnoSeleccionado);
         }
 
         // Filtro global (búsqueda)
@@ -453,7 +493,8 @@ public class RegistrodeDefectosController : Controller
             draw = request.Draw,
             recordsTotal = totalRecords,
             recordsFiltered = filteredRecords,
-            data = data
+            data = data,
+            turnoSeleccionado // ✅ lo devolvemos para que la vista pueda marcar el select
         });
     }
 }

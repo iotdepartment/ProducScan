@@ -16,16 +16,18 @@
 <!-- Datepicker Producción -->
     <div class="col-md-3">
         <label for="fechaProduccion"><strong>Fecha Inspección</strong></label>
-        <input type="text" id="fechaProduccion" class="form-control  datepicker" />
+        <input type="text" id="fechaProduccion" name="fecha"
+               class="form-control datepicker"
+               value="@ViewBag.FechaSeleccionada" />
     </div>
 
     <div class="col-md-3">
         <label for="turnoFiltro"><strong>Filtrar por Turno</strong></label>
-        <select id="turnoFiltro" class="form-select rounded-pill">
-            <option value="">Todos</option>
-            <option value="1">Turno 1</option>
-            <option value="2">Turno 2</option>
-            <option value="3">Turno 3</option>
+        <select id="turnoFiltro" name="turno" class="form-select rounded-pill">
+            <option value="" selected="@(ViewBag.TurnoSeleccionado == "" ? "selected" : null)">Todos</option>
+            <option value="1" selected="@(ViewBag.TurnoSeleccionado == "1" ? "selected" : null)">Turno 1</option>
+            <option value="2" selected="@(ViewBag.TurnoSeleccionado == "2" ? "selected" : null)">Turno 2</option>
+            <option value="3" selected="@(ViewBag.TurnoSeleccionado == "3" ? "selected" : null)">Turno 3</option>
         </select>
     </div>
 
@@ -71,50 +73,48 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.es.min.js"></script>
     
     <script>
-          $(document).ready(function () {
-                $('.datepicker').datepicker({
-                    format: 'yyyy-mm-dd',
-                    language: 'es',
-                    autoclose: true,
-                    todayHighlight: true
-                });
-                var hoy = new Date();
-                $('#fechaProduccion').datepicker('setDate', hoy);
+                 $(document).ready(function () {
+            $('.datepicker').datepicker({
+                format: 'yyyy-mm-dd',
+                language: 'es',
+                autoclose: true,
+                todayHighlight: true
+            });
 
+            // 👇 Usar la fecha laboral que viene del backend
+            var fechaLaboral = $('#fechaProduccion').val();
+            $('#fechaProduccion').datepicker('setDate', fechaLaboral);
 
-                var tablaProduccion = $('#tablaProduccion').DataTable({
-                    processing: true,
-                    serverSide: true,
-                    ajax: {
-                        url: '/PiezasEscaneadas/GetProduccion',
-                        type: 'POST',
-                        data: function (d) {
-                            d.fecha = $('#fechaProduccion').val(); 
-                            d.turno = $('#turnoFiltro').val();
-                        }
-                    },
-                    columns: [
-                        { data: 'fecha' },
-                        { data: 'hora' },
-                        { data: 'mandrel' },
-                        { data: 'ndpiezas' },
-                        { data: 'turno' },
-                        { data: 'nuMesa' },
-                        { data: 'tm' }
-                    ],
-                    language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
-                });
+            var tablaProduccion = $('#tablaProduccion').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: '/PiezasEscaneadas/GetProduccion',
+                    type: 'POST',
+                    data: function (d) {
+                        d.fecha = $('#fechaProduccion').val();
+                        d.turno = $('#turnoFiltro').val();
+                    }
+                },
+                columns: [
+                    { data: 'fecha' },
+                    { data: 'hora' },
+                    { data: 'mandrel' },
+                    { data: 'ndpiezas' },
+                    { data: 'turno' },
+                    { data: 'nuMesa' },
+                    { data: 'tm' }
+                ],
+                language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
+            });
 
-                // Recargar tablas al cambiar fecha
-                $('#fechaProduccion').on('changeDate', function () {
-                    tablaProduccion.ajax.reload();
-                });
+            $('#fechaProduccion').on('changeDate', function () {
+                tablaProduccion.ajax.reload();
+            });
 
-                // Recargar tabla al cambiar turno
-                $('#turnoFiltro').on('change', function () {
-                    tablaProduccion.ajax.reload();
-                });
-
+            $('#turnoFiltro').on('change', function () {
+                tablaProduccion.ajax.reload();
+            });
         });
 
     </script>

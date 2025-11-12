@@ -50,7 +50,9 @@
     <div class="row">
         <div class="col-md-3">
             <strong>Fecha</strong>
-            <input type="date" name="fecha" class="form-control rounded-pill" value="@fecha" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            <input type="date" name="fecha" class="form-control rounded-pill"
+                   value="@ViewBag.FechaSeleccionada"
+                   max="@TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)")).ToString("yyyy-MM-dd")" />
         </div>
         <div class="col-md-2">
             <strong>Turno</strong>

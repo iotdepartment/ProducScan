@@ -17,16 +17,19 @@
 
     <div class="col-md-3">
         <label for="fechaDefectos"><strong>Fecha Defectos</strong></label>
-        <input type="text" id="fechaDefectos" class="form-control datepicker" />
+        <input type="text" id="fechaDefectos" name="fecha"
+               class="form-control datepicker"
+               value="@ViewBag.FechaSeleccionada" />
     </div>
+
 
     <div class="col-md-3">
         <label for="turnoFiltro"><strong>Filtrar por Turno</strong></label>
-        <select id="turnoFiltro" class="form-select rounded-pill">
-            <option value="">Todos</option>
-            <option value="1">Turno 1</option>
-            <option value="2">Turno 2</option>
-            <option value="3">Turno 3</option>
+        <select id="turnoFiltro" name="turno" class="form-select rounded-pill">
+            <option value="" selected="@(ViewBag.TurnoSeleccionado == "" ? "selected" : null)">Todos</option>
+            <option value="1" selected="@(ViewBag.TurnoSeleccionado == "1" ? "selected" : null)">Turno 1</option>
+            <option value="2" selected="@(ViewBag.TurnoSeleccionado == "2" ? "selected" : null)">Turno 2</option>
+            <option value="3" selected="@(ViewBag.TurnoSeleccionado == "3" ? "selected" : null)">Turno 3</option>
         </select>
     </div>
 
@@ -73,16 +76,17 @@
 
     <script>
 
-         $(document).ready(function () {
-            // Inicializar datepickers con fecha de hoy
-            $('.datepicker').datepicker({
+                 $(document).ready(function () {
+            $('#fechaDefectos').datepicker({
                 format: 'yyyy-mm-dd',
-                language: 'es',
                 autoclose: true,
-                todayHighlight: true
+                todayHighlight: true,
+                language: 'es'
             });
-            var hoy = new Date();
-            $('#fechaDefectos').datepicker('setDate', hoy);
+
+            // 👇 Usar el valor que viene del backend, no la fecha natural
+            var fechaLaboral = $('#fechaDefectos').val();
+            $('#fechaDefectos').datepicker('setDate', fechaLaboral);
 
             // DataTable Defectos
             var tablaDefectos = $('#tablaDefectos').DataTable({
@@ -92,7 +96,7 @@
                     url: '/RegistrodeDefectos/GetDefectos',
                     type: 'POST',
                     data: function (d) {
-                        d.fecha = $('#fechaDefectos').val(); // 👈 enviar fecha seleccionada
+                        d.fecha = $('#fechaDefectos').val(); // enviar fecha laboral
                         d.turno = $('#turnoFiltro').val();
                     }
                 },
@@ -112,11 +116,9 @@
                 tablaDefectos.ajax.reload();
             });
 
-        // Recargar tabla al cambiar turno
-               $('#turnoFiltro').on('change', function () {
-                   tablaDefectos.ajax.reload();
-               });
-
+            $('#turnoFiltro').on('change', function () {
+                tablaDefectos.ajax.reload();
+            });
         });
     </script>
 }
