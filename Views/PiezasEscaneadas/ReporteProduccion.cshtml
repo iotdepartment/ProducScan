@@ -57,7 +57,7 @@
         <div class="col-md-2">
             <strong>Turno</strong>
             <select name="turno" class="form-control rounded-pill">
-                <option value="">Todos</option>
+                <option value="Todos" selected="@(string.IsNullOrEmpty(Model.Turno) || Model.Turno == "Todos")">Todos</option>
                 <option value="1" selected="@(Model.Turno == "1")">1</option>
                 <option value="2" selected="@(Model.Turno == "2")">2</option>
                 <option value="3" selected="@(Model.Turno == "3")">3</option>

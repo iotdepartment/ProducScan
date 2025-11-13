@@ -61,21 +61,19 @@ public class PiezasEscaneadasController : Controller
         return View(paginated);
     }
 
+    [Authorize(Roles = "Admin,Editor,Visual")]
     public IActionResult InspeccionTM(DateTime? fecha, string turno)
     {
-        // Zona horaria de Matamoros
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
         var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
 
-        // Si no se seleccionó fecha, usar la fecha laboral local de Matamoros
         var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
-        // Determinar turno
         string turnoSeleccionado = turno;
         if (string.IsNullOrEmpty(turnoSeleccionado))
         {
-            var horaActual = ahora.TimeOfDay; // 👈 usar la hora actual local
+            var horaActual = ahora.TimeOfDay;
             if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
                 turnoSeleccionado = "1";
             else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
@@ -84,9 +82,9 @@ public class PiezasEscaneadasController : Controller
                 turnoSeleccionado = "3";
         }
 
-        // Meta fija para todos los turnos
         int meta = 1800;
         var usuarios = _context.Users.ToList();
+
 
         // --- Producciones ---
         var producciones = _context.RegistrodePiezasEscaneadas
@@ -115,13 +113,12 @@ public class PiezasEscaneadasController : Controller
             .Select(g => new { Mesa = g.Key.NuMesa, TM = g.Key.Tm, PiezasMalas = g.Count() })
             .ToList();
 
-        var model = producciones.Select(p =>
+        var lista = producciones.Select(p =>
         {
             var usuario = usuarios.FirstOrDefault(u => u.Nombre == p.TM);
             string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
             string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
 
-            // Rutas posibles
             string fotoPathJPG = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.JPG");
             string fotoPathjpg = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.jpg");
 
@@ -138,15 +135,15 @@ public class PiezasEscaneadasController : Controller
 
             string color;
             if (total >= meta + 400)
-                color = "bg-danger-subtle text-danger"; // Sobreproducción
+                color = "bg-danger-subtle text-danger";
             else if (total >= meta)
-                color = "bg-success-subtle text-success"; // Cumple meta
+                color = "bg-success-subtle text-success";
             else if (total >= meta - 400 && total < meta - 100)
-                color = "bg-warning-subtle text-dark"; // Entre 100 y 400 piezas menos
+                color = "bg-warning-subtle text-dark";
             else if (total < meta - 400)
-                color = "bg-danger-subtle text-white"; // Más de 400 piezas menos
+                color = "bg-danger-subtle text-white";
             else
-                color = "bg-success-subtle text-success"; // Dentro de la meta
+                color = "bg-success-subtle text-success";
 
             return new InspeccionTMViewModel
             {
@@ -161,18 +158,25 @@ public class PiezasEscaneadasController : Controller
                 ColorCard = color
             };
         })
-        .OrderBy(m =>
-        {
-            var digits = new string(m.Mesa.Where(char.IsDigit).ToArray());
-            return int.TryParse(digits, out int num) ? num : int.MaxValue;
-        })
-        .ToList();
+    .OrderBy(m =>
+    {
+        var digits = new string(m.Mesa.Where(char.IsDigit).ToArray());
+        return int.TryParse(digits, out int num) ? num : int.MaxValue;
+    })
+    .ToList();
 
+        ViewBag.Año = fechaFiltro.Year;
+        ViewBag.Mes = fechaFiltro.Month;
+        ViewBag.Dia = fechaFiltro.Day;
+        ViewBag.Turno = turnoSeleccionado;
+
+        // ✅ claves que la vista necesita
         ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
         ViewBag.TurnoSeleccionado = turnoSeleccionado;
 
-        return View(model);
+        return View(lista);
     }
+
 
     //METODOS PARA CREAR, ACTUALIZAR Y ELIMINAR PRODUCCION
     [Authorize(Roles = "Admin,Editor")]
@@ -412,7 +416,9 @@ public class PiezasEscaneadasController : Controller
 
         // --- Determinar turno actual si no se seleccionó ---
         string turnoSeleccionado = turno;
-        if (string.IsNullOrWhiteSpace(turnoSeleccionado))
+
+        // Si es null => calcular turno actual
+        if (turnoSeleccionado == null)
         {
             var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
             var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
@@ -431,19 +437,33 @@ public class PiezasEscaneadasController : Controller
             .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
             .ToList()
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
-            .Where(r => r.Turno.Trim().Equals(turnoSeleccionado, StringComparison.OrdinalIgnoreCase));
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date);
+
+        // ✅ aplicar filtro de turno solo si NO es "Todos"
+        if (!string.IsNullOrWhiteSpace(turnoSeleccionado) && !turnoSeleccionado.Equals("Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            registros = registros.Where(r => r.Turno.Trim().Equals(turnoSeleccionado, StringComparison.OrdinalIgnoreCase));
+        }
 
         if (!string.IsNullOrWhiteSpace(mesa))
+        {
             registros = registros.Where(r => r.NuMesa.Trim().Equals(mesa.Trim(), StringComparison.OrdinalIgnoreCase));
+        }
 
         // --- Defectos ---
         var defectos = _context.RegistrodeDefectos
             .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
             .ToList()
             .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
-            .Where(d => d.Turno.Trim().Equals(turnoSeleccionado, StringComparison.OrdinalIgnoreCase))
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date);
+
+        // ✅ aplicar filtro de turno solo si NO es "Todos"
+        if (!string.IsNullOrWhiteSpace(turnoSeleccionado) && !turnoSeleccionado.Equals("Todos", StringComparison.OrdinalIgnoreCase))
+        {
+            defectos = defectos.Where(d => d.Turno.Trim().Equals(turnoSeleccionado, StringComparison.OrdinalIgnoreCase));
+        }
+
+        defectos = defectos
             .Where(d => string.IsNullOrWhiteSpace(mesa) || d.NuMesa.Trim().Equals(mesa.Trim(), StringComparison.OrdinalIgnoreCase))
             .Where(d => !string.IsNullOrEmpty(d.Defecto) && !string.IsNullOrEmpty(d.Mandrel))
             .ToList();
@@ -451,6 +471,7 @@ public class PiezasEscaneadasController : Controller
         // --- ViewBag ---
         ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
         ViewBag.TurnoSeleccionado = turnoSeleccionado;
+
 
         // --- Mesas disponibles ---
         var mesasDisponibles = registros
@@ -647,7 +668,6 @@ public class PiezasEscaneadasController : Controller
 
         var fechaFiltro = DateOnly.FromDateTime(parsedDateTime);
 
-
         // Traemos un rango de +/-1 día en SQL
         var registros = _context.RegistrodePiezasEscaneadas
             .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
@@ -658,33 +678,50 @@ public class PiezasEscaneadasController : Controller
                      && r.Tm.Trim().Equals(usuario.Trim(), StringComparison.OrdinalIgnoreCase))
             .OrderBy(r => r.Fecha)
             .ThenBy(r => r.Hora)
-           .Select(r => new ProduccionDetalleViewModel
-           {
-               Id = r.Id,
-               TM = r.Tm,
-               FechaReal = r.Fecha,
-               Hora = r.Hora,
-               Mandrel = r.Mandrel,
-               NumeroDePiezas = r.Ndpiezas,
-               NuMesa = r.NuMesa,
-               Turno = r.Turno,
-               FechaLaboral = ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora))
-           })
-            .ToList(); 
+            .Select(r => new ProduccionDetalleViewModel
+            {
+                Id = r.Id,
+                TM = r.Tm,
+                FechaReal = r.Fecha,
+                Hora = r.Hora,
+                Mandrel = r.Mandrel,
+                NumeroDePiezas = r.Ndpiezas,
+                NuMesa = r.NuMesa,
+                Turno = r.Turno,
+                FechaLaboral = ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora))
+            })
+            .ToList();
 
         ViewBag.FechaLaboral = fechaFiltro.ToString("yyyy-MM-dd");
-      
+
         int totalPiezas = registros.Sum(d =>
-        int.TryParse(d.NumeroDePiezas, out int cantidad) ? cantidad : 0);
+            int.TryParse(d.NumeroDePiezas, out int cantidad) ? cantidad : 0);
 
         ViewBag.TotalPiezas = totalPiezas;
         ViewBag.Usuario = usuario;
         ViewBag.Fecha = fechaFiltro.ToString("yyyy-MM-dd");
         ViewBag.Turno = registros.FirstOrDefault()?.Turno ?? "Desconocido";
 
+        // --- Buscar usuario y calcular foto ---
+        var usuarioBD = _context.Users.FirstOrDefault(u => u.Nombre == usuario);
+        string numeroEmpleadoBD = usuarioBD?.NumerodeEmpleado ?? "0000";
+        string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
+
+        string fotoPathJPG = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.JPG");
+        string fotoPathjpg = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.jpg");
+
+        string fotoUrl;
+        if (System.IO.File.Exists(fotoPathJPG))
+            fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.JPG";
+        else if (System.IO.File.Exists(fotoPathjpg))
+            fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.jpg";
+        else
+            fotoUrl = "/images/tm/thumbnail.png";
+
+        ViewBag.FotoUrl = fotoUrl;
+
         return View("DetallePorUsuario", registros);
     }
-
     //PRODUCCION POR MESA - TURNO - FECHA
     public IActionResult DetalleProduccionMesa(string fecha, string mesa, string? turno)
     {

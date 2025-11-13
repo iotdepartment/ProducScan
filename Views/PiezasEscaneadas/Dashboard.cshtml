@@ -43,9 +43,9 @@
 
         <form method="get">
             <div class="row mb-3 d-flex justify-content-start">
-                <div class="col-md-6 col-lg-4">
+                <div class="col-md-6 col-lg-3">
                     <h6 for="fecha" class="fw-bold">Seleccionar fecha:</h6>
-                    <input type="date" id="fecha" name="fecha" class="form-control rounded-pill"
+                    <input type="date" id="fecha" name="fecha" class="form-control w-100 rounded-pill shadow-sm"
                            value="@ViewBag.FechaSeleccionada"
                            max="@TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)")).ToString("yyyy-MM-dd")" />
                 </div>
@@ -160,17 +160,25 @@
         </div>
     </div>
 <hr />
-<div class="mb-3">
-        <strong for="tipoGrafica" class="form-label">Ver Inspección por:</strong>
-        <select id="tipoGrafica" class="form-select w-auto">
+
+    <!-- Título bonito arriba del select y la gráfica -->
+    <div class="text-center mb-4">
+        <h4 class="fw-bold text-primary-emphasis">
+            <i class="bi bi-bar-chart-line me-2"></i> Piezas Inspeccionadas
+        </h4>
+        <p class="text-muted">Visualiza las piezas inspeccionadas agrupadas por turno, mesa o Team Member</p>
+    </div>
+
+    <div class="mb-3 d-flex justify-content-center">
+        <strong for="tipoGrafica" class="form-label me-2">Ver Inspección por:</strong>
+        <select id="tipoGrafica" class="form-select w-auto rounded-pill shadow-sm">
             <option value="turno">Turno</option>
             <option value="mesa">Mesa</option>
             <option value="tm">Team Member</option>
         </select>
+    </div>
 
-</div>
-
-<canvas id="graficaProduccion" height="100"></canvas>
+    <canvas id="graficaProduccion" height="100"></canvas>
 
 </div>
 @section Scripts {

@@ -20,7 +20,20 @@
                             aria-expanded="false"
                             aria-controls="@collapseId">
                         <strong>@grupo.NuMesa</strong>
-                        <span><strong>Turno:</strong> @grupo.Turno</span>
+                        <span><strong>Turno:</strong> 
+                            @if (grupo.Turno == "1")
+                            {
+                                <span class="badge bg-secondary rounded-pill">1</span> <!-- gris elegante -->
+                            }
+                            else if (grupo.Turno == "2")
+                            {
+                                <span class="badge bg-warning text-dark rounded-pill">2</span> <!-- amarillo -->
+                            }
+                            else if (grupo.Turno == "3")
+                            {
+                                <span class="badge bg-info text-dark rounded-pill">3</span> <!-- celeste -->
+                            }
+                        </span>
                         <span><strong>Defectos:</strong> <span class="badge bg-danger rounded-pill">@grupo.TotalDefectos</span></span>
                         <span><strong>Inspección:</strong> <span class="badge bg-primary rounded-pill">@grupo.TotalPiezas</span></span>
                         <span><strong>TM:</strong> @string.Join(", ", grupo.TeamMembers ?? new List<string>())</span>

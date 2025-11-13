@@ -1,10 +1,13 @@
 ﻿@using ProducScan.ViewModels
+
 @{
     ViewData["Title"] = "Inspección por TM";
     ViewData["Subtitle"] = "Piezas Inspeccionadas por Team Member.";
 }
 
 @model List<InspeccionTMViewModel>
+
+
 
 <form method="get" class="mb-4">
     <div class="row">
@@ -63,9 +66,15 @@
         @foreach (var tm in Model)
         {
             <div class="col-12 col-sm-6 col-md-4 col-lg-3 mb-3">
-                <div class="card card-hover shadow-sm border-0 rounded-4 @tm.ColorCard h-100"
-                     data-bs-toggle="tooltip"
-                     title="@tm.TM">
+                <!-- Card clickeable conservando tu diseño -->
+                <a asp-action="DetallePorUsuario"
+                   asp-route-fecha="@($"{ViewBag.Año}-{ViewBag.Mes:00}-{ViewBag.Dia:00}")"
+                   asp-route-usuario="@tm.TM"
+                   asp-route-turno="@ViewBag.TurnoSeleccionado"
+                   class="card card-hover shadow-sm border-0 rounded-4 @tm.ColorCard h-100 text-decoration-none"
+                   data-bs-toggle="tooltip"
+                   title="@tm.TM">
+
                     <div class="card-body m-1 d-flex align-items-center">
                         <div class="me-3 flex-shrink-0">
                             <img src="@tm.FotoUrl"
@@ -88,10 +97,12 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </a>
             </div>
         }
     </div>
+
+
 </div>
 
 

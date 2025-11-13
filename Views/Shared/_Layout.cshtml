@@ -34,10 +34,7 @@
     <link rel="stylesheet" href="~/ProducScan.styles.css" asp-append-version="true" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
 
-    <style>
-
-
-        
+    <style>        
         #sidebarMenu {
             width: 240px;
             min-height: 100vh;
@@ -84,6 +81,15 @@
         .nav-link[aria-expanded="true"] .transition-arrow {
             transform: rotate(180deg);
         }
+        /* Transición normal para clics */
+        #sidebarMenu {
+            transition: all 0.3s ease;
+        }
+
+            /* Desactiva transiciones cuando tenga la clase no-transition */
+            #sidebarMenu.no-transition {
+                transition: none !important;
+            }
     </style>
 
 
@@ -178,7 +184,7 @@
                                     <span class="ms-2 sidebar-text">Reporte de producción</span>
                                 </a>
                             </li>
-                            @if (User.IsInRole("Admin"))
+                            @if (User.IsInRole("Admin") || User.IsInRole("Editor") || User.IsInRole("Visual"))
                             // @if (User.IsInRole("Admin") && User.Identity.Name == "Angelito")
                         {
                             <li class="nav-item ">
@@ -191,7 +197,7 @@
                                 </a>
                             </li>
                             }
-                            @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                                @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                                 {
                                     <li class="nav-item">
                                         <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeUsers" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
@@ -368,13 +374,29 @@
     @await RenderSectionAsync("Scripts", required: false)
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+                        document.addEventListener("DOMContentLoaded", function () {
             const toggleBtn = document.getElementById("toggleSidebar");
             const sidebar = document.getElementById("sidebarMenu");
 
             if (toggleBtn && sidebar) {
+                // Al cargar, revisa estado guardado
+                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+                if (isCollapsed) {
+                    // Aplica colapso sin animación
+                    sidebar.classList.add("no-transition");
+                    sidebar.classList.add("collapsed");
+
+                    // Quita la clase no-transition después de un pequeño delay
+                    requestAnimationFrame(() => {
+                        sidebar.classList.remove("no-transition");
+                    });
+                }
+
+                // Al hacer clic, alterna con animación normal
                 toggleBtn.addEventListener("click", function () {
                     sidebar.classList.toggle("collapsed");
+                    const collapsed = sidebar.classList.contains("collapsed");
+                    localStorage.setItem("sidebarCollapsed", collapsed);
                 });
             }
         });
