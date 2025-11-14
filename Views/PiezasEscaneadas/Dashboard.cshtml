@@ -166,7 +166,7 @@
         <h4 class="fw-bold text-primary-emphasis">
             <i class="bi bi-bar-chart-line me-2"></i> Piezas Inspeccionadas
         </h4>
-        <p class="text-muted">Visualiza las piezas inspeccionadas agrupadas por turno, mesa o Team Member</p>
+        <p class="text-muted">Visualiza las piezas inspeccionadas agrupadas por turno, mesa, Team Member o Mandril</p>
     </div>
 
     <div class="mb-3 d-flex justify-content-center">
@@ -175,6 +175,7 @@
             <option value="turno">Turno</option>
             <option value="mesa">Mesa</option>
             <option value="tm">Team Member</option>
+            <option value="mandrel">Mandril</option>
         </select>
     </div>
 
@@ -202,6 +203,12 @@
         const turno1PorTM = @Html.Raw(Json.Serialize(ViewBag.Turno1PorTM));
         const turno2PorTM = @Html.Raw(Json.Serialize(ViewBag.Turno2PorTM));
         const turno3PorTM = @Html.Raw(Json.Serialize(ViewBag.Turno3PorTM));
+
+        // Por Mandrel
+        const mandrelLabels = @Html.Raw(Json.Serialize(ViewBag.MandrelLabels));
+        const turno1PorMandrel = @Html.Raw(Json.Serialize(ViewBag.Turno1PorMandrel));
+        const turno2PorMandrel = @Html.Raw(Json.Serialize(ViewBag.Turno2PorMandrel));
+        const turno3PorMandrel = @Html.Raw(Json.Serialize(ViewBag.Turno3PorMandrel));
 
         function renderStackedBar(labels, datasets, title) {
             if (chart) chart.destroy();
@@ -249,7 +256,7 @@
 
             });
         }
-               function actualizarGrafica(tipo) {
+                    function actualizarGrafica(tipo) {
             if (tipo === "mesa") {
                 renderStackedBar(mesaLabels, [
                     { label: 'Turno 1', data: turno1PorMesa, backgroundColor: '#4e73df' },
@@ -262,10 +269,14 @@
                     { label: 'Turno 2', data: turno2PorTM, backgroundColor: '#1cc88a' },
                     { label: 'Turno 3', data: turno3PorTM, backgroundColor: '#f6c23e' },
                 ], "Inspección por TM (Apilado por Turno)");
+            } else if (tipo === "mandrel") {
+                renderStackedBar(mandrelLabels, [
+                    { label: 'Turno 1', data: turno1PorMandrel, backgroundColor: '#4e73df' },
+                    { label: 'Turno 2', data: turno2PorMandrel, backgroundColor: '#1cc88a' },
+                    { label: 'Turno 3', data: turno3PorMandrel, backgroundColor: '#f6c23e' },
+                ], "Inspección por Mandrel (Apilado por Turno)");
             } else {
-                // Etiquetas con total: "Turno 1 (123)"
                 const turnoLabelsWithTotals = turnoLabels.map((t, i) => `${t} (${turnoData[i]})`);
-
                 renderStackedBar(
                     turnoLabelsWithTotals,
                     [{

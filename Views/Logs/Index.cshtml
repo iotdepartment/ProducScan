@@ -1,5 +1,4 @@
 ﻿@model IEnumerable<ProducScan.Models.Log>
-
 @{
     ViewData["Title"] = "Logs del Sistema";
 }
@@ -15,31 +14,39 @@
     }
 </style>
 
-
 <div class="row mb-3">
     <div class="col-md-3">
-        <label for="filtroNivel" class="form-label">Nivel</label>
-        <select id="filtroNivel" class="form-select">
+        <label for="filtroNivel" class="form-label fw-bold">Nivel</label>
+        <select id="filtroNivel" class="form-select rounded-pill">
             <option value="all">Todos</option>
             <option value="Info">Info</option>
             <option value="Warning">Warning</option>
-            <option value="Error">Error</option>
-            <option value="Critical">Critical</option>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <option value="Error">Error</option>
+                <option value="Critical">Critical</option>
+            }
         </select>
     </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <div class="col-md-3">
+            <label for="filtroCategoria" class="form-label fw-bold">Categoría</label>
+            <select id="filtroCategoria" class="form-select rounded-pill">
+                <option value="all">Todas</option>
+                <option value="Producción">Producción</option>
+                <option value="Sistema">Sistema</option>
+            </select>
+        </div>
+    }
     <div class="col-md-3">
-        <label for="filtroCategoria" class="form-label">Categoría</label>
-        <select id="filtroCategoria" class="form-select">
-            <option value="all">Todas</option>
-            <option value="Producción">Producción</option>
-            <option value="Sistema">Sistema</option>
-        </select>
+        <label for="filtroFecha" class="form-label fw-bold">Fecha</label>
+        <input type="date" id="filtroFecha" class="form-control rounded-pill" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
     </div>
-    <div class="col-md-3">
-        <label for="filtroFecha" class="form-label">Fecha</label>
-        <input type="date" id="filtroFecha" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
-    </div>
+
 </div>
+
 
 <div id="logsContainer" class="p-2 text-muted">
     @await Html.PartialAsync("_TablaLogs", Model)

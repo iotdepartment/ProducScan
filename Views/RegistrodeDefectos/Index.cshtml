@@ -1,7 +1,7 @@
 ﻿@model PaginatedList<RegistrodeDefecto>
 
 @{
-    ViewData["Title"] = "Defectos";
+    ViewData["Title"] = "Registro de defectos";
     ViewData["PageTitle"] = "Registro de defectos";
     ViewData["Subtitle"] = "Defectos detectados en la labor de inspección del día laboral actual.";
 
@@ -9,22 +9,22 @@
 
 <div class="row align-items-end mb-3">
     <div class="col-md-3">
-        <a class="btn btn-success rounded-pill" asp-controller="PiezasEscaneadas" asp-action="ReporteProduccion"><i class="bi bi-table"></i> Reporte Inspección</a>
+        <a class="btn btn-danger rounded-pill" asp-controller="PiezasEscaneadas" asp-action="ReporteProduccion">
+            <i class="bi bi-table"></i> Reporte Inspección
+        </a>
     </div>
 
-
-<!-- Datepicker Defectos -->
-
+    <!-- Datepicker Defectos (nativo HTML5) -->
     <div class="col-md-3">
-        <label for="fechaDefectos"><strong>Fecha Defectos</strong></label>
-        <input type="text" id="fechaDefectos" name="fecha"
-               class="form-control datepicker"
-               value="@ViewBag.FechaSeleccionada" />
+        <label for="fechaDefectos" class="form-label fw-bold">Fecha Defectos</label>
+        <input type="date" id="fechaDefectos" name="fecha"
+               class="form-control rounded-pill"
+               value="@ViewBag.FechaSeleccionada"
+               max="@DateTime.Now.ToString("yyyy-MM-dd")" />
     </div>
 
-
     <div class="col-md-3">
-        <label for="turnoFiltro"><strong>Filtrar por Turno</strong></label>
+        <label for="turnoFiltro" class="form-label fw-bold">Filtrar por Turno</label>
         <select id="turnoFiltro" name="turno" class="form-select rounded-pill">
             <option value="" selected="@(ViewBag.TurnoSeleccionado == "" ? "selected" : null)">Todos</option>
             <option value="1" selected="@(ViewBag.TurnoSeleccionado == "1" ? "selected" : null)">Turno 1</option>
@@ -32,7 +32,6 @@
             <option value="3" selected="@(ViewBag.TurnoSeleccionado == "3" ? "selected" : null)">Turno 3</option>
         </select>
     </div>
-
 </div>
 
 <table id="tablaDefectos" class="table table-striped table-bordered">
@@ -76,19 +75,7 @@
 
     <script>
 
-                 $(document).ready(function () {
-            $('#fechaDefectos').datepicker({
-                format: 'yyyy-mm-dd',
-                autoclose: true,
-                todayHighlight: true,
-                language: 'es'
-            });
-
-            // 👇 Usar el valor que viene del backend, no la fecha natural
-            var fechaLaboral = $('#fechaDefectos').val();
-            $('#fechaDefectos').datepicker('setDate', fechaLaboral);
-
-            // DataTable Defectos
+                       $(document).ready(function () {
             var tablaDefectos = $('#tablaDefectos').DataTable({
                 processing: true,
                 serverSide: true,
@@ -96,7 +83,7 @@
                     url: '/RegistrodeDefectos/GetDefectos',
                     type: 'POST',
                     data: function (d) {
-                        d.fecha = $('#fechaDefectos').val(); // enviar fecha laboral
+                        d.fecha = $('#fechaDefectos').val(); // enviar fecha seleccionada
                         d.turno = $('#turnoFiltro').val();
                     }
                 },
@@ -112,10 +99,12 @@
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
             });
 
-            $('#fechaDefectos').on('changeDate', function () {
+            // 👇 Recargar tabla cuando cambie la fecha
+            $('#fechaDefectos').on('change', function () {
                 tablaDefectos.ajax.reload();
             });
 
+            // 👇 Recargar tabla cuando cambie el turno
             $('#turnoFiltro').on('change', function () {
                 tablaDefectos.ajax.reload();
             });

@@ -155,7 +155,7 @@
                     <div class="collapse @(produccionOpen ? "show" : "")" id="produccionSubmenu">
                         <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "Index" ? "active fw-bold bg-success text-white" : "text-dark")"
                                     asp-controller="PiezasEscaneadas" asp-action="Index">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-list-ul"></i>
@@ -164,7 +164,7 @@
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeDefectos" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeDefectos" && currentAction == "Index" ? "active fw-bold bg-danger text-white" : "text-dark")"
                                     asp-controller="RegistrodeDefectos" asp-action="Index">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-exclamation-triangle"></i>
@@ -213,7 +213,7 @@
                     </div>
                 </li>
 
-                    @if (User.IsInRole("Editor") || User.IsInRole("Admin"))
+                    @if (User.IsInRole("Admin"))
                     {
                         <li class="nav-item">
                             <a class="nav-link d-flex align-items-center w-100 @(currentController == "Usuarios" ? "active fw-bold bg-primary text-white" : "fw-bold")"
@@ -225,7 +225,8 @@
                             </a>
                         </li>
                     }
-                    @if (User.IsInRole("Admin"))
+                    @if (User.IsInRole("Editor") || User.IsInRole("Admin"))
+                    
                     {
                         <li class="nav-item">
                             <a class="nav-link d-flex align-items-center w-100 @(currentController == "Logs" ? "active fw-bold bg-primary text-white" : "fw-bold")"
@@ -376,6 +377,7 @@
     }
 
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/cosmo/bootstrap.min.css">
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>

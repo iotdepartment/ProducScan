@@ -4,7 +4,7 @@ using ProducScan.Models;
 
 namespace ProducScan.Controllers
 {
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Editor")]
     public class LogsController : Controller
     {
         private readonly AppDbContext _context;
@@ -14,32 +14,24 @@ namespace ProducScan.Controllers
             _context = context;
         }
 
-        public IActionResult Index(string? usuario, string? nivel, DateTime? desde, DateTime? hasta)
+        // Vista principal
+        public IActionResult Index()
         {
-            var query = _context.Logs.AsQueryable();
-
-            if (!string.IsNullOrWhiteSpace(usuario))
-                query = query.Where(l => l.Usuario.Contains(usuario));
-
-            if (!string.IsNullOrWhiteSpace(nivel))
-                query = query.Where(l => l.Nivel == nivel);
-
-            if (desde.HasValue)
-                query = query.Where(l => l.Fecha >= desde.Value);
-
-            if (hasta.HasValue)
-                query = query.Where(l => l.Fecha <= hasta.Value);
-
-            var logs = query.OrderByDescending(l => l.Fecha).Take(1000).ToList();
+            // Se carga inicialmente con los últimos registros
+            var logs = _context.Logs
+                .OrderByDescending(l => l.Fecha)
+                .Take(100)
+                .ToList();
 
             return View(logs);
         }
 
-        [Authorize(Roles = "Admin")]
-        public IActionResult TablaLogs(string? nivel = "all", string? categoria = "all", DateTime? fecha = null)
+        // Acción que devuelve el partial filtrado
+        public IActionResult TablaLogs(string? nivel, string? categoria, DateTime? fecha)
         {
             var query = _context.Logs.AsQueryable();
 
+            // Filtros
             if (!string.IsNullOrWhiteSpace(nivel) && nivel != "all")
                 query = query.Where(l => l.Nivel == nivel);
 
@@ -47,19 +39,17 @@ namespace ProducScan.Controllers
                 query = query.Where(l => l.Categoria == categoria);
 
             if (fecha.HasValue)
+                query = query.Where(l => l.Fecha.Date == fecha.Value.Date);
+
+            // Restricción por rol
+            if (User.IsInRole("Editor"))
             {
-                var day = fecha.Value.Date;
-                var nextDay = day.AddDays(1);
-                query = query.Where(l => l.Fecha >= day && l.Fecha < nextDay);
+                query = query.Where(l => l.Categoria == "Producción");
             }
 
-            var logs = query
-            .OrderByDescending(l => l.Fecha)
-            .ToList();
+            var logs = query.OrderByDescending(l => l.Fecha).Take(1000).ToList();
 
             return PartialView("_TablaLogs", logs);
         }
-
-
     }
 }

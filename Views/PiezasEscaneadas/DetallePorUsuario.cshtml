@@ -10,6 +10,7 @@
     ViewData["PageDescription"] = "Producción desglozada por día de cada TM.";
 }
 
+
 @if (Model.Any())
 {
     <div class="card mb-3 shadow-sm border-0 rounded-4">
@@ -96,8 +97,9 @@ else
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-           
+       
 
         $(document).on("click", ".btnEditar", function () {
             var id = $(this).data("id");
@@ -200,4 +202,5 @@ else
         $("#modalCrud").modal("show");
     });
 </script>
+  
 }

@@ -651,7 +651,7 @@ public class PiezasEscaneadasController : Controller
         return View(filtro);
     }
 
-    //PRODUCCION POR USUARIO - FECHA
+    // PRODUCCION POR USUARIO - FECHA
     public IActionResult DetallePorUsuario(string fecha, string usuario)
     {
         if (string.IsNullOrWhiteSpace(fecha) || string.IsNullOrWhiteSpace(usuario))
@@ -668,10 +668,9 @@ public class PiezasEscaneadasController : Controller
 
         var fechaFiltro = DateOnly.FromDateTime(parsedDateTime);
 
-        // Traemos un rango de +/-1 día en SQL
         var registros = _context.RegistrodePiezasEscaneadas
             .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
-            .ToList() // 👈 materializamos para poder usar el helper
+            .ToList()
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
                      && r.Tm != null
@@ -693,16 +692,12 @@ public class PiezasEscaneadasController : Controller
             .ToList();
 
         ViewBag.FechaLaboral = fechaFiltro.ToString("yyyy-MM-dd");
-
-        int totalPiezas = registros.Sum(d =>
-            int.TryParse(d.NumeroDePiezas, out int cantidad) ? cantidad : 0);
-
-        ViewBag.TotalPiezas = totalPiezas;
+        ViewBag.TotalPiezas = registros.Sum(d => int.TryParse(d.NumeroDePiezas, out int cantidad) ? cantidad : 0);
         ViewBag.Usuario = usuario;
         ViewBag.Fecha = fechaFiltro.ToString("yyyy-MM-dd");
-        ViewBag.Turno = registros.FirstOrDefault()?.Turno ?? "Desconocido";
+        ViewBag.Turnos = registros.Select(r => r.Turno).Distinct().ToList();
 
-        // --- Buscar usuario y calcular foto ---
+        // --- Foto del usuario ---
         var usuarioBD = _context.Users.FirstOrDefault(u => u.Nombre == usuario);
         string numeroEmpleadoBD = usuarioBD?.NumerodeEmpleado ?? "0000";
         string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
@@ -719,6 +714,22 @@ public class PiezasEscaneadasController : Controller
             fotoUrl = "/images/tm/thumbnail.png";
 
         ViewBag.FotoUrl = fotoUrl;
+
+        // --- Datos para la gráfica ---
+        var datosAgrupados = registros
+            .GroupBy(r => new { r.Turno, r.Mandrel })
+            .Select(g => new {
+                Turno = g.Key.Turno,
+                Mandrel = g.Key.Mandrel,
+                Total = g.Sum(x => int.TryParse(x.NumeroDePiezas, out var n) ? n : 0)
+            }).ToList();
+
+        ViewBag.Registros = registros.Select(r => new {
+            Hora = r.Hora.ToString(@"hh\:mm"),
+            Mandrel = r.Mandrel,
+            Turno = r.Turno,
+            Piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0
+        }).ToList();
 
         return View("DetallePorUsuario", registros);
     }
@@ -880,6 +891,26 @@ public class PiezasEscaneadasController : Controller
                           t => t.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0)
                       )
             );
+
+        // --- Producción por Mandrel y turno ---
+        var produccionPorMandrelYTurno = producciones
+            .Where(r => !string.IsNullOrWhiteSpace(r.Mandrel) && !string.IsNullOrWhiteSpace(r.Turno))
+            .GroupBy(r => r.Mandrel.Trim())
+            .OrderBy(g => g.Key) // orden alfabético de mandrel
+            .ToDictionary(
+                g => g.Key,
+                g => g.GroupBy(r => r.Turno.Trim())
+                      .ToDictionary(
+                          t => t.Key,
+                          t => t.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0)
+                      )
+            );
+
+        // --- Preparar datos para Chart.js ---
+        ViewBag.MandrelLabels = produccionPorMandrelYTurno.Keys.ToList();
+        ViewBag.Turno1PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("1") ? m["1"] : 0).ToList();
+        ViewBag.Turno2PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("2") ? m["2"] : 0).ToList();
+        ViewBag.Turno3PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("3") ? m["3"] : 0).ToList();
 
         // --- Preparar datos para Chart.js ---
         ViewBag.MesaLabels = produccionPorMesaYTurno.Keys.ToList();

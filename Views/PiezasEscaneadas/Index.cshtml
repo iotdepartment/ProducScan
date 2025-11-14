@@ -2,7 +2,7 @@
 
 
 @{
-    ViewData["Title"] = "Inspección";
+    ViewData["Title"] = "Registro de Inspección";
     ViewData["PageTitle"] = "Registro de Inspección";
     ViewData["Subtitle"] = "Registro de Inspección del día laboral actual.";
 
@@ -15,10 +15,11 @@
 
 <!-- Datepicker Producción -->
     <div class="col-md-3">
-        <label for="fechaProduccion"><strong>Fecha Inspección</strong></label>
-        <input type="text" id="fechaProduccion" name="fecha"
-               class="form-control datepicker"
-               value="@ViewBag.FechaSeleccionada" />
+        <label for="fechaProduccion" class="form-label fw-bold">Fecha Inspección</label>
+        <input type="date" id="fechaProduccion" name="fecha"
+               class="form-control rounded-pill"
+               value="@ViewBag.FechaSeleccionada"
+               max="@DateTime.Now.ToString("yyyy-MM-dd")" />
     </div>
 
     <div class="col-md-3">
@@ -73,18 +74,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-datepicker/1.9.0/locales/bootstrap-datepicker.es.min.js"></script>
     
     <script>
-                 $(document).ready(function () {
-            $('.datepicker').datepicker({
-                format: 'yyyy-mm-dd',
-                language: 'es',
-                autoclose: true,
-                todayHighlight: true
-            });
-
-            // 👇 Usar la fecha laboral que viene del backend
-            var fechaLaboral = $('#fechaProduccion').val();
-            $('#fechaProduccion').datepicker('setDate', fechaLaboral);
-
+         $(document).ready(function () {
             var tablaProduccion = $('#tablaProduccion').DataTable({
                 processing: true,
                 serverSide: true,
@@ -108,10 +98,12 @@
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
             });
 
-            $('#fechaProduccion').on('changeDate', function () {
+            // 👇 Recargar tabla cuando cambie la fecha
+            $('#fechaProduccion').on('change', function () {
                 tablaProduccion.ajax.reload();
             });
 
+            // 👇 Recargar tabla cuando cambie el turno
             $('#turnoFiltro').on('change', function () {
                 tablaProduccion.ajax.reload();
             });

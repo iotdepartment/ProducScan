@@ -30,7 +30,7 @@ namespace ProducScan.Services
                 Nivel = nivel,
                 Usuario = usuario ?? _httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "Sistema",
                 Ip = ip ?? _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Desconocida",
-                Fecha = ahoraLocal, // ✅ ahora siempre en hora local
+                Fecha = ahoraLocal,
                 Categoria = categoria
             };
 
