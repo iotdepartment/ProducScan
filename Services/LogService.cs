@@ -17,10 +17,12 @@ namespace ProducScan.Services
             _hub = hub;
         }
 
-
-
         public void Registrar(string accion, string detalles, string nivel = "Info", string usuario = null, string ip = null, string categoria = "Sistema")
         {
+            // 👇 Convertir siempre a hora local de Matamoros
+            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
             var log = new Log
             {
                 Accion = accion,
@@ -28,7 +30,7 @@ namespace ProducScan.Services
                 Nivel = nivel,
                 Usuario = usuario ?? _httpContextAccessor.HttpContext?.User?.Identity?.Name ?? "Sistema",
                 Ip = ip ?? _httpContextAccessor.HttpContext?.Connection?.RemoteIpAddress?.ToString() ?? "Desconocida",
-                Fecha = DateTime.Now,
+                Fecha = ahoraLocal, // ✅ ahora siempre en hora local
                 Categoria = categoria
             };
 
@@ -48,6 +50,5 @@ namespace ProducScan.Services
                 log.Categoria
             });
         }
-
     }
 }

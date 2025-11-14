@@ -1,81 +1,16 @@
-﻿@model ProducScan.Models.ViewModels.UsuariosLogsViewModel
+﻿@model IEnumerable<ProducScan.Models.Usuario>
 @{
     ViewData["Title"] = "Administrar Usuarios";
 }
-<style>
-    td.details-control {
-        background: url('https://www.datatables.net/examples/resources/details_open.png') no-repeat center center;
-        cursor: pointer;
-    }
 
-    tr.shown td.details-control {
-        background: url('https://www.datatables.net/examples/resources/details_close.png') no-repeat center center;
-    }
+<div class="d-flex justify-content-between mb-3">
+    <button class="btn btn-primary rounded-pill" id="btnNuevo">
+        <i class="bi bi-person-plus"></i> Nuevo Usuario
+    </button>
+</div>
 
-    td.details-control {
-        background: url('https://www.datatables.net/examples/resources/details_open.png') no-repeat center center;
-        cursor: pointer;
-    }
-
-    tr.shown td.details-control {
-        background: url('https://www.datatables.net/examples/resources/details_close.png') no-repeat center center;
-    }
-
-</style>
-
-<ul class="nav nav-tabs" id="usuariosLogsTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-        <button class="nav-link active" id="usuarios-tab" data-bs-toggle="tab" data-bs-target="#usuarios" type="button" role="tab">Usuarios</button>
-    </li>
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">Logs</button>
-    </li>
-</ul>
-
-<div class="tab-content mt-3">
-
-    <div class="tab-pane fade show active" id="usuarios" role="tabpanel">
-        <div class="d-flex justify-content-between mb-3">
-            <button class="btn btn-primary rounded-pill" id="btnNuevo">
-                <i class="bi bi-person-plus"></i> Nuevo Usuario
-            </button>
-        </div>
-        <div id="tablaUsuariosContainer">
-        @await Html.PartialAsync("_TablaUsuarios", Model.Usuarios)
-        </div>
-    </div>
-
-    <div class="tab-pane fade" id="logs" role="tabpanel">
-        <div class="row mb-3">
-            <div class="col-md-3">
-                <label for="filtroNivel" class="form-label">Nivel</label>
-                <select id="filtroNivel" class="form-select">
-                    <option value="all">Todos</option>
-                    <option value="Info">Info</option>
-                    <option value="Warning">Warning</option>
-                    <option value="Error">Error</option>
-                    <option value="Critical">Critical</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="filtroCategoria" class="form-label">Categoría</label>
-                <select id="filtroCategoria" class="form-select">
-                    <option value="all">Todas</option>
-                    <option value="Producción">Producción</option>
-                    <option value="Sistema">Sistema</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <label for="filtroFecha" class="form-label">Fecha</label>
-                <input type="date" id="filtroFecha" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
-            </div>
-        </div>
-        <div id="logsContainer" class="p-2 text-muted">
-            <i class="bi bi-arrow-repeat"></i> Cargando logs...
-        </div>
-        
-    </div>
-
+<div id="tablaUsuariosContainer">
+    @await Html.PartialAsync("_TablaUsuarios", Model)
 </div>
 
 <!-- Modal genérico -->
@@ -104,101 +39,7 @@
 </div>
 
 @section Scripts {
-
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-
     <script>
-        // State (solo filtros, ya no page ni pageSize)
-        let state = {
-            nivel: "all",
-            categoria: "all",
-            fecha: ""
-        };
-
-        // Guardar qué accordions están abiertos
-        let openAccordions = new Set();
-
-        $(document).on('shown.bs.collapse', '.accordion-collapse', function () {
-            openAccordions.add(this.id);
-        });
-
-        $(document).on('hidden.bs.collapse', '.accordion-collapse', function () {
-            openAccordions.delete(this.id);
-        });
-
-        function cargarLogs() {
-            const { nivel, categoria, fecha } = state;
-            const qNivel = encodeURIComponent(nivel);
-            const qCat = encodeURIComponent(categoria);
-            const qFecha = encodeURIComponent(fecha || "");
-
-            $("#logsContainer").load(`/Logs/TablaLogs?nivel=${qNivel}&categoria=${qCat}&fecha=${qFecha}`, function () {
-                var table = $('#logsTable').DataTable({
-                    destroy: true,
-                    pageLength: 10,
-                    lengthMenu: [10, 20, 50, 100],
-                    order: [[0, "desc"]],
-                    language: {
-                        url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-                    },
-                    columnDefs: [
-                        { orderable: false, targets: 0 }
-                    ]
-                });
-
-
-
-                // Evento para expandir detalles con animación
-                $('#logsTable tbody').on('click', 'td.details-control', function () {
-                    var tr = $(this).closest('tr');
-                    var row = table.row(tr);
-
-                    if (row.child.isShown()) {
-                        // Animación de cierre
-                        $('div.slider', row.child()).slideUp(300, function () {
-                            row.child.hide();
-                            tr.removeClass('shown');
-                        });
-                    } else {
-                        // Contenido de detalles
-                        var detalles = tr.data('detalles');
-                        row.child(
-                            `<div class="slider bg-light p-2">
-                                <strong>Detalles:</strong><br/>${detalles}
-                             </div>`
-                        ).show();
-
-                        // Animación de apertura
-                        $('div.slider', row.child()).hide().slideDown(300);
-                        tr.addClass('shown');
-                        }
-                });
-
-
-            });
-        }
-            // Eventos de filtros
-        $(document).on("change", "#filtroNivel", function () {
-            state.nivel = $(this).val();
-            cargarLogs();
-        });
-
-
-            $(document).on("change", "#filtroCategoria", function () {
-            state.categoria = $(this).val();
-            cargarLogs();
-        });
-
-
-            $(document).on("change", "#filtroFecha", function () {
-            state.fecha = $(this).val();
-            cargarLogs();
-        });
-
-
-        // Toasts
         const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
         const toastSuccess = new bootstrap.Toast(document.getElementById('toastSuccess'));
         const toastError = new bootstrap.Toast(document.getElementById('toastError'));
@@ -257,12 +98,5 @@
                     showToast(false, "Error en la petición.");
                 });
         });
-
-        // ⚡ Cargar logs al abrir la pestaña
-        document.getElementById('logs-tab').addEventListener('shown.bs.tab', function () {
-            cargarLogs();
-        });
-
-
     </script>
 }

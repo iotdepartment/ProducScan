@@ -3,7 +3,7 @@
 <table id="logsTable" class="table table-hover align-middle">
     <thead class="table-dark">
         <tr>
-            <th></th>
+            <th></th> <!-- columna para el arrow -->
             <th>Fecha</th>
             <th>Usuario</th>
             <th>Acción</th>
@@ -15,7 +15,11 @@
         @foreach (var log in Model)
         {
             <tr data-detalles="@log.Detalles">
-                <td class="details-control"></td>
+                <td>
+                    <span class="arrow-toggle">
+                        <i class="bi bi-chevron-right"></i>
+                    </span>
+                </td>
                 <td>@log.Fecha.ToString("dd/MM/yyyy HH:mm:ss")</td>
                 <td>@log.Usuario</td>
                 <td>@log.Accion</td>
@@ -44,3 +48,4 @@
         }
     </tbody>
 </table>
+

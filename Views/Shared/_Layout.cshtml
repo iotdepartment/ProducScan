@@ -116,7 +116,7 @@
 
                     <!-- Dashboard -->
                     <li class="nav-item">
-                        <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "Dashboard" ? "active fw-bold bg-primary text-white" : "text-dark")"
+                        <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "Dashboard" ? "active fw-bold bg-primary text-white" : "fw-bold")"
                            asp-controller="PiezasEscaneadas" asp-action="Dashboard">
                             <span class="d-flex justify-content-center" style="width:40px;">
                             <i class="bi bi-house"></i>
@@ -134,7 +134,7 @@
                             || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios"))
                             || (currentController == "RegistrodeUsers" && (currentAction == "Index") || currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
                         }
-                            <a class="nav-link d-flex align-items-center w-100 @(produccionOpen ? "active fw-bold bg-primary text-white" : "text-dark")"
+                            <a class="nav-link d-flex align-items-center w-100 @(produccionOpen ? "active fw-bold bg-primary text-white" : "fw-bold text-dark")"
                                 data-bs-toggle="collapse" href="#produccionSubmenu" role="button"
                                 aria-expanded="@(produccionOpen.ToString().ToLower())" aria-controls="produccionSubmenu">
 
@@ -186,34 +186,34 @@
                             </li>
                             @if (User.IsInRole("Admin") || User.IsInRole("Editor") || User.IsInRole("Visual"))
                             // @if (User.IsInRole("Admin") && User.Identity.Name == "Angelito")
-                        {
+                            {
                             <li class="nav-item ">
                                 <a class="nav-link d-flex align-items-center w-100  @(currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM" ? "active fw-bold bg-secondary text-white" : "text-dark")"
                                    asp-controller="PiezasEscaneadas" asp-action="InspeccionTM">
                                     <span class="d-flex justify-content-center" style="width:40px;">
-                                                <i class="bi bi-person-vcard"></i>
+                                        <i class="bi bi-person-vcard"></i>
                                     </span>
                                     <span class="ms-2 sidebar-text">Inspección por TM</span>
                                 </a>
                             </li>
                             }
-                                @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
-                                {
-                                    <li class="nav-item">
-                                        <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeUsers" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
-                                        asp-controller="RegistrodeUsers" asp-action="Index">
-                                            <span class="d-flex justify-content-center" style="width:40px;">
-                                                <i class="bi bi-person-badge-fill"></i>
-                                            </span>
-                                            <span class="ms-2 sidebar-text">Team Members</span>
-                                        </a>
-                                    </li>
-                                }
+                            @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                            {
+                                <li class="nav-item">
+                                    <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeUsers" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                                    asp-controller="RegistrodeUsers" asp-action="Index">
+                                        <span class="d-flex justify-content-center" style="width:40px;">
+                                            <i class="bi bi-person-badge"></i>
+                                        </span>
+                                        <span class="ms-2 sidebar-text">Team Members</span>
+                                    </a>
+                                </li>
+                            }
                             </ul>
                     </div>
                 </li>
 
-                @if (User.IsInRole("Admin"))
+                    @if (User.IsInRole("Editor") || User.IsInRole("Admin"))
                     {
                         <li class="nav-item">
                             <a class="nav-link d-flex align-items-center w-100 @(currentController == "Usuarios" ? "active fw-bold bg-primary text-white" : "fw-bold")"
@@ -222,6 +222,18 @@
                                 <i class="bi bi-people"></i>
                                 </span>
                                 <span class="ms-2 sidebar-text">Usuarios</span>
+                            </a>
+                        </li>
+                    }
+                    @if (User.IsInRole("Admin"))
+                    {
+                        <li class="nav-item">
+                            <a class="nav-link d-flex align-items-center w-100 @(currentController == "Logs" ? "active fw-bold bg-primary text-white" : "fw-bold")"
+                               asp-controller="Logs" asp-action="Index">
+                                <span class="d-flex justify-content-center" style="width:40px;">
+                                    <i class="bi bi-clock-history"></i>
+                                </span>
+                                <span class="ms-2 sidebar-text">Logs</span>
                             </a>
                         </li>
                     }
@@ -374,32 +386,32 @@
     @await RenderSectionAsync("Scripts", required: false)
 
     <script>
-                        document.addEventListener("DOMContentLoaded", function () {
-            const toggleBtn = document.getElementById("toggleSidebar");
-            const sidebar = document.getElementById("sidebarMenu");
+                document.addEventListener("DOMContentLoaded", function () {
+    const toggleBtn = document.getElementById("toggleSidebar");
+    const sidebar = document.getElementById("sidebarMenu");
 
-            if (toggleBtn && sidebar) {
-                // Al cargar, revisa estado guardado
-                const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-                if (isCollapsed) {
-                    // Aplica colapso sin animación
-                    sidebar.classList.add("no-transition");
-                    sidebar.classList.add("collapsed");
+    if (toggleBtn && sidebar) {
+        // Al cargar, revisa estado guardado
+        const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+        if (isCollapsed) {
+            // Aplica colapso sin animación
+            sidebar.classList.add("no-transition");
+            sidebar.classList.add("collapsed");
 
-                    // Quita la clase no-transition después de un pequeño delay
-                    requestAnimationFrame(() => {
-                        sidebar.classList.remove("no-transition");
-                    });
-                }
+            // Quita la clase no-transition después de un pequeño delay
+            requestAnimationFrame(() => {
+                sidebar.classList.remove("no-transition");
+            });
+        }
 
-                // Al hacer clic, alterna con animación normal
-                toggleBtn.addEventListener("click", function () {
-                    sidebar.classList.toggle("collapsed");
-                    const collapsed = sidebar.classList.contains("collapsed");
-                    localStorage.setItem("sidebarCollapsed", collapsed);
-                });
-            }
+        // Al hacer clic, alterna con animación normal
+        toggleBtn.addEventListener("click", function () {
+            sidebar.classList.toggle("collapsed");
+            const collapsed = sidebar.classList.contains("collapsed");
+            localStorage.setItem("sidebarCollapsed", collapsed);
         });
+    }
+});
 
         $(document).ready(function () {
             $('#busqueda').on('keyup', function () {
