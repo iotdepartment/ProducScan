@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ProducScan.Models;
 
+
 namespace ProducScan.Controllers
 {
     [Authorize]

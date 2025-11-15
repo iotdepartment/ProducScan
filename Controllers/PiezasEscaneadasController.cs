@@ -32,7 +32,7 @@ public class PiezasEscaneadasController : Controller
 
         var Escaneadas = _context.RegistrodePiezasEscaneadas.AsQueryable();
 
-        ViewBag.Mandrels = _context.Mandrels.ToList();
+        ViewBag.Mandrels = _context.Mandriles.ToList();
         ViewBag.Mesas = _context.Mesas.ToList();
         ViewBag.Usuarios = _context.Users.ToList();
 
@@ -245,7 +245,7 @@ public class PiezasEscaneadasController : Controller
             var horaAntes = registro.Hora;
 
             // Validar mandrel
-            bool existeMandrel = _context.Mandrels.Any(m => m.Mandril == model.Mandrel);
+            bool existeMandrel = _context.Mandriles.Any(m => m.MandrilNombre == model.Mandrel);
             if (!existeMandrel)
             {
                 return Json(new { success = false, error = "El mandrel ingresado no existe en el catálogo." });
@@ -376,9 +376,9 @@ public class PiezasEscaneadasController : Controller
     [HttpGet]
     public JsonResult BuscarMandrel(string term)
     {
-        var mandriles = _context.Mandrels
-            .Where(m => m.Mandril.Contains(term))
-            .Select(m => m.Mandril)
+        var mandriles = _context.Mandriles
+            .Where(m => m.MandrilNombre.Contains(term))
+            .Select(m => m.MandrilNombre)
             .Take(10)
             .ToList();
 
@@ -392,9 +392,9 @@ public class PiezasEscaneadasController : Controller
         if (string.IsNullOrWhiteSpace(term))
             return Json(new List<string>());
 
-        var mandriles = _context.Mandrels
-            .Where(m => m.Mandril.Contains(term))
-            .Select(m => m.Mandril)
+        var mandriles = _context.Mandriles
+            .Where(m => m.MandrilNombre.Contains(term))
+            .Select(m => m.MandrilNombre)
             .Take(10) // limitar resultados
             .ToList();
 

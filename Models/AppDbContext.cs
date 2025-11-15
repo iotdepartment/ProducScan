@@ -16,15 +16,15 @@ public partial class AppDbContext : DbContext
     }
 
     public virtual DbSet<Defecto> Defectos { get; set; }
-    public virtual DbSet<Mandrel> Mandrels { get; set; }
     public virtual DbSet<Mesa> Mesas { get; set; }
     public virtual DbSet<Registro> Registros { get; set; }
     public virtual DbSet<RegistrodeDefecto> RegistrodeDefectos { get; set; }
     public virtual DbSet<RegistrodePiezasEscaneada> RegistrodePiezasEscaneadas { get; set; }
     public virtual DbSet<User> Users { get; set; }
     public DbSet<Usuario> Usuarios { get; set; }
-
     public DbSet<Log> Logs { get; set; }
+    public DbSet<Mandril> Mandriles { get; set; }
+
 
 
 
@@ -50,52 +50,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Id)
                 .HasMaxLength(50)
                 .HasColumnName("ID");
-        });
-
-        modelBuilder.Entity<Mandrel>(entity =>
-        {
-            entity.HasNoKey();
-
-            entity.Property(e => e.BarCode).HasMaxLength(50);
-            entity.Property(e => e.Cantidadempaqueinspeccion)
-                .HasMaxLength(50)
-                .HasColumnName("CANTIDADEMPAQUEINSPECCION");
-            entity.Property(e => e.Cantidadkanbanfinalcaja)
-                .HasMaxLength(50)
-                .HasColumnName("CANTIDADKANBANFINALCAJA");
-            entity.Property(e => e.Diametroexterior)
-                .HasMaxLength(50)
-                .HasColumnName("DIAMETROEXTERIOR");
-            entity.Property(e => e.Diametrointerior)
-                .HasMaxLength(50)
-                .HasColumnName("DIAMETROINTERIOR");
-            entity.Property(e => e.Espesordepared)
-                .HasMaxLength(50)
-                .HasColumnName("ESPESORDEPARED");
-            entity.Property(e => e.Kanbanfinal)
-                .HasMaxLength(50)
-                .HasColumnName("KANBANFINAL");
-            entity.Property(e => e.Kanbanoven)
-                .HasMaxLength(50)
-                .HasColumnName("KANBANOVEN");
-            entity.Property(e => e.Mandril)
-                .HasMaxLength(50)
-                .HasColumnName("MANDRIL");
-            entity.Property(e => e.Num)
-                .HasMaxLength(50)
-                .HasColumnName("NUM");
-            entity.Property(e => e.Nupartedemanguera)
-                .HasMaxLength(50)
-                .HasColumnName("NUPARTEDEMANGUERA");
-            entity.Property(e => e.Nupartefinal)
-                .HasMaxLength(50)
-                .HasColumnName("NUPARTEFINAL");
-            entity.Property(e => e.Nurackinspeccion)
-                .HasMaxLength(50)
-                .HasColumnName("NURACKINSPECCION");
-            entity.Property(e => e.Nurackoven)
-                .HasMaxLength(50)
-                .HasColumnName("NURACKOVEN");
         });
 
         modelBuilder.Entity<Mesa>(entity =>
@@ -152,6 +106,20 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Nombre).HasMaxLength(50);
         });
 
+        modelBuilder.Entity<Mandril>(entity =>
+        {
+            entity.ToTable("Mandriles", "dbo");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Id).HasColumnName("ID");
+            entity.Property(e => e.MandrilNombre).HasColumnName("Mandril");
+            entity.Property(e => e.CentrodeCostos).HasMaxLength(100);
+            entity.Property(e => e.CantidaddeEmpaque);
+            entity.Property(e => e.Barcode).HasMaxLength(100);
+            entity.Property(e => e.Area).HasMaxLength(100);
+            entity.Property(e => e.Kanban).HasMaxLength(100);
+        });
 
 
 

@@ -101,7 +101,7 @@
             <!-- Sidebar fijo solo en escritorio -->
             <nav id="sidebarMenu" class="d-none d-md-flex flex-column bg-light border-end vh-100 position-fixed">
                 <!-- Botón hamburguesa dentro del sidebar (escritorio) -->
-            <button id="toggleSidebar" class="btn mb-3 ">
+            <button id="toggleSidebar" class="btn mb-3 d-flex justify-content-sm-end justify-content-center">
                 <i class="bi bi-list"></i>
             </button>
 
@@ -131,8 +131,7 @@
                         @{
                             bool produccionOpen =
                             (currentController == "PiezasEscaneadas" && (currentAction == "Index" || currentAction == "ReporteProduccion" || currentAction == "DetalleProduccionMesa" || currentAction == "DetallePorUsuario"))
-                            || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios"))
-                            || (currentController == "RegistrodeUsers" && (currentAction == "Index") || currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
+                            || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios")) || (currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
                         }
                             <a class="nav-link d-flex align-items-center w-100 @(produccionOpen ? "active fw-bold bg-primary text-white" : "fw-bold text-dark")"
                                 data-bs-toggle="collapse" href="#produccionSubmenu" role="button"
@@ -140,7 +139,7 @@
 
                                 <!-- Ícono de Producción -->
                                 <span class="d-flex flex-column align-items-center" style="width:40px;">
-                                    <i class="bi bi-gear"></i>
+                                    <i class="bi bi-box-seam"></i>
                                     <i class="bi bi-chevron-down transition-arrow collapsed-arrow d-none"></i>
                                 </span>
 
@@ -199,6 +198,63 @@
                             }
                             @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                             {
+                                // <li class="nav-item">
+                                //     <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeUsers" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                                //     asp-controller="RegistrodeUsers" asp-action="Index">
+                                //         <span class="d-flex justify-content-center" style="width:40px;">
+                                //             <i class="bi bi-person-badge"></i>
+                                //         </span>
+                                //         <span class="ms-2 sidebar-text">Team Members</span>
+                                //     </a>
+                                // </li>
+                            }
+                            </ul>
+                    </div>
+                </li>
+
+                 <!-- Producción expandible -->
+                    @if (User.IsInRole("Admin") || User.IsInRole("Editor")){
+                    <li class="nav-item">
+                        @{
+                            bool administracionOpen =
+                            (currentController == "Mandriles" && (currentAction == "Index"))
+                            || (currentController == "RegistrodeUsers" && (currentAction == "Index"));
+                        }
+                            <a class="nav-link d-flex align-items-center w-100 @(administracionOpen ? "active fw-bold bg-primary text-white" : "fw-bold text-dark")"
+                                data-bs-toggle="collapse" href="#administracionSubmenu" role="button"
+                                aria-expanded="@(administracionOpen.ToString().ToLower())" aria-controls="administracionSubmenu">
+
+                                <!-- Ícono de Producción -->
+                                <span class="d-flex flex-column align-items-center" style="width:40px;">
+                                <i class="bi bi-diagram-3"></i>
+                                    <i class="bi bi-chevron-down transition-arrow collapsed-arrow d-none"></i>
+                                </span>
+
+                                <!-- Texto + flecha pegada al texto -->
+                                <span class="ms-2 sidebar-text d-flex align-items-center">
+                                    Administración
+                                    <i class="bi bi-chevron-down transition-arrow ms-1 normal-arrow"></i>
+                                </span>
+                            </a>
+
+
+                    <div class="collapse @(administracionOpen ? "show" : "")" id="administracionSubmenu">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                            @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                            // @if (User.IsInRole("Admin") && User.Identity.Name == "Angelito")
+                            {
+                            <li class="nav-item ">
+                                        <a class="nav-link d-flex align-items-center w-100  @(currentController == "Mandriles" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                                           asp-controller="Mandriles" asp-action="Index">
+                                    <span class="d-flex justify-content-center" style="width:40px;">
+                                                    <i class="bi bi-puzzle"></i>
+                                    </span>
+                                    <span class="ms-2 sidebar-text">Mandril</span>
+                                </a>
+                            </li>
+                            }
+                            @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
+                            {
                                 <li class="nav-item">
                                     <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeUsers" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
                                     asp-controller="RegistrodeUsers" asp-action="Index">
@@ -212,6 +268,7 @@
                             </ul>
                     </div>
                 </li>
+                }
 
                     @if (User.IsInRole("Admin"))
                     {

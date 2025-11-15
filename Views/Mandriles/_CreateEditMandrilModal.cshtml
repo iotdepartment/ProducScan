@@ -1,0 +1,56 @@
+﻿@model ProducScan.Models.Mandril
+
+<!-- Modal Create/Edit -->
+<div class="modal fade" id="createEditModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <!-- modal-lg para que se vea más amplio -->
+        <div class="modal-content">
+            <form id="createEditForm" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Crear Mandril</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="mandrilId" name="Id" />
+
+                    <div class="mb-3">
+                        <label class="form-label">Mandril</label>
+                        <input type="text" class="form-control" id="mandrilNombre" name="MandrilNombre" required />
+                        <div class="invalid-feedback">El campo Mandril es obligatorio.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Centro de Costos</label>
+                        <input type="text" class="form-control" id="centrodeCostos" name="CentrodeCostos"
+                               required pattern="^[0-9]+$" />
+                        <div class="invalid-feedback">El centro de costos debe contener solo números.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad de Empaque</label>
+                        <input type="text" class="form-control" id="cantidaddeEmpaque" name="CantidaddeEmpaque"
+                               required pattern="^[0-9]+$" />
+                        <div class="invalid-feedback">La cantidad de empaque debe contener solo números.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Barcode</label>
+                        <input type="text" class="form-control" id="barcode" name="Barcode" />
+                    </div>
+
+                  
+                    <div class="mb-3">
+                        <label class="form-label">Kanban</label>
+                        <input type="text" class="form-control" id="kanban" name="Kanban" />
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" id="saveBtn">Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

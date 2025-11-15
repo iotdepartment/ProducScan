@@ -1,37 +1,39 @@
 ﻿@{
-    ViewData["Title"] = "Team Members";
-    ViewData["Subtitle"] = "Team Members registrados en el Sistema de escaneo de Inspección.";
+    ViewData["Title"] = "Mandriles";
+    ViewData["Subtitle"] = "Mandriles registrados en el Sistema de escaneo de Inspección.";
 }
 
 <button class="btn btn-success mb-3 rounded rounded-pill" data-bs-toggle="modal" data-bs-target="#createEditModal"
         onclick="openCreateModal()">
-    <i class="bi bi-person-plus"></i>
-    Nuevo Team Member
+    <i class="bi bi-plus-circle"></i>
+    Nuevo Mandril
 </button>
 
-<table id="usersTable" class="table table-striped table-bordered">
+<table id="mandrilesTable" class="table table-striped table-bordered">
     <thead class="table-dark">
         <tr>
-            <th>Número de Empleado</th>
-            <th>Nombre</th>
+            <th>Mandril</th>
+            <th>Centro de Costos</th>
+            <th>Cantidad de Empaque</th>
+            <th>Barcode</th>
+            <th>Kanban</th>
             <th>Acciones</th>
         </tr>
     </thead>
 </table>
+
 <!-- Toast único -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
     <div id="mainToast" class="toast align-items-center border-0" role="alert">
         <div class="d-flex">
-            <div class="toast-body" id="toastMessage">
-                Mensaje aquí
-            </div>
+            <div class="toast-body" id="toastMessage">Mensaje aquí</div>
             <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
 <!-- Partial con modal Create/Edit -->
-@await Html.PartialAsync("_CreateEditModal")
+@await Html.PartialAsync("_CreateEditMandrilModal")
 
 <!-- Modal Delete -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
@@ -39,12 +41,12 @@
         <div class="modal-content">
             <form id="deleteForm" asp-action="Delete" method="post">
                 <div class="modal-header">
-                    <h5 class="modal-title">Eliminar Usuario</h5>
+                    <h5 class="modal-title">Eliminar Mandril</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="deleteId" name="id" />
-                    <p>¿Seguro que deseas eliminar este usuario?</p>
+                    <p>¿Seguro que deseas eliminar este mandril?</p>
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-danger">Eliminar</button>
@@ -55,33 +57,38 @@
     </div>
 </div>
 
-
-
 @section Scripts {
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
-               var table;
+        var table;
 
         $(document).ready(function () {
-            table = $('#usersTable').DataTable({   // 👈 aquí asignas a la variable
+            table = $('#mandrilesTable').DataTable({
                 ajax: {
-                    url: "/RegistrodeUsers/GetUsers",
+                    url: "/Mandriles/GetMandriles",
                     type: "GET",
                     datatype: "json"
                 },
                 columns: [
-                    { data: "numerodeEmpleado" },
-                    { data: "nombre" },
+                    { data: "mandrilNombre" },
+                    { data: "centrodeCostos" },
+                    { data: "cantidaddeEmpaque" },
+                    { data: "barcode" },
+                    { data: "kanban" },
                     {
                         data: "id",
-                                                
                         render: function (data, type, row) {
                             return `
-                                <button class="btn btn-sm btn-warning rounded-pill" onclick="openEditModal(${data}, '${row.numerodeEmpleado}', '${row.nombre}')"> <i class="bi bi-pencil-fill"></i></button>
-                                <button class="btn btn-sm btn-danger rounded-pill" onclick="openDeleteModal(${data})"><i class="bi bi-trash-fill"></i></button>
-                            `;
+                                <button class="btn btn-sm btn-warning rounded-pill"
+                                    onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}')">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+                                <button class="btn btn-sm btn-danger rounded-pill"
+                                    onclick="openDeleteModal(${data})">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>`;
                         }
                     }
                 ],
@@ -104,7 +111,7 @@
                             $('#createEditModal').modal('hide');
                             $('#deleteModal').modal('hide');
                             showToast(res.message, true);
-                            table.ajax.reload(null, false); // ✅ ahora sí funciona
+                            table.ajax.reload(null, false);
                         } else {
                             if (res.errors && res.errors.length > 0) {
                                 showToast(res.errors.join("\n"), false);
@@ -129,7 +136,7 @@
                             $('#createEditModal').modal('hide');
                             $('#deleteModal').modal('hide');
                             showToast(res.message, true);
-                            table.ajax.reload(null, false); // ✅ ahora sí funciona
+                            table.ajax.reload(null, false);
                         } else {
                             if (res.errors && res.errors.length > 0) {
                                 showToast(res.errors.join("\n"), false);
@@ -142,28 +149,37 @@
             });
         });
 
-                $('#createEditModal').on('hidden.bs.modal', function () {
-            // Limpia todos los campos del formulario
+        $('#createEditModal').on('hidden.bs.modal', function () {
             $(this).find('form')[0].reset();
-            // Quita clases de validación de Bootstrap
             $(this).find('form').removeClass('was-validated');
         });
 
-        function openCreateModal() {
-            document.getElementById("modalTitle").innerText = "Crear Usuario";
-            document.getElementById("createEditForm").action = "/RegistrodeUsers/Create";
-            document.getElementById("userId").value = ""; // 👈 vacío en create
-            document.getElementById("numeroEmpleado").value = "";
-            document.getElementById("nombre").value = "";
+               function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban) {
+            document.getElementById("modalTitle").innerText = "Editar Mandril";
+            document.getElementById("createEditForm").action = "/Mandriles/Edit";
+
+            const idInput = document.getElementById("mandrilId");
+            idInput.setAttribute("name", "Id"); // 👈 se envía en Edit
+            idInput.value = id;
+
+            document.getElementById("mandrilNombre").value = mandrilNombre;
+            document.getElementById("centrodeCostos").value = centrodeCostos;
+            document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
+            document.getElementById("barcode").value = barcode;
+            document.getElementById("kanban").value = kanban;
+
+            $('#createEditModal').modal('show');
         }
 
-
-        function openEditModal(id, numero, nombre) {
-            document.getElementById("modalTitle").innerText = "Editar Usuario";
-            document.getElementById("createEditForm").action = "/RegistrodeUsers/Edit";
-            document.getElementById("userId").value = id; // 👈 aquí sí existe
-            document.getElementById("numeroEmpleado").value = numero;
-            document.getElementById("nombre").value = nombre;
+        function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban) {
+            document.getElementById("modalTitle").innerText = "Editar Mandril";
+            document.getElementById("createEditForm").action = "/Mandriles/Edit";
+            document.getElementById("mandrilId").value = id;
+            document.getElementById("mandrilNombre").value = mandrilNombre;
+            document.getElementById("centrodeCostos").value = centrodeCostos;
+            document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
+            document.getElementById("barcode").value = barcode;
+            document.getElementById("kanban").value = kanban;
             $('#createEditModal').modal('show');
         }
 
@@ -175,21 +191,9 @@
         function showToast(message, isSuccess = true) {
             const toastEl = document.getElementById("mainToast");
             const toastBody = document.getElementById("toastMessage");
-
-            // Limpia clases previas
             toastEl.classList.remove("text-bg-success", "text-bg-danger");
-
-            // Aplica color según el tipo
-            if (isSuccess) {
-                toastEl.classList.add("text-bg-success");
-            } else {
-                toastEl.classList.add("text-bg-danger");
-            }
-
-            // Cambia el mensaje
+            toastEl.classList.add(isSuccess ? "text-bg-success" : "text-bg-danger");
             toastBody.innerText = message;
-
-            // Muestra el toast
             var toast = new bootstrap.Toast(toastEl);
             toast.show();
         }
