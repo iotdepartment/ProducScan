@@ -17,6 +17,7 @@
             <th>Cantidad de Empaque</th>
             <th>Barcode</th>
             <th>Kanban</th>
+            <th>Estación</th>
             <th>Acciones</th>
         </tr>
     </thead>
@@ -77,12 +78,13 @@
                     { data: "cantidaddeEmpaque" },
                     { data: "barcode" },
                     { data: "kanban" },
+                    { data: "estacion" }, // 👈 columna estación
                     {
                         data: "id",
                         render: function (data, type, row) {
                             return `
                                 <button class="btn btn-sm btn-warning rounded-pill"
-                                    onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}')">
+                                    onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}', '${row.estacion ?? ""}')">
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
                                 <button class="btn btn-sm btn-danger rounded-pill"
@@ -154,24 +156,7 @@
             $(this).find('form').removeClass('was-validated');
         });
 
-               function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban) {
-            document.getElementById("modalTitle").innerText = "Editar Mandril";
-            document.getElementById("createEditForm").action = "/Mandriles/Edit";
-
-            const idInput = document.getElementById("mandrilId");
-            idInput.setAttribute("name", "Id"); // 👈 se envía en Edit
-            idInput.value = id;
-
-            document.getElementById("mandrilNombre").value = mandrilNombre;
-            document.getElementById("centrodeCostos").value = centrodeCostos;
-            document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
-            document.getElementById("barcode").value = barcode;
-            document.getElementById("kanban").value = kanban;
-
-            $('#createEditModal').modal('show');
-        }
-
-        function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban) {
+        function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban, estacion) {
             document.getElementById("modalTitle").innerText = "Editar Mandril";
             document.getElementById("createEditForm").action = "/Mandriles/Edit";
             document.getElementById("mandrilId").value = id;
@@ -180,6 +165,7 @@
             document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
             document.getElementById("barcode").value = barcode;
             document.getElementById("kanban").value = kanban;
+            document.getElementById("estacion").value = estacion || ""; // 👈 ahora sí se llena
             $('#createEditModal').modal('show');
         }
 

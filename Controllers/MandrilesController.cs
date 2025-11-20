@@ -33,7 +33,8 @@ namespace ProducScan.Controllers
                     cantidaddeEmpaque = m.CantidaddeEmpaque,
                     barcode = m.Barcode,
                     area = m.Area,
-                    kanban = m.Kanban
+                    kanban = m.Kanban,
+                    estacion = m.Estacion
                 })
                 .ToListAsync();
 
@@ -60,6 +61,9 @@ namespace ProducScan.Controllers
             try
             {
                 mandril.Area = "INSPECCION"; // fuerza el área
+                                             // 👇 Estación ya viene del formulario, puede ser null
+                                             // mandril.Estacion = mandril.Estacion; // no es necesario asignar explícitamente
+
                 _context.Add(mandril);
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "Mandril creado correctamente." });
@@ -69,7 +73,6 @@ namespace ProducScan.Controllers
                 return Json(new { success = false, message = $"Error al crear: {ex.Message}" });
             }
         }
-
         [Authorize(Roles = "Admin,Editor")]
         // POST: Mandriles/Edit
         [HttpPost]
@@ -94,8 +97,9 @@ namespace ProducScan.Controllers
                 existing.CantidaddeEmpaque = mandril.CantidaddeEmpaque;
                 existing.Barcode = mandril.Barcode;
                 existing.Kanban = mandril.Kanban;
+                existing.Estacion = mandril.Estacion; // 👈 ahora también se actualiza
 
-                existing.Area = "INSPECCION"; // 👈 siempre INSPECCION
+                existing.Area = "INSPECCION"; // siempre INSPECCION
 
                 await _context.SaveChangesAsync();
                 return Json(new { success = true, message = "Mandril actualizado correctamente." });

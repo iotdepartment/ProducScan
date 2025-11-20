@@ -9,6 +9,7 @@
         public string? Barcode { get; set; }
         public string? Area { get; set; }
         public string? Kanban { get; set; }
+        public string? Estacion { get; set; }
     }
 
 }
