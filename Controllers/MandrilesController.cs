@@ -61,7 +61,7 @@ namespace ProducScan.Controllers
             try
             {
                 mandril.Area = "INSPECCION"; // fuerza el área
-                                             // 👇 Estación ya viene del formulario, puede ser null
+                                             // Estación ya viene del formulario, puede ser null por el momento
                                              // mandril.Estacion = mandril.Estacion; // no es necesario asignar explícitamente
 
                 _context.Add(mandril);
@@ -97,7 +97,7 @@ namespace ProducScan.Controllers
                 existing.CantidaddeEmpaque = mandril.CantidaddeEmpaque;
                 existing.Barcode = mandril.Barcode;
                 existing.Kanban = mandril.Kanban;
-                existing.Estacion = mandril.Estacion; // 👈 ahora también se actualiza
+                existing.Estacion = mandril.Estacion; // ahora también se actualiza
 
                 existing.Area = "INSPECCION"; // siempre INSPECCION
 

@@ -16,7 +16,7 @@
 
     <!-- Datepicker Defectos (nativo HTML5) -->
     <div class="col-md-3">
-        <label for="fechaDefectos" class="form-label fw-bold">Fecha Defectos</label>
+        <label for="fechaDefectos" class="form-label fw-bold">Fecha</label>
         <input type="date" id="fechaDefectos" name="fecha"
                class="form-control rounded-pill"
                value="@ViewBag.FechaSeleccionada"
@@ -24,7 +24,7 @@
     </div>
 
     <div class="col-md-3">
-        <label for="turnoFiltro" class="form-label fw-bold">Filtrar por Turno</label>
+        <label for="turnoFiltro" class="form-label fw-bold">Turno</label>
         <select id="turnoFiltro" name="turno" class="form-select rounded-pill">
             <option value="" selected="@(ViewBag.TurnoSeleccionado == "" ? "selected" : null)">Todos</option>
             <option value="1" selected="@(ViewBag.TurnoSeleccionado == "1" ? "selected" : null)">Turno 1</option>

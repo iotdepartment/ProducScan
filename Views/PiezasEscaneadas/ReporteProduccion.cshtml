@@ -34,7 +34,7 @@
             <a asp-action="ExportProduccionDiaLaboral"
                asp-route-fecha="@ViewBag.FechaSeleccionada"
                asp-route-turno="@ViewBag.TurnoSeleccionado"
-               class="btn btn-success rounded-pill">
+               class="btn btn-outline-success rounded-pill">
                 <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
             </a>
         </div>
@@ -241,22 +241,23 @@
                     success: function (res) {
                         if (res.success) {
                             showToast("success", res.message || "Operación exitosa");
-                            $form.closest(".modal").modal("hide");
                             refreshAccordion();
-                        } else {
-                            // mostramos el mensaje principal
-                            let msg = res.message || "Error desconocido";
 
-                            // si hay errores de modelo, los concatenamos
+                            // 👇 limpiar todos los campos excepto fecha y hora
+                            $form.find("input, select, textarea").each(function () {
+                                const id = $(this).attr("id");
+                                if (id !== "fecha" && id !== "hora") {
+                                    $(this).val("");
+                                }
+                            });
+                        } else {
+                            let msg = res.message || "Error desconocido";
                             if (res.errors && res.errors.length > 0) {
                                 msg += " → " + res.errors.join(", ");
                             }
-
-                            // si hay stacktrace, lo mandamos a consola para debug
                             if (res.stack) {
                                 console.error("StackTrace:", res.stack);
                             }
-
                             showToast("danger", msg);
                         }
                     },

@@ -78,7 +78,7 @@
                     { data: "cantidaddeEmpaque" },
                     { data: "barcode" },
                     { data: "kanban" },
-                    { data: "estacion" }, // 👈 columna estación
+                    { data: "estacion" }, // columna estación
                     {
                         data: "id",
                         render: function (data, type, row) {
@@ -165,7 +165,7 @@
             document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
             document.getElementById("barcode").value = barcode;
             document.getElementById("kanban").value = kanban;
-            document.getElementById("estacion").value = estacion || ""; // 👈 ahora sí se llena
+            document.getElementById("estacion").value = estacion || ""; // ahora sí se llena
             $('#createEditModal').modal('show');
         }
 

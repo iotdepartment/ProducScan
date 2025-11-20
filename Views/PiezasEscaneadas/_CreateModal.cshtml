@@ -6,20 +6,20 @@
                 <form id="formProduccion" asp-action="Create" asp-controller="PiezasEscaneadas" method="post">
 
                 <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">CREAR REGISTRO DE INSPECCIÓN</h5>
+                    <h5 class="modal-title">CREAR REGISTRO DE PIEZAS BUENAS</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Fecha y Hora -->
                     <div class="mb-3">
                         <label>Fecha</label>
-                        <input type="date" asp-for="Fecha" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        <input id="fecha" type="date" asp-for="Fecha" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" required />
 
                     </div>
 
                     <div class="mb-3">
                         <label>Hora</label>
-                        <input type="time" asp-for="Hora" class="form-control" />
+                        <input id="hora" type="time" asp-for="Hora" class="form-control" />
                     </div>
                     <!-- Mesa -->
                     <div class="mb-3">
@@ -60,13 +60,6 @@
                             }
                         </select>
                     </div>
-
-                    
-
-
-
-                   
-
                 </div>
                 <div class="modal-footer">
                     <button type="submit" class="btn btn-success">Guardar</button>

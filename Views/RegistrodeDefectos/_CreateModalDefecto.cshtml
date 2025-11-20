@@ -7,21 +7,21 @@
             <form asp-action="Create" asp-controller="RegistrodeDefectos" method="post" id="formDefecto">
                 @Html.AntiForgeryToken()
                 <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="createDefectoModalLabel">REGISTRAR DEFECTO</h5>
+                    <h5 class="modal-title" id="createDefectoModalLabel">CREAR REGISTRO DE DEFECTO</h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                     <!-- Fecha -->
                     <div class="mb-3">
                         <label>Fecha</label>
-                        <input asp-for="Fecha" type="date" class="form-control"
+                        <input id="fecha" asp-for="Fecha" type="date" class="form-control"
                                max="@DateTime.Now.ToString("yyyy-MM-dd")" required/>
 
                     </div>
                     <!-- Hora -->
                     <div class="mb-3">
                         <label>Hora</label>
-                        <input type="time" class="form-control" name="Hora" value="@Model.Hora.ToString("HH:mm")" required />
+                        <input id="hora" type="time" class="form-control" name="Hora" value="@Model.Hora.ToString("HH:mm")" required />
                     </div>
                     <!-- Mesa -->
                     <div class="mb-3">
@@ -66,8 +66,8 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button id="btnNuevoDefecto" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                     <button type="submit" class="btn btn-danger">Guardar</button>
+                    <button id="btnNuevoDefecto" type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
                 </div>
             </form>
         </div>

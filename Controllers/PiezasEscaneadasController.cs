@@ -686,7 +686,7 @@ public class PiezasEscaneadasController : Controller
     public JsonResult BuscarMandrel(string term)
     {
         var mandriles = _context.Mandriles
-            .Where(m => m.MandrilNombre.Contains(term))
+            .Where(m => m.Area == "INSPECCION" &&  m.MandrilNombre.Contains(term))
             .Select(m => m.MandrilNombre)
             .Take(10)
             .ToList();
@@ -702,7 +702,7 @@ public class PiezasEscaneadasController : Controller
             return Json(new List<string>());
 
         var mandriles = _context.Mandriles
-            .Where(m => m.MandrilNombre.Contains(term))
+            .Where(m => m.Area == "INSPECCION" && m.MandrilNombre.Contains(term))
             .Select(m => m.MandrilNombre)
             .Take(10) // limitar resultados
             .ToList();

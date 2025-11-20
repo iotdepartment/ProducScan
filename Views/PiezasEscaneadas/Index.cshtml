@@ -2,9 +2,9 @@
 
 
 @{
-    ViewData["Title"] = "Registro de Inspección";
-    ViewData["PageTitle"] = "Registro de Inspección";
-    ViewData["Subtitle"] = "Registro de Inspección del día laboral actual.";
+    ViewData["Title"] = "Registro de Piezas Buenas";
+    ViewData["PageTitle"] = "Registro de Piezas Buenas";
+    ViewData["Subtitle"] = "Registro de Piezas buenas del día laboral actual.";
 
 }
 
@@ -15,7 +15,7 @@
 
 <!-- Datepicker Producción -->
     <div class="col-md-3">
-        <label for="fechaProduccion" class="form-label fw-bold">Fecha Inspección</label>
+        <label for="fechaProduccion" class="form-label fw-bold">Fecha</label>
         <input type="date" id="fechaProduccion" name="fecha"
                class="form-control rounded-pill"
                value="@ViewBag.FechaSeleccionada"
@@ -23,7 +23,7 @@
     </div>
 
     <div class="col-md-3">
-        <label for="turnoFiltro"><strong>Filtrar por Turno</strong></label>
+        <label for="turnoFiltro" class="form-label fw-bold"><strong>Turno</strong></label>
         <select id="turnoFiltro" name="turno" class="form-select rounded-pill">
             <option value="" selected="@(ViewBag.TurnoSeleccionado == "" ? "selected" : null)">Todos</option>
             <option value="1" selected="@(ViewBag.TurnoSeleccionado == "1" ? "selected" : null)">Turno 1</option>
@@ -98,12 +98,12 @@
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
             });
 
-            // 👇 Recargar tabla cuando cambie la fecha
+            // Recargar tabla cuando cambie la fecha
             $('#fechaProduccion').on('change', function () {
                 tablaProduccion.ajax.reload();
             });
 
-            // 👇 Recargar tabla cuando cambie el turno
+            // Recargar tabla cuando cambie el turno
             $('#turnoFiltro').on('change', function () {
                 tablaProduccion.ajax.reload();
             });
