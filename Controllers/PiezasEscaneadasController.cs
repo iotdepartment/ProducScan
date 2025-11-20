@@ -1,4 +1,6 @@
 ﻿using Azure;
+using ClosedXML.Excel;
+using System.IO;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
@@ -17,7 +19,6 @@ public class PiezasEscaneadasController : Controller
 {
     private readonly AppDbContext _context;
     private readonly ILogService _log;
-
 
     public PiezasEscaneadasController(AppDbContext context, ILogService log)
     {
@@ -110,12 +111,30 @@ public class PiezasEscaneadasController : Controller
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
                         && d.Turno == turnoSeleccionado)
             .GroupBy(d => new { d.NuMesa, d.Tm })
-            .Select(g => new { Mesa = g.Key.NuMesa, TM = g.Key.Tm, PiezasMalas = g.Count() })
+            .Select(g => new
+            {
+                Mesa = g.Key.NuMesa,
+                TM = g.Key.Tm,
+                PiezasMalas = g.Count()
+            })
             .ToList();
 
-        var lista = producciones.Select(p =>
+        // --- Unión de claves (Mesa + TM) ---
+        var union = producciones.Select(p => new { p.Mesa, p.TM })
+            .Union(
+                    defectos.Select(d => new { d.Mesa, d.TM }))
+            .ToList();
+
+        var lista = union.Select(u =>
         {
-            var usuario = usuarios.FirstOrDefault(u => u.Nombre == p.TM);
+            var prod = producciones.FirstOrDefault(p => p.Mesa == u.Mesa && p.TM == u.TM);
+            var def = defectos.FirstOrDefault(d => d.Mesa == u.Mesa && d.TM == u.TM);
+
+            int piezasBuenas = prod?.PiezasBuenas ?? 0;
+            int piezasMalas = def?.PiezasMalas ?? 0;
+            int total = piezasBuenas + piezasMalas;
+
+            var usuario = usuarios.FirstOrDefault(x => x.Nombre == u.TM);
             string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
             string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
 
@@ -129,9 +148,6 @@ public class PiezasEscaneadasController : Controller
                 fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.jpg";
             else
                 fotoUrl = "/images/tm/thumbnail.png";
-
-            int piezasMalas = defectos.FirstOrDefault(d => d.TM == p.TM && d.Mesa == p.Mesa)?.PiezasMalas ?? 0;
-            int total = p.PiezasBuenas + piezasMalas;
 
             string color;
             if (total >= meta + 400)
@@ -147,23 +163,23 @@ public class PiezasEscaneadasController : Controller
 
             return new InspeccionTMViewModel
             {
-                TM = p.TM,
-                Mesa = p.Mesa,
+                TM = u.TM,
+                Mesa = u.Mesa,
                 NumeroEmpleado = numeroEmpleadoBD,
                 FotoUrl = fotoUrl,
-                PiezasBuenas = p.PiezasBuenas,
+                PiezasBuenas = piezasBuenas,
                 PiezasMalas = piezasMalas,
                 TotalPiezas = total,
                 Meta = meta,
                 ColorCard = color
             };
         })
-    .OrderBy(m =>
-    {
-        var digits = new string(m.Mesa.Where(char.IsDigit).ToArray());
-        return int.TryParse(digits, out int num) ? num : int.MaxValue;
-    })
-    .ToList();
+        .OrderBy(m =>
+        {
+            var digits = new string(m.Mesa.Where(char.IsDigit).ToArray());
+            return int.TryParse(digits, out int num) ? num : int.MaxValue;
+        })
+        .ToList();
 
         ViewBag.Año = fechaFiltro.Year;
         ViewBag.Mes = fechaFiltro.Month;
@@ -175,6 +191,299 @@ public class PiezasEscaneadasController : Controller
         ViewBag.TurnoSeleccionado = turnoSeleccionado;
 
         return View(lista);
+    }
+
+    public IActionResult ExportProduccionDiaLaboral(DateTime? fecha)
+    {
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+        var fechaSeleccionada = fecha ?? ahora;
+        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
+
+        // --- Producciones agrupadas por Mesa + Mandril + Turno ---
+        var producciones = _context.RegistrodePiezasEscaneadas
+            .ToList()
+            .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora))
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue))
+            .GroupBy(r => new { r.NuMesa, r.Mandrel, r.Turno })
+            .Select(g => new
+            {
+                Mesa = g.Key.NuMesa,
+                Mandril = g.Key.Mandrel,
+                Turno = g.Key.Turno,
+                PiezasBuenas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0)
+            })
+            .ToList();
+
+        // --- Defectos agrupados por Mesa + Mandril + Turno ---
+        var defectos = _context.RegistrodeDefectos
+            .ToList()
+            .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora))
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue))
+            .GroupBy(d => new { d.NuMesa, d.Mandrel, d.Turno })
+            .Select(g => new
+            {
+                Mesa = g.Key.NuMesa,
+                Mandril = g.Key.Mandrel,
+                Turno = g.Key.Turno,
+                PiezasMalas = g.Count()
+            })
+            .ToList();
+
+        // --- Unión de claves (Mesa + Mandril + Turno) ---
+        var union = producciones.Select(p => new { p.Mesa, p.Mandril, p.Turno })
+            .Union(defectos.Select(d => new { d.Mesa, d.Mandril, d.Turno }))
+            .ToList();
+
+        // --- Pivot: filas = Mesa+Mandril, columnas = Turnos ---
+        var lista = union
+            .GroupBy(u => new { u.Mesa, u.Mandril })
+            .Select(g =>
+            {
+                int turno1Buenas = producciones.FirstOrDefault(p => p.Mesa == g.Key.Mesa && p.Mandril == g.Key.Mandril && p.Turno == "1")?.PiezasBuenas ?? 0;
+                int turno1Malas = defectos.FirstOrDefault(d => d.Mesa == g.Key.Mesa && d.Mandril == g.Key.Mandril && d.Turno == "1")?.PiezasMalas ?? 0;
+                int turno1Total = turno1Buenas + turno1Malas;
+
+                int turno2Buenas = producciones.FirstOrDefault(p => p.Mesa == g.Key.Mesa && p.Mandril == g.Key.Mandril && p.Turno == "2")?.PiezasBuenas ?? 0;
+                int turno2Malas = defectos.FirstOrDefault(d => d.Mesa == g.Key.Mesa && d.Mandril == g.Key.Mandril && d.Turno == "2")?.PiezasMalas ?? 0;
+                int turno2Total = turno2Buenas + turno2Malas;
+
+                int turno3Buenas = producciones.FirstOrDefault(p => p.Mesa == g.Key.Mesa && p.Mandril == g.Key.Mandril && p.Turno == "3")?.PiezasBuenas ?? 0;
+                int turno3Malas = defectos.FirstOrDefault(d => d.Mesa == g.Key.Mesa && d.Mandril == g.Key.Mandril && d.Turno == "3")?.PiezasMalas ?? 0;
+                int turno3Total = turno3Buenas + turno3Malas;
+
+                int totalProduccion = turno1Buenas + turno2Buenas + turno3Buenas;
+                int totalDefectos = turno1Malas + turno2Malas + turno3Malas;
+                int totalDia = totalProduccion + totalDefectos;
+
+                return new
+                {
+                    Mesa = g.Key.Mesa,
+                    Mandril = g.Key.Mandril,
+                    Turno1 = turno1Total,
+                    Turno2 = turno2Total,
+                    Turno3 = turno3Total,
+                    TotalProduccion = totalProduccion,
+                    TotalDefectos = totalDefectos,
+                    TotalDia = totalDia,
+                    Turno1Produccion = turno1Buenas,
+                    Turno1Defectos = turno1Malas,
+                    Turno2Produccion = turno2Buenas,
+                    Turno2Defectos = turno2Malas,
+                    Turno3Produccion = turno3Buenas,
+                    Turno3Defectos = turno3Malas
+                };
+            })
+            .OrderBy(x =>
+            {
+                var digits = new string(x.Mesa.Where(char.IsDigit).ToArray());
+                return int.TryParse(digits, out int num) ? num : int.MaxValue;
+            })
+            .ThenBy(x => x.Mandril)
+            .ToList();
+
+        // --- Generar Excel con bloques por mesa lado a lado ---
+        using (var workbook = new XLWorkbook())
+        {
+            var ws = workbook.Worksheets.Add("Producción Día Laboral");
+
+            // Agrupar por mesa para conocer tamaños de bloque
+            var mesas = lista.GroupBy(x => x.Mesa)
+                             .OrderBy(g =>
+                             {
+                                 var digits = new string(g.Key.Where(char.IsDigit).ToArray());
+                                 return int.TryParse(digits, out int num) ? num : int.MaxValue;
+                             })
+                             .ToList();
+
+            // Configuración de bloques
+            int blocksPerRow = 4;       // hasta 4 mesas por fila
+            int blockWidth = 8;         // columnas usadas: Mesa..Total Día (8 columnas)
+            int blockGapCols = 2;       // columnas de separación entre bloques
+            int blockHeaderHeight = 1;  // altura del encabezado
+            int blockTotalsHeight = 1;  // fila TOTAL MESA
+            int blockRowPadding = 2;    // filas de espacio entre filas de bloques (tu requerimiento)
+            int startRow = 1;
+            int startCol = 1;
+
+            // Totales generales por turno (acumulados de todo el día)
+            int totalTurno1Produccion = 0, totalTurno1Defectos = 0;
+            int totalTurno2Produccion = 0, totalTurno2Defectos = 0;
+            int totalTurno3Produccion = 0, totalTurno3Defectos = 0;
+
+            int blockIndexInRow = 0;
+            int currentRowMaxBlockHeight = 0;
+
+            foreach (var mesaGroup in mesas)
+            {
+                // Colocar encabezado del bloque (siempre, incluyendo la primera mesa)
+                int headerRow = startRow;
+                int headerCol = startCol;
+
+                // Encabezado por mesa
+                ws.Cell(headerRow, headerCol + 0).Value = "Mesa";
+                ws.Cell(headerRow, headerCol + 1).Value = "Mandril";
+                ws.Cell(headerRow, headerCol + 2).Value = "Turno 1";
+                ws.Cell(headerRow, headerCol + 3).Value = "Turno 2";
+                ws.Cell(headerRow, headerCol + 4).Value = "Turno 3";
+                ws.Cell(headerRow, headerCol + 5).Value = "Total Producción";
+                ws.Cell(headerRow, headerCol + 6).Value = "Total Defectos";
+                ws.Cell(headerRow, headerCol + 7).Value = "Total Día";
+
+
+
+                var headerRange = ws.Range(headerRow, headerCol, headerRow, headerCol + 7);
+                headerRange.Style.Font.Bold = true;
+                headerRange.Style.Font.Underline = XLFontUnderlineValues.Single;
+                headerRange.Style.Fill.BackgroundColor = XLColor.LightBlue;
+                headerRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+                headerRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                headerRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+
+                // Escribir filas de mandriles
+                int dataStartRow = headerRow + blockHeaderHeight;
+                int r = dataStartRow;
+
+                int sumaTurno1 = 0, sumaTurno2 = 0, sumaTurno3 = 0;
+                int sumaProduccion = 0, sumaDefectos = 0, sumaTotalDia = 0;
+
+                foreach (var item in mesaGroup.OrderBy(x => x.Mandril))
+                {
+                    // Filas de mandriles
+                    ws.Cell(r, headerCol + 0).Value = item.Mesa;
+                    ws.Cell(r, headerCol + 1).Value = item.Mandril;
+                    ws.Cell(r, headerCol + 2).Value = item.Turno1;
+                    ws.Cell(r, headerCol + 3).Value = item.Turno2;
+                    ws.Cell(r, headerCol + 4).Value = item.Turno3;
+                    ws.Cell(r, headerCol + 5).Value = item.TotalProduccion;
+                    ws.Cell(r, headerCol + 6).Value = item.TotalDefectos;
+                    ws.Cell(r, headerCol + 7).Value = item.TotalDia;
+
+                    // aplicar bordes a la fila
+                    var dataRange = ws.Range(r, headerCol, r, headerCol + 7);
+                    dataRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                    dataRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+                    // Acumulados por mesa
+                    sumaTurno1 += item.Turno1;
+                    sumaTurno2 += item.Turno2;
+                    sumaTurno3 += item.Turno3;
+                    sumaProduccion += item.TotalProduccion;
+                    sumaDefectos += item.TotalDefectos;
+                    sumaTotalDia += item.TotalDia;
+
+                    // Acumulados generales por turno (producción/defectos)
+                    totalTurno1Produccion += item.Turno1Produccion;
+                    totalTurno1Defectos += item.Turno1Defectos;
+                    totalTurno2Produccion += item.Turno2Produccion;
+                    totalTurno2Defectos += item.Turno2Defectos;
+                    totalTurno3Produccion += item.Turno3Produccion;
+                    totalTurno3Defectos += item.Turno3Defectos;
+
+                    r++;
+                }
+
+                // Fila TOTAL MESA
+                ws.Cell(r, headerCol + 0).Value = mesaGroup.Key;
+                ws.Cell(r, headerCol + 1).Value = "TOTAL MESA";
+                ws.Cell(r, headerCol + 2).Value = sumaTurno1;
+                ws.Cell(r, headerCol + 3).Value = sumaTurno2;
+                ws.Cell(r, headerCol + 4).Value = sumaTurno3;
+                ws.Cell(r, headerCol + 5).Value = sumaProduccion;
+                ws.Cell(r, headerCol + 6).Value = sumaDefectos;
+                ws.Cell(r, headerCol + 7).Value = sumaTotalDia;
+
+                var totalRange = ws.Range(r, headerCol, r, headerCol + 7);
+                totalRange.Style.Font.Bold = true;
+                totalRange.Style.Fill.BackgroundColor = XLColor.LightGray;
+                totalRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+                totalRange.Style.Border.InsideBorder = XLBorderStyleValues.Thin;
+
+
+                int blockHeight = (r - headerRow + 1); // header + data + total
+                currentRowMaxBlockHeight = Math.Max(currentRowMaxBlockHeight, blockHeight);
+
+                // Preparar siguiente bloque en esta fila (lado derecho)
+                blockIndexInRow++;
+                if (blockIndexInRow < blocksPerRow)
+                {
+                    startCol += (blockWidth + blockGapCols);
+                }
+                else
+                {
+                    // Pasar a la "siguiente fila de bloques"
+                    startCol = 1;
+                    startRow += currentRowMaxBlockHeight + blockRowPadding; // deja 2 líneas entre filas
+                    blockIndexInRow = 0;
+                    currentRowMaxBlockHeight = 0;
+                }
+            }
+
+            // Bloque de Totales Generales por Turno (al final)
+            // Lo colocamos en el siguiente espacio disponible de bloques.
+            int tgHeaderRow = startRow;
+            int tgHeaderCol = startCol;
+
+            ws.Cell(tgHeaderRow, tgHeaderCol + 0).Value = "Totales generales por turno";
+            ws.Range(tgHeaderRow, tgHeaderCol, tgHeaderRow, tgHeaderCol + 7).Merge();
+            var tgHeaderRange = ws.Range(tgHeaderRow, tgHeaderCol, tgHeaderRow, tgHeaderCol + 7);
+            tgHeaderRange.Style.Font.Bold = true;
+            tgHeaderRange.Style.Fill.BackgroundColor = XLColor.LightBlue;
+            tgHeaderRange.Style.Alignment.Horizontal = XLAlignmentHorizontalValues.Center;
+            tgHeaderRange.Style.Border.OutsideBorder = XLBorderStyleValues.Thin;
+
+            int tgRow = tgHeaderRow + 1;
+
+            ws.Cell(tgRow, tgHeaderCol + 0).Value = "Turno 1 Producción";
+            ws.Cell(tgRow, tgHeaderCol + 1).Value = totalTurno1Produccion;
+            ws.Cell(tgRow, tgHeaderCol + 2).Value = "Turno 1 Defectos";
+            ws.Cell(tgRow, tgHeaderCol + 3).Value = totalTurno1Defectos;
+            ws.Cell(tgRow, tgHeaderCol + 4).Value = "Turno 1 Total";
+            ws.Cell(tgRow, tgHeaderCol + 5).Value = totalTurno1Produccion + totalTurno1Defectos;
+            tgRow++;
+
+            ws.Cell(tgRow, tgHeaderCol + 0).Value = "Turno 2 Producción";
+            ws.Cell(tgRow, tgHeaderCol + 1).Value = totalTurno2Produccion;
+            ws.Cell(tgRow, tgHeaderCol + 2).Value = "Turno 2 Defectos";
+            ws.Cell(tgRow, tgHeaderCol + 3).Value = totalTurno2Defectos;
+            ws.Cell(tgRow, tgHeaderCol + 4).Value = "Turno 2 Total";
+            ws.Cell(tgRow, tgHeaderCol + 5).Value = totalTurno2Produccion + totalTurno2Defectos;
+            tgRow++;
+
+            ws.Cell(tgRow, tgHeaderCol + 0).Value = "Turno 3 Producción";
+            ws.Cell(tgRow, tgHeaderCol + 1).Value = totalTurno3Produccion;
+            ws.Cell(tgRow, tgHeaderCol + 2).Value = "Turno 3 Defectos";
+            ws.Cell(tgRow, tgHeaderCol + 3).Value = totalTurno3Defectos;
+            ws.Cell(tgRow, tgHeaderCol + 4).Value = "Turno 3 Total";
+            ws.Cell(tgRow, tgHeaderCol + 5).Value = totalTurno3Produccion + totalTurno3Defectos;
+
+            // Ajuste de columnas y estilos generales
+            ws.Columns().AdjustToContents();
+
+            // Configuración de impresión para 11x17 horizontal ocupando la página
+            ws.PageSetup.PaperSize = XLPaperSize.TabloidPaper;           // 11x17
+            ws.PageSetup.PageOrientation = XLPageOrientation.Landscape;  // horizontal
+            ws.PageSetup.Margins.Top = 0.25;
+            ws.PageSetup.Margins.Bottom = 0.25;
+            ws.PageSetup.Margins.Left = 0.25;
+            ws.PageSetup.Margins.Right = 0.25;
+
+            // Ajustar a una sola página (si el contenido excede, ClosedXML escala para caber)
+            ws.PageSetup.PagesWide = 1;
+            ws.PageSetup.PagesTall = 1;
+
+            using (var stream = new MemoryStream())
+            {
+                workbook.SaveAs(stream);
+                var content = stream.ToArray();
+                return File(content,
+                            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                            $"ProduccionDiaLaboral_{fechaFiltro:yyyyMMdd}.xlsx");
+            }
+        }
+
     }
 
 

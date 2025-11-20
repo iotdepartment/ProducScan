@@ -20,15 +20,26 @@
     <div class="row">
         @if (User.IsInRole("Admin"))
         {
-            <div class="col-sm-6 col-md-4 col-lg-3 col-xxl-2 mb-3">
+            <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-2 mb-3">
                 <button class="btn btn-danger rounded-pill" id="btnNuevoDefecto">
                     + Nuevo Defecto
                 </button>
             </div>
         }
-        <div class="col-sm-6 col-md-4 col-lg-3 col-xxl-2  mb-3">
+        <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-2  mb-3">
             <button class="btn btn-success rounded-pill" id="btnNuevo">+ Nuevo Registro</button>
         </div>
+
+        <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-8 d-flex justify-content-end mb-3">
+            <a asp-action="ExportProduccionDiaLaboral"
+               asp-route-fecha="@ViewBag.FechaSeleccionada"
+               asp-route-turno="@ViewBag.TurnoSeleccionado"
+               class="btn btn-success rounded-pill">
+                <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+            </a>
+        </div>
+
+       
 
     </div>
 
@@ -36,6 +47,12 @@
     <div class="modal-content" id="modalContent">
 
     </div>
+    
+    
+    <div class="mb-3">
+      
+    </div>
+
 
     @if (User.IsInRole("Admin"))
     {

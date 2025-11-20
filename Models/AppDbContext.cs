@@ -25,15 +25,9 @@ public partial class AppDbContext : DbContext
     public DbSet<Log> Logs { get; set; }
     public DbSet<Mandril> Mandriles { get; set; }
 
-
-
-
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=10.195.10.166,1433;Database=ScanSystemDB;User Id=manu; Password=2022.Tgram2;TrustServerCertificate=True;");
-
-    
 
     //"Server=RMX-D4LZZV2;Database=ScanSystem;Trusted_Connection=True;TrustServerCertificate=True;User ID=eramirez3;Password=2022.Tgram2."
 
