@@ -26,21 +26,20 @@
                 </button>
             </div>
         }
-        <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-2  mb-3">
+
+        <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-2 mb-3">
             <button class="btn btn-success rounded-pill" id="btnNuevo">+ Nuevo Registro</button>
         </div>
 
-        <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-8 d-flex justify-content-end mb-3">
+        <!-- 👇 aquí el cambio -->
+        <div class="col mb-3 d-flex">
             <a asp-action="ExportProduccionDiaLaboral"
                asp-route-fecha="@ViewBag.FechaSeleccionada"
                asp-route-turno="@ViewBag.TurnoSeleccionado"
-               class="btn btn-outline-success rounded-pill">
+               class="btn btn-outline-success rounded-pill ms-auto">
                 <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
             </a>
         </div>
-
-       
-
     </div>
 
     <!-- Modal de Producción -->

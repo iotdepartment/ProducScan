@@ -91,7 +91,9 @@ else
 <!-- Modal -->
 <div class="modal fade" id="modalCrud" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" id="modalContent"></div>
+        <div class="modal-content" id="modalContent">
+
+        </div>
     </div>
 </div>
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
@@ -189,15 +191,22 @@ else
         var data = $(this).data();
         var token = '@Antiforgery.GetTokens(ViewContext.HttpContext).RequestToken';
         var html = `
-            <div class="modal-header"><h5>Eliminar</h5></div>
-            <div class="modal-body">
+
                 <form id="formDelete" method="post" action="@Url.Action("Delete","PiezasEscaneadas")">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirmar eliminación</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                        <div class="modal-body">
                     <input type="hidden" name="__RequestVerificationToken" value="${token}" />
                     <input type="hidden" name="Id" value="${data.id}" />
-                    <p>¿Seguro que deseas eliminar?</p>
-                        <button type="submit" class="btn btn-danger rounded-pill">Eliminar</button>
-                </form>
-            </div>`;
+                       <p>¿Estás seguro de que deseas borrar este registro?</p>
+                       </div>
+                           <div class="modal-footer">
+                           <button type="submit" class="btn btn-danger rounded-pill">Sí, borrar</button>
+                        <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                </form>`;
         $("#modalContent").html(html);
         $("#modalCrud").modal("show");
     });
