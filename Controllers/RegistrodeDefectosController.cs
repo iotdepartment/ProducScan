@@ -78,10 +78,14 @@ public class RegistrodeDefectosController : Controller
     [HttpGet]
     public IActionResult Create()
     {
+        // Obtener la zona horaria de Matamoros (Central Standard Time)
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+        var nowInMatamoros = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+
         var model = new RegistrodeDefecto
         {
-            Fecha = DateOnly.FromDateTime(DateTime.Now),
-            Hora = TimeOnly.FromDateTime(DateTime.Now)
+            Fecha = DateOnly.FromDateTime(nowInMatamoros),
+            Hora = TimeOnly.FromDateTime(nowInMatamoros)
         };
 
         // Traer mesas de la tabla Mesas, IDs 3 a 24, ordenadas numéricamente

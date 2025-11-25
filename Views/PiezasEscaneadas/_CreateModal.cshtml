@@ -3,62 +3,75 @@
 <div class="modal fade" id="createProduccModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
-                <form id="formProduccion" asp-action="Create" asp-controller="PiezasEscaneadas" method="post">
-
+            <form id="formProduccion" asp-action="Create" asp-controller="PiezasEscaneadas" method="post">
+                @Html.AntiForgeryToken()
                 <div class="modal-header bg-success text-white">
                     <h5 class="modal-title">CREAR REGISTRO DE PIEZAS BUENAS</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <!-- Fecha y Hora -->
+                    <!-- Fecha -->
+                  
                     <div class="mb-3">
                         <label>Fecha</label>
-                        <input id="fecha" type="date" asp-for="Fecha" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" required />
-
+                        <input id="fecha" asp-for="Fecha" type="date" class="form-control"
+                               value="@Model.Fecha.ToString("yyyy-MM-dd")"
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        <span asp-validation-for="Fecha" class="text-danger"></span>
                     </div>
 
+                    <!-- Hora -->
                     <div class="mb-3">
                         <label>Hora</label>
-                        <input id="hora" type="time" asp-for="Hora" class="form-control" />
+                        <input id="hora" asp-for="Hora" type="time" class="form-control"
+                               value="@Model.Hora.ToString("HH:mm")" required />
+                        <span asp-validation-for="Hora" class="text-danger"></span>
                     </div>
+
                     <!-- Mesa -->
                     <div class="mb-3">
                         <label>Mesa</label>
-                        <select name="NuMesa" class="form-control" required>
+                        <select asp-for="NuMesa" id="nuMesa" class="form-control" required>
                             <option value="">Seleccione una mesa</option>
                             @foreach (var m in (IEnumerable<string>)ViewBag.Mesas)
                             {
                                 <option value="@m">@m</option>
                             }
                         </select>
+                        <span asp-validation-for="NuMesa" class="text-danger"></span>
                     </div>
 
-                    <!-- TM -->
+                    <!-- Team Member -->
                     <div class="mb-3">
                         <label>Team Member</label>
-                        <input type="text" class="form-control tm-input" name="Tm" placeholder="Buscar TM..." required />
+                        <input asp-for="Tm" type="text" class="form-control tm-input" placeholder="Buscar TM..." required />
+                        <span asp-validation-for="Tm" class="text-danger"></span>
                     </div>
 
                     <!-- Mandrel -->
                     <div class="mb-3">
                         <label>Mandrel</label>
-                        <input type="text" class="form-control mandrel-input" name="Mandrel" placeholder="Buscar Mandrel..." required />
+                        <input asp-for="Mandrel" type="text" class="form-control mandrel-input" placeholder="Buscar Mandrel..." required />
+                        <span asp-validation-for="Mandrel" class="text-danger"></span>
                     </div>
 
+                    <!-- Piezas -->
                     <div class="mb-3">
-                        <label class="form-label">Piezas</label>
-                        <input asp-for="Ndpiezas" type="number" class="form-control" />
+                        <label>Piezas</label>
+                        <input asp-for="Ndpiezas" type="number" class="form-control" required />
                         <span asp-validation-for="Ndpiezas" class="text-danger"></span>
                     </div>
+
                     <!-- Turno -->
                     <div class="mb-3">
                         <label>Turno</label>
-                        <select name="Turno" class="form-control" required>
+                        <select asp-for="Turno" id="turno" class="form-control" required>
                             @foreach (var t in (IEnumerable<string>)ViewBag.Turnos)
                             {
                                 <option value="@t">@t</option>
                             }
                         </select>
+                        <span asp-validation-for="Turno" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="modal-footer">

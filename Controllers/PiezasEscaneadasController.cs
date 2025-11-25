@@ -150,16 +150,17 @@ public class PiezasEscaneadasController : Controller
                 fotoUrl = "/images/tm/thumbnail.png";
 
             string color;
-            if (total >= meta + 400)
-                color = "bg-danger-subtle text-danger";
-            else if (total >= meta)
+            if (total >= meta + 400) // sobreproducción
+                color = "bg-overprod border-overprod";
+            else if (total >= meta) // >= 1800
                 color = "bg-success-subtle text-success";
-            else if (total >= meta - 400 && total < meta - 100)
+            else if (total >= meta - 400 && total < meta - 100) // 1400–1699
                 color = "bg-warning-subtle text-dark";
-            else if (total < meta - 400)
+            else if (total < meta - 400) // < 1400
                 color = "bg-danger-subtle text-white";
             else
                 color = "bg-success-subtle text-success";
+
 
             return new InspeccionTMViewModel
             {
@@ -487,15 +488,19 @@ public class PiezasEscaneadasController : Controller
     }
 
 
-    //METODOS PARA CREAR, ACTUALIZAR Y ELIMINAR PRODUCCION
+    //METODOS PARA CREAR PIEZAS BUENAS
     [Authorize(Roles = "Admin,Editor")]
     [HttpGet]
     public IActionResult Create()
     {
+        // Obtener la zona horaria de Matamoros (Central Standard Time con DST local)
+        var tz = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
+        var nowInMatamoros = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+
         var model = new RegistrodePiezasEscaneada
         {
-            Fecha = DateOnly.FromDateTime(DateTime.Now),
-            Hora = TimeOnly.FromDateTime(DateTime.Now)
+            Fecha = DateOnly.FromDateTime(nowInMatamoros),
+            Hora = TimeOnly.FromDateTime(nowInMatamoros)
         };
 
         var mesas = _context.Mesas
@@ -513,10 +518,8 @@ public class PiezasEscaneadasController : Controller
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost]
-    [ValidateAntiForgeryToken]
     public async Task<IActionResult> Create(RegistrodePiezasEscaneada model)
     {
-
         if (ModelState.IsValid)
         {
             try
@@ -529,11 +532,22 @@ public class PiezasEscaneadasController : Controller
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error al guardar producción: " + ex.Message });
+                return Json(new
+                {
+                    success = false,
+                    message = "Error al guardar registro",
+                    errors = new List<string> { ex.Message, ex.InnerException?.Message ?? "" }
+                });
             }
         }
 
-        return Json(new { success = false, message = "Modelo inválido." });
+        // 👇 aquí devolvemos los errores de validación
+        var validationErrors = ModelState.Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .ToList();
+
+        return Json(new { success = false, message = "Modelo inválido.", errors = validationErrors });
     }
 
     [Authorize(Roles = "Admin,Editor")]

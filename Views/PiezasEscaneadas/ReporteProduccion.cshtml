@@ -228,44 +228,62 @@
         }
 
         // Manejo genérico de formularios AJAX
-        function handleAjaxForm(formSelector) {
-            $(document).on("submit", formSelector, function (e) {
-                e.preventDefault();
-                const $form = $(this);
+                function handleAjaxForm(formSelector) {
+          $(document).on("submit", formSelector, function (e) {
+            e.preventDefault();
+            const $form = $(this);
 
-                $.ajax({
-                    type: $form.attr("method"),
-                    url: $form.attr("action"),
-                    data: $form.serialize(),
-                    success: function (res) {
-                        if (res.success) {
-                            showToast("success", res.message || "Operación exitosa");
-                            refreshAccordion();
+            // extrae el token del form
+            const token = $form.find('input[name="__RequestVerificationToken"]').val();
 
-                            // 👇 limpiar todos los campos excepto fecha y hora
-                            $form.find("input, select, textarea").each(function () {
-                                const id = $(this).attr("id");
-                                if (id !== "fecha" && id !== "hora") {
-                                    $(this).val("");
-                                }
-                            });
-                        } else {
-                            let msg = res.message || "Error desconocido";
-                            if (res.errors && res.errors.length > 0) {
-                                msg += " → " + res.errors.join(", ");
-                            }
-                            if (res.stack) {
-                                console.error("StackTrace:", res.stack);
-                            }
-                            showToast("danger", msg);
-                        }
-                    },
-                    error: function (xhr) {
-                        console.error("Error AJAX:", xhr.responseText);
-                        showToast("danger", "Error inesperado: " + xhr.statusText);
+            $.ajax({
+              type: $form.attr("method"),
+              url: $form.attr("action"),
+              data: $form.serialize(),
+              headers: { 'RequestVerificationToken': token }, // enviar token también en header
+              success: function (res) {
+                if (res.success) {
+                  showToast("success", res.message || "Operación exitosa");
+                  refreshAccordion();
+
+                  // limpia SOLO los campos que no deben persistir
+                  $form.find("input, select, textarea").each(function () {
+                    const id = $(this).attr("id");
+                    const type = $(this).attr("type");
+                    const tag = this.tagName.toLowerCase();
+
+                    // preserva estos
+                    const preserve = ["fecha", "hora", "turno", "nuMesa"];
+                    if (preserve.includes(id)) return;
+
+                    // limpia según tipo
+                    if (tag === "select") {
+                      $(this).val(""); // resetea a vacío
+                    } else if (type === "number" || type === "text" || type === "time" || type === "date") {
+                      $(this).val("");
+                    } else {
+                      $(this).val("");
                     }
-                });
+                  });
+
+                  // no cerrar el modal
+                } else {
+                  let msg = res.message || "Error desconocido";
+                  if (res.errors && res.errors.length > 0) {
+                    msg += " → " + res.errors.join(", ");
+                  }
+                  showToast("danger", msg);
+                }
+              },
+              error: function (xhr) {
+                let msg = "Error inesperado: " + xhr.status + " " + xhr.statusText;
+                if (xhr.responseText) {
+                  msg += " → " + xhr.responseText;
+                }
+                showToast("danger", msg);
+              }
             });
+          });
         }
 
         // Inicializar para ambos formularios

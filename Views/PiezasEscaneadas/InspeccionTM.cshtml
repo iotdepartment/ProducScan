@@ -7,7 +7,16 @@
 
 @model List<InspeccionTMViewModel>
 
+<style>
+    .bg-overprod {
+        background-color: #ff7354 !important; /* rojo claro tipo subtle */
+        color: #fff !important; /* texto blanco */
+    }
 
+    .border-overprod {
+        border: 3px solid #ff1f58 !important; /* contorno rojo fuerte */
+    }
+</style>
 
 <form method="get" class="mb-4">
     <div class="row g-3">
@@ -32,7 +41,33 @@
         </div>
     </div>
 </form>
-
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body">
+                <h6 class="fw-bold mb-2">📊Significado</h6>
+                <div class="row text-center">
+                    <div class="col-6 col-md-3 mb-2">
+                        <span class="badge bg-danger-subtle text-white">&nbsp;&nbsp;&nbsp;</span>
+                        <div>Fuera de meta</div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <span class="badge bg-success-subtle text-success">&nbsp;&nbsp;&nbsp;</span>
+                        <div>En meta</div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <span class="badge bg-warning-subtle text-dark">&nbsp;&nbsp;&nbsp;</span>
+                        <div>Cerca de la meta</div>
+                    </div>
+                    <div class="col-6 col-md-3 mb-2">
+                        <span class="badge bg-overprod border-overprod">&nbsp;&nbsp;&nbsp;</span>
+                        <div>Sobreproducción</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <div class="row mb-4">
     <!-- Skeletons -->
     <div id="skeletons" class="row">
@@ -70,7 +105,7 @@
                    asp-route-fecha="@($"{ViewBag.Año}-{ViewBag.Mes:00}-{ViewBag.Dia:00}")"
                    asp-route-usuario="@tm.TM"
                    asp-route-turno="@ViewBag.TurnoSeleccionado"
-                   class="card card-hover shadow-sm border-0 rounded-4 @tm.ColorCard h-100 text-decoration-none"
+                   class="card card-hover shadow-sm rounded-4 @tm.ColorCard h-100 text-decoration-none"
                    data-bs-toggle="tooltip"
                    title="@tm.TM">
 

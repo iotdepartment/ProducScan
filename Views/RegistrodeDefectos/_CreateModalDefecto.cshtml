@@ -1,7 +1,6 @@
 ﻿@model ProducScan.Models.RegistrodeDefecto
 
-
-    <div class="modal fade" id="createDefectoModal" tabindex="-1">
+<div class="modal fade" id="createDefectoModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <form asp-action="Create" asp-controller="RegistrodeDefectos" method="post" id="formDefecto">
@@ -13,56 +12,65 @@
                 <div class="modal-body">
                     <!-- Fecha -->
                     <div class="mb-3">
-                        <label>Fecha</label>
+                        <label asp-for="Fecha" class="form-label"></label>
                         <input id="fecha" asp-for="Fecha" type="date" class="form-control"
-                               max="@DateTime.Now.ToString("yyyy-MM-dd")" required/>
-
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                        <span asp-validation-for="Fecha" class="text-danger"></span>
                     </div>
+
                     <!-- Hora -->
                     <div class="mb-3">
-                        <label>Hora</label>
-                        <input id="hora" type="time" class="form-control" name="Hora" value="@Model.Hora.ToString("HH:mm")" required />
+                        <label asp-for="Hora" class="form-label"></label>
+                        <input id="hora" asp-for="Hora" type="time" class="form-control" required />
+                        <span asp-validation-for="Hora" class="text-danger"></span>
                     </div>
+
                     <!-- Mesa -->
                     <div class="mb-3">
-                        <label>Mesa</label>
-                        <select name="NuMesa" class="form-control" required>
+                        <label  class="form-label">Mesa</label>
+                        <select asp-for="NuMesa" class="form-control" required>
                             <option value="">Seleccione una mesa</option>
                             @foreach (var m in (IEnumerable<string>)ViewBag.Mesas)
                             {
                                 <option value="@m">@m</option>
                             }
                         </select>
-                    </div>
-                    <!-- TM -->
-                    <div class="mb-3">
-                        <label>Team Member</label>
-                        <input type="text" class="form-control tm-input" name="Tm" placeholder="Buscar TM..." required />
+                        <span asp-validation-for="NuMesa" class="text-danger"></span>
                     </div>
 
-                    <!-- Mandrel -->
+                    <!-- TM -->
                     <div class="mb-3">
-                        <label>Mandril</label>
-                        <input type="text" class="form-control mandrel-input" name="Mandrel" placeholder="Buscar Mandrel..." required />
+                        <label class="form-label">Team Member</label>
+                        <input asp-for="Tm" type="text" class="form-control tm-input" placeholder="Buscar TM..." required />
+                        <span asp-validation-for="Tm" class="text-danger"></span>
+                    </div>
+
+                    <!-- Mandril -->
+                    <div class="mb-3">
+                        <label class="form-label">Mandril</label>
+                        <input asp-for="Mandrel" type="text" class="form-control mandrel-input" placeholder="Buscar Mandril..." required />
+                        <span asp-validation-for="Mandrel" class="text-danger"></span>
                     </div>
 
                     <!-- Defecto -->
                     <div class="mb-3">
-                        <label  class="form-label">Defecto</label>
-                        <select asp-for="CodigodeDefecto" id="ddlDefecto" class="form-select">
+                        <label>Codigo de Defecto</label>
+                        <select asp-for="CodigodeDefecto" id="ddlDefecto" class="form-select" required>
                             <option value="">-- Selecciona un defecto --</option>
                         </select>
+                        <span asp-validation-for="CodigodeDefecto" class="text-danger"></span>
                     </div>
 
                     <!-- Turno -->
                     <div class="mb-3">
-                        <label>Turno</label>
-                        <select name="Turno" class="form-control" required>
+                        <label asp-for="Turno" class="form-label"></label>
+                        <select asp-for="Turno" class="form-control" required>
                             @foreach (var t in (IEnumerable<string>)ViewBag.Turnos)
                             {
                                 <option value="@t">@t</option>
                             }
                         </select>
+                        <span asp-validation-for="Turno" class="text-danger"></span>
                     </div>
                 </div>
                 <div class="modal-footer">
