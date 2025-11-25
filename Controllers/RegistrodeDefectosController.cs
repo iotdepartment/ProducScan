@@ -73,6 +73,7 @@ public class RegistrodeDefectosController : Controller
         return Json(defectos);
 
     }
+
     // METODOS PARA CREAR, EDITAR, ELIMINAR DEFECTOS 
     [Authorize(Roles = "Admin")]
     [HttpGet]
@@ -219,7 +220,7 @@ public class RegistrodeDefectosController : Controller
                     Usuario = User.Identity?.Name ?? "Sistema",
                     Accion = "Actualizar Defecto",
                     Nivel = "Info",
-                    Categoria = "Defecto",
+                    Categoria = "Producción",
                     Detalles = $"Defecto ID {registro.Id} actualizado. Cambios: {string.Join("; ", cambios)}"
                 };
                 _context.Logs.Add(log);
@@ -258,7 +259,7 @@ public class RegistrodeDefectosController : Controller
                 Usuario = User.Identity?.Name ?? "Sistema",
                 Accion = "Eliminar Defecto",
                 Nivel = "Warning",
-                Categoria = "Defecto",
+                Categoria = "Producción",
                 Detalles = $"Se eliminó: {detalles}"
             };
             _context.Logs.Add(log);
