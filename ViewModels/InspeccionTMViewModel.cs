@@ -11,5 +11,8 @@
         public int TotalPiezas { get; set; }
         public int Meta { get; set; }
         public string ColorCard { get; set; }
+
+        // 🔥 nueva propiedad para mostrar el último mandrel escaneado
+        public string UltimoMandrel { get; set; }
     }
 }

@@ -1,0 +1,192 @@
+﻿
+@using ProducScan.ViewModels
+
+@{
+    ViewData["Title"] = "Inspección por TM";
+    ViewData["Subtitle"] = "Piezas Inspeccionadas por Team Member.";
+    ViewData["FullWidth"] = true;
+    ViewData["HideSidebar"] = true;
+
+
+
+
+}
+
+@model List<InspeccionTMViewModel>
+
+<style>
+    .card-tv {
+        min-height: 180px;
+        transition: transform 0.2s ease-in-out;
+    }
+
+        .card-tv:hover {
+            transform: scale(1.02);
+        }
+
+    .card-body-tv {
+        font-size: 1.2rem;
+    }
+
+    .legend-badge {
+        display: inline-block;
+        width: 30px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 8px;
+    }
+
+    .bg-overprod {
+        background-color: #ff7354 !important; /* rojo claro tipo subtle */
+        color: #fff !important; /* texto blanco */
+    }
+
+    .border-overprod {
+        border: 3px solid #ff1f58 !important; /* contorno rojo fuerte */
+    }
+
+    #mainContent {
+        margin-left: 0;
+        transition: margin-left 0.3s;
+    }
+
+    
+</style>
+<div class="w-full bg-white shadow rounded-lg p-3 mb-4 text-sm">
+    <div class="flex items-center justify-between mb-2">
+        <span id="lastUpdate" class="text-xs text-gray-600">
+            Última actualización hace 0 segundos
+        </span>
+        <div class="flex gap-2">
+            <button id="btnActualizar"
+                    class="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-xs">
+                🔄 Actualizar
+            </button>
+            <a href="@Url.Action("InspeccionTM", "PiezasEscaneadas")"
+               class="bg-gray-500 hover:bg-gray-600 text-white px-2 py-1 rounded text-xs">
+                ⬅️ Regresar
+            </a>
+        </div>
+    </div>
+
+    <h5 class="font-semibold text-center mb-3">📊 Significado de colores</h5>
+    <div class="flex flex-wrap justify-center gap-4 text-xs">
+        <div class="flex items-center gap-1">
+            <span class="w-5 h-3 rounded bg-red-300 border border-red-500"></span> Fuera de meta
+        </div>
+        <div class="flex items-center gap-1">
+            <span class="w-5 h-3 rounded bg-yellow-400 border border-yellow-500"></span> Cerca de la meta
+        </div>
+        <div class="flex items-center gap-1">
+            <span class="w-5 h-3 rounded bg-green-500 border border-green-600"></span> En meta
+        </div>
+        <div class="flex items-center gap-1">
+            <span class="w-5 h-3 rounded bg-pink-600 border border-pink-700"></span> Sobreproducción
+        </div>
+    </div>
+</div>
+<div class="row mb-4">
+
+    <div id="cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-6">
+        @foreach (var tm in Model)
+        {
+
+            string colorClass;
+            string estado;
+
+            if (tm.TotalPiezas >= tm.Meta + 400)
+            {
+                colorClass = "bg-red-600 text-white";
+                estado = "Sobreproducción";
+            }
+            else if (tm.TotalPiezas >= tm.Meta)
+            {
+                colorClass = "bg-green-500 text-white";
+                estado = "En meta";
+            }
+            else if (tm.TotalPiezas >= tm.Meta - 400 && tm.TotalPiezas < tm.Meta - 100)
+            {
+                colorClass = "bg-yellow-400 text-black";
+                estado = "Cerca de la meta";
+            }
+            else if (tm.TotalPiezas < tm.Meta - 400)
+            {
+                colorClass = "bg-red-300 text-black";
+                estado = "Fuera de meta";
+            }
+            else
+            {
+                colorClass = "bg-green-500 text-white";
+                estado = "En meta";
+            }
+
+            <div class="bg-white shadow-sm rounded-xl flex flex-col overflow-hidden"
+                 data-tm="@tm.TM" data-mesa="@tm.Mesa">
+                <div class="p-2 flex flex-col items-center text-center flex-grow space-y-1">
+                    <img src="@tm.FotoUrl" class="w-16 h-16 rounded-full mb-2 border-2 border-white shadow" />
+                    <h3 class="text-sm font-semibold text-gray-800 text-center break-words whitespace-normal leading-tight max-w-[120px]">
+                        <i class="bi bi-person-badge me-1"></i> @tm.TM
+                    </h3>
+                    <p class="text-xs text-gray-500"><i class="bi bi-grid-3x3-gap me-1"></i> @tm.Mesa</p>
+                    <p class="text-sm font-semibold text-blue-600"><i class="bi bi-box-seam me-1"></i> Total Piezas</p>
+                    <p class="text-xl font-bold text-gray-700 total-piezas">@tm.TotalPiezas</p>
+                    <p class="text-xs text-gray-500 mandrel"><i class="bi bi-tools me-1"></i> Mandrel: @tm.UltimoMandrel</p>
+                </div>
+                <div class="@colorClass w-full py-1 text-center text-xs font-semibold estado-footer">
+                    @estado
+                </div>
+            </div>
+        }
+    </div>
+
+</div>
+
+@section Scripts {
+    <script>
+        let secondsSinceUpdate = 0;
+        const lastUpdateSpan = document.getElementById("lastUpdate");
+        const btnActualizar = document.getElementById("btnActualizar");
+
+        function refreshCards() {
+            // Recarga solo el contenido de #cards desde el servidor
+            $("#cards").load(window.location.href + " #cards>*", function () {
+                secondsSinceUpdate = 0; // reinicia contador
+                lastUpdateSpan.textContent = "Última actualización hace 0 segundos";
+            });
+        }
+
+        // Botón manual
+        btnActualizar.addEventListener("click", refreshCards);
+
+        // Auto-refresh cada 10 segundos
+        setInterval(refreshCards, 10000);
+
+        // Contador que incrementa cada segundo
+        setInterval(function () {
+            secondsSinceUpdate++;
+            lastUpdateSpan.textContent = "Última actualización hace " + secondsSinceUpdate + " segundos";
+        }, 1000);
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            // Inicializar tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+
+            // Recargar cards cada 30 segundos
+            setInterval(function () {
+                $("#cards").load(window.location.href + " #cards>*", function () {
+                    // Re-inicializar tooltips después de recargar
+                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                    tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl);
+                    });
+                });
+            }, 30000);
+        });
+    </script>
+}
+

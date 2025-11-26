@@ -54,6 +54,8 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.MapHub<LogsHub>("/logsHub");
+app.MapHub<ProduccionHub>("/produccionHub");
+
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
