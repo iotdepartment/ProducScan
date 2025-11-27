@@ -6,44 +6,11 @@
     ViewData["Subtitle"] = "Piezas Inspeccionadas por Team Member.";
     ViewData["FullWidth"] = true;
     ViewData["HideSidebar"] = true;
-
-
-
-
 }
 
 @model List<InspeccionTMViewModel>
 
 <style>
-    .card-tv {
-        min-height: 180px;
-        transition: transform 0.2s ease-in-out;
-    }
-
-        .card-tv:hover {
-            transform: scale(1.02);
-        }
-
-    .card-body-tv {
-        font-size: 1.2rem;
-    }
-
-    .legend-badge {
-        display: inline-block;
-        width: 30px;
-        height: 20px;
-        border-radius: 4px;
-        margin-right: 8px;
-    }
-
-    .bg-overprod {
-        background-color: #ff7354 !important; /* rojo claro tipo subtle */
-        color: #fff !important; /* texto blanco */
-    }
-
-    .border-overprod {
-        border: 3px solid #ff1f58 !important; /* contorno rojo fuerte */
-    }
 
     #mainContent {
         margin-left: 0;
@@ -123,7 +90,11 @@
             <div class="bg-white shadow-sm rounded-xl flex flex-col overflow-hidden"
                  data-tm="@tm.TM" data-mesa="@tm.Mesa">
                 <div class="p-2 flex flex-col items-center text-center flex-grow space-y-1">
-                    <img src="@tm.FotoUrl" class="w-16 h-16 rounded-full mb-2 border-2 border-white shadow" />
+                    <div class="w-20 h-20 mb-2">
+                        <img src="@tm.FotoUrl"
+                             alt="Foto de @tm.TM"
+                             class="w-full h-full rounded-full border-2 border-white shadow-sm object-cover" />
+                    </div>
                     <h3 class="text-sm font-semibold text-gray-800 text-center break-words whitespace-normal leading-tight max-w-[120px]">
                         <i class="bi bi-person-badge me-1"></i> @tm.TM
                     </h3>

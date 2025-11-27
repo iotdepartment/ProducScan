@@ -10,13 +10,8 @@
     ViewData["PageDescription"] = "Defectos desglozados por día del TM.";
 }
 
-
-
 @if (Model.Defectos.Any())
 {
-
-
-
 <div class="card mb-3">
     <div class="card-body">
         <h5 class="card-title">Defectos del día</h5>
@@ -34,6 +29,7 @@
                 <th>Turno</th>
                 <th>Mandrel</th>
                 <th>Defecto</th>
+  
                 @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                 {
                     <th>Acciones</th>
@@ -46,12 +42,11 @@
                 <tr id="row-@d.Id">
                     <td>@d.FechaLaboral.ToString("yyyy-MM-dd")</td>
                     <td>@d.Fecha.ToString("yyyy-MM-dd")</td>
-                    <td>@d.Hora</td>
-                    <td>@d.NuMesa</td>
-                    <td>@d.Turno</td>
-                    <td>@d.Mandrel</td>
-                    <td>@d.CodigodeDefecto - @d.Defecto</td>
-
+                    <td class="col-hora">@d.Hora</td>
+                    <td class="col-mesa">@d.NuMesa</td>
+                    <td class="col-turno">@d.Turno</td>
+                    <td class="col-mandrel">@d.Mandrel</td>
+                    <td class="col-defecto">@d.CodigodeDefecto - @d.Defecto</td>
                     @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                     {
                         <td>
@@ -65,7 +60,9 @@
                                         data-mandrel="@d.Mandrel"
                                         data-codigodefecto="@d.CodigodeDefecto"
                                         data-defecto="@d.Defecto"
-                                        data-hora="@d.Hora.ToString("HH:mm")">
+                                        data-hora="@d.Hora.ToString("HH:mm")"
+                                        data-tm="@d.Tm">
+                                    <!-- 👈 corregido: data-tm en minúsculas -->
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
                             }
@@ -121,24 +118,27 @@ else
 
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
-@section scripts{
-<script>
-
-            $(document).on("click", ".btnEditarDefecto", function () {
+@section Scripts {
+    <script>
+        // Abrir modal de edición de defecto
+        $(document).on("click", ".btnEditarDefecto", function () {
             var btn = $(this);
             var valor = btn.data("codigodefecto") + "|" + btn.data("defecto");
+
             $("#editId").val(btn.data("id"));
             $("#editMesa").val(btn.data("mesa"));
             $("#editTurno").val(btn.data("turno"));
             $("#editMandrel").val(btn.data("mandrel"));
             $("#editDefectoSelect").val(valor);
             $("#editHora").val(btn.data("hora"));
+            $("#editTm").val(btn.data("tm")); // 👈 nuevo campo TM
 
             const modal = new bootstrap.Modal(document.getElementById('editarDefectoModal'));
             modal.show();
         });
 
         // Guardar cambios
+                // Guardar cambios
         $(document).on("submit", "#formEditarDefecto", function (e) {
             e.preventDefault();
 
@@ -146,38 +146,45 @@ else
                 url: '/RegistrodeDefectos/EditarDefecto',
                 type: 'POST',
                 data: $(this).serialize(),
-                success: function (resp) {
-                    $('#editarDefectoModal').modal('hide');
+                        success: function (resp) {
+            $('#editarDefectoModal').modal('hide');
 
-                    if (resp.success) {
-                        mostrarToast('success', resp.message);
+            if (resp.success) {
+                var id = $("#editId").val();
+                var fila = $("#row-" + id);
+                var valor = $("#editDefectoSelect").val().split("|");
+                var codigo = valor[0];
+                var defecto = valor[1];
+                var nuevoTm = $("#editTm").val();
+                var tmActualVista = "@ViewBag.Usuario"; // 👈 TM que se está filtrando en la vista
 
-                        var id = $("#editId").val();
-                        var fila = $("#row-" + id);
-                        var valor = $("#editDefectoSelect").val().split("|");
-                        var codigo = valor[0];
-                        var defecto = valor[1];
+                if (nuevoTm !== tmActualVista) {
+                    // 👈 Si el TM cambió, el registro ya no pertenece a esta vista → eliminar fila
+                    fila.remove();
+                } else {
+                    // 👈 Si el TM sigue siendo el mismo, actualizar la fila
+                    fila.find(".col-mesa").text($("#editMesa").val());
+                    fila.find(".col-turno").text($("#editTurno").val());
+                    fila.find(".col-mandrel").text($("#editMandrel").val());
+                    fila.find(".col-defecto").text(codigo + " | " + defecto);
+                    fila.find(".col-hora").text($("#editHora").val());
+                    fila.find(".col-tm").text(nuevoTm);
 
-                        // Actualizar celdas
-                        fila.find(".col-mesa").text($("#editMesa").val());
-                        fila.find(".col-turno").text($("#editTurno").val());
-                        fila.find(".col-mandrel").text($("#editMandrel").val());
-                        fila.find(".col-defecto").text(codigo + " | " + defecto);
-                        fila.find(".col-hora").text($("#editHora").val());
+                    var btnEditar = fila.find(".btnEditarDefecto");
+                    btnEditar.data("mesa", $("#editMesa").val());
+                    btnEditar.data("turno", $("#editTurno").val());
+                    btnEditar.data("mandrel", $("#editMandrel").val());
+                    btnEditar.data("codigodefecto", codigo);
+                    btnEditar.data("defecto", defecto);
+                    btnEditar.data("hora", $("#editHora").val());
+                    btnEditar.data("tm", nuevoTm);
+                }
 
-                        // Actualizar data-* del botón
-                        var btnEditar = fila.find(".btnEditarDefecto");
-                        btnEditar.data("mesa", $("#editMesa").val());
-                        btnEditar.data("turno", $("#editTurno").val());
-                        btnEditar.data("mandrel", $("#editMandrel").val());        
-                        btnEditar.data("codigodefecto", codigo);
-                        btnEditar.data("defecto", defecto);
-                        btnEditar.data("hora", $("#editHora").val());
-
-                    } else {
-                        mostrarToast('danger', resp.message);
-                    }
-                },
+                mostrarToast('success', resp.message);
+            } else {
+                mostrarToast('danger', resp.message);
+            }
+        },
                 error: function () {
                     $('#editarDefectoModal').modal('hide');
                     mostrarToast('danger', 'Error inesperado al procesar la solicitud.');
@@ -185,6 +192,65 @@ else
             });
         });
 
+        // Autocomplete para Mandrel
+        $(document).on("keyup", "#editMandrel", function () {
+            var query = $(this).val();
+            if (query.length < 2) {
+                $("#mandrelSuggestions").empty();
+                return;
+            }
+
+            $.get("/RegistrodeDefectos/BuscarMandrel", { term: query }, function (data) { // 👈 adaptado
+                var suggestions = $("#mandrelSuggestions");
+                suggestions.empty();
+
+                if (data.length === 0) {
+                    suggestions.append('<div class="list-group-item">Sin resultados</div>');
+                } else {
+                    data.forEach(function (item) {
+                        suggestions.append('<button type="button" class="list-group-item list-group-item-action mandrel-option">' + item + '</button>');
+                    });
+                }
+            });
+        });
+
+        // Al hacer clic en una sugerencia de mandrel
+        $(document).on("click", ".mandrel-option", function () {
+            var value = $(this).text();
+            $("#editMandrel").val(value);
+            $("#mandrelSuggestions").empty();
+        });
+
+        // Autocomplete para TM
+        $(document).on("keyup", "#editTm", function () {
+            var query = $(this).val();
+            if (query.length < 2) {
+                $("#tmSuggestions").empty();
+                return;
+            }
+
+            $.get("/RegistrodeDefectos/BuscarTM", { term: query }, function (data) { // 👈 adaptado
+                var suggestions = $("#tmSuggestions");
+                suggestions.empty();
+
+                if (data.length === 0) {
+                    suggestions.append('<div class="list-group-item">Sin resultados</div>');
+                } else {
+                    data.forEach(function (item) {
+                        suggestions.append('<button type="button" class="list-group-item list-group-item-action tm-option">' + item + '</button>');
+                    });
+                }
+            });
+        });
+
+        // Al hacer clic en una sugerencia de TM
+        $(document).on("click", ".tm-option", function () {
+            var value = $(this).text();
+            $("#editTm").val(value);
+            $("#tmSuggestions").empty();
+        });
+
+        // Toast helper
         function mostrarToast(tipo, mensaje) {
             var toastId = "toast-" + Date.now();
             var toastHtml = `
@@ -196,33 +262,30 @@ else
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                     </div>
                 </div>`;
-
             $("#toastContainer").append(toastHtml);
 
             var toastEl = document.getElementById(toastId);
             var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
             toast.show();
 
-            // Eliminar del DOM cuando se oculta
             toastEl.addEventListener('hidden.bs.toast', function () {
                 $(toastEl).remove();
             });
-        }   
+        }
 
-
-        // Capturar id al abrir modal
+        // Capturar id al abrir modal de borrar
         var borrarModal = document.getElementById('borrarDefectoModal');
         borrarModal.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget;
             document.getElementById('deleteId').value = button.getAttribute('data-id');
         });
 
-        // Enviar por AJAX
+        // Enviar por AJAX el borrado
         $(document).on("submit", "#formBorrarDefecto", function (e) {
             e.preventDefault();
 
             $.ajax({
-                url: '/RegistrodeDefectos/BorrarDefecto',
+                url: '/RegistrodeDefectos/BorrarDefecto', // 👈 adaptado
                 type: 'POST',
                 data: $(this).serialize(),
                 success: function (resp) {
@@ -243,5 +306,5 @@ else
                 }
             });
         });
-</script>
+    </script>
 }

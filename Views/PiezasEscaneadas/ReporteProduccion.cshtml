@@ -246,25 +246,10 @@
                   showToast("success", res.message || "Operación exitosa");
                   refreshAccordion();
 
-                  // limpia SOLO los campos que no deben persistir
-                  $form.find("input, select, textarea").each(function () {
-                    const id = $(this).attr("id");
-                    const type = $(this).attr("type");
-                    const tag = this.tagName.toLowerCase();
-
-                    // preserva estos
-                    const preserve = ["fecha", "hora", "turno", "nuMesa"];
-                    if (preserve.includes(id)) return;
-
-                    // limpia según tipo
-                    if (tag === "select") {
-                      $(this).val(""); // resetea a vacío
-                    } else if (type === "number" || type === "text" || type === "time" || type === "date") {
-                      $(this).val("");
-                    } else {
-                      $(this).val("");
-                    }
-                  });
+                          $form.find("input, select, textarea").each(function () {
+                              // simplemente no hacemos nada
+                              return;
+                            });
 
                   // no cerrar el modal
                 } else {

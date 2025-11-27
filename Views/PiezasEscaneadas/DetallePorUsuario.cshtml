@@ -8,6 +8,7 @@
     ViewData["Title"] = "Producción por TM";
     ViewData["PageTitle"] = "PRODUCCION POR TEAM MEMBER";
     ViewData["PageDescription"] = "Producción desglozada por día de cada TM.";
+    // ViewData["FullWidth"] = true;
 }
 
 
@@ -99,10 +100,8 @@ else
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
 @section Scripts {
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-       
-
+    <script>
+        // Abrir modal de edición
         $(document).on("click", ".btnEditar", function () {
             var id = $(this).data("id");
 
@@ -112,6 +111,7 @@ else
             });
         });
 
+        // Submit de formularios Update/Delete
         $(document).on("submit", "#formUpdate, #formDelete", function (e) {
             e.preventDefault();
 
@@ -134,6 +134,7 @@ else
             });
         });
 
+        // Mandrel autocomplete
         $(document).on("keyup", "#editMandrel", function () {
             var query = $(this).val();
             if (query.length < 2) {
@@ -155,13 +156,45 @@ else
             });
         });
 
-    // Al hacer clic en una sugerencia
-    $(document).on("click", ".mandrel-option", function () {
-        var value = $(this).text();
-        $("#editMandrel").val(value);
-        $("#mandrelSuggestions").empty();
-    });
+        // Al hacer clic en una sugerencia de mandrel
+        $(document).on("click", ".mandrel-option", function () {
+            var value = $(this).text();
+            $("#editMandrel").val(value);
+            $("#mandrelSuggestions").empty();
+        });
 
+
+                // TM autocomplete
+        $(document).on("keyup", "#editTm", function () {
+            var query = $(this).val();
+            if (query.length < 2) {
+                $("#tmSuggestions").empty();
+                return;
+            }
+
+            $.get("/PiezasEscaneadas/BuscarTM", { term: query }, function (data) {
+                var suggestions = $("#tmSuggestions");
+                suggestions.empty();
+
+                if (data.length === 0) {
+                    suggestions.append('<div class="list-group-item">Sin resultados</div>');
+                } else {
+                    data.forEach(function (item) {
+                        suggestions.append('<button type="button" class="list-group-item list-group-item-action tm-option">' + item + '</button>');
+                    });
+                }
+            });
+        });
+
+        // Al hacer clic en una sugerencia de TM
+        $(document).on("click", ".tm-option", function () {
+            var value = $(this).text();
+            $("#editTm").val(value);
+            $("#tmSuggestions").empty();
+        });
+
+
+        // Toast helper
         function mostrarToast(tipo, mensaje) {
             var toastId = "toast-" + Date.now();
             var toastHtml = `
@@ -173,7 +206,6 @@ else
                         <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                     </div>
                 </div>`;
-
             $("#toastContainer").append(toastHtml);
 
             var toastEl = document.getElementById(toastId);
@@ -185,31 +217,28 @@ else
             });
         }
 
-
-    // Abrir modal de Eliminar
-    $(document).on("click", ".btnEliminar", function () {
-        var data = $(this).data();
-        var token = '@Antiforgery.GetTokens(ViewContext.HttpContext).RequestToken';
-        var html = `
-
-                <form id="formDelete" method="post" action="@Url.Action("Delete","PiezasEscaneadas")">
+        // Abrir modal de Eliminar
+        $(document).on("click", ".btnEliminar", function () {
+            var data = $(this).data();
+            var token = '@Antiforgery.GetTokens(ViewContext.HttpContext).RequestToken';
+            var html = `
+                <form id="formDelete" method="post" action="@Url.Action("Delete", "PiezasEscaneadas")">
                     <div class="modal-header">
                         <h5 class="modal-title">Confirmar eliminación</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
-                        <div class="modal-body">
-                    <input type="hidden" name="__RequestVerificationToken" value="${token}" />
-                    <input type="hidden" name="Id" value="${data.id}" />
-                       <p>¿Estás seguro de que deseas borrar este registro?</p>
-                       </div>
-                           <div class="modal-footer">
-                           <button type="submit" class="btn btn-danger rounded-pill">Sí, borrar</button>
+                    <div class="modal-body">
+                        <input type="hidden" name="__RequestVerificationToken" value="${token}" />
+                        <input type="hidden" name="Id" value="${data.id}" />
+                        <p>¿Estás seguro de que deseas borrar este registro?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger rounded-pill">Sí, borrar</button>
                         <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                        </div>
+                    </div>
                 </form>`;
-        $("#modalContent").html(html);
-        $("#modalCrud").modal("show");
-    });
-</script>
-  
+            $("#modalContent").html(html);
+            $("#modalCrud").modal("show");
+        });
+    </script>
 }

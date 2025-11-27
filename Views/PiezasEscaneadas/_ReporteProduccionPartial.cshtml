@@ -46,6 +46,7 @@
                     <div class="accordion-body">
                         <div class="row">
                             <div class="col-lg-12 col-xl-3">
+
                                 <strong class="text-primary">Inspección por Mesa:</strong>
                                 <ul>
                                     @foreach (var mandrel in grupo.Mandriles)
@@ -119,34 +120,40 @@
                                 </div>
                             </div>
                         }
-
+                          @if (grupo.TeamMembersProduccion?.Any() == true)
+                            {
                         <hr />
+                      
                         <strong>Detalles de Inspección:</strong>
                         <ul>
-                            @foreach (var tm in grupo.TeamMembers)
-                            {
-                                <li>
-                                    <a asp-action="DetallePorUsuario"
-                                       asp-route-fecha="@($"{Model.Año}-{Model.Mes:00}-{Model.Dia:00}")"
-                                       asp-route-usuario="@tm"
-                                       asp-route-turno="@grupo.Turno"
-                                       class="btn btn-sm btn-outline-primary rounded-pill mb-1"
-                                       target="_blank">
-                                        Ver Inspección de @tm
-                                    </a>
-                                </li>
-                            }
+                          
+
+                                    @foreach (var tmProd in grupo.TeamMembersProduccion)
+                                    {
+                                        <li>
+                                            <a asp-action="DetallePorUsuario"
+                                               asp-route-fecha="@($"{Model.Año}-{Model.Mes:00}-{Model.Dia:00}")"
+                                               asp-route-usuario="@tmProd.TM"
+                                               asp-route-turno="@grupo.Turno"
+                                               class="btn btn-sm btn-outline-primary rounded-pill mb-1">
+                                                Ver Producción de @tmProd.TM
+                                            </a> <!-- 👈 cierre correcto -->
+                                        </li> <!-- 👈 cierre correcto -->
+                                    }
+
+                           
                             <li>
                                 <a asp-action="DetalleProduccionMesa"
                                    asp-route-fecha="@($"{Model.Año:0000}-{Model.Mes:00}-{Model.Dia:00}")"
                                    asp-route-mesa="@grupo.NuMesa"
                                    asp-route-turno="@grupo.Turno"
-                                   class="btn btn-sm btn-outline-info rounded-pill"
-                                   target="_blank">
+                                   class="btn btn-sm btn-outline-info rounded-pill">
                                     Ver Inspección por Mesa
                                 </a>
                             </li>
+
                         </ul>
+                             }
 
                         @if (grupo.DefectosPorTM?.Any() == true)
                         {
@@ -161,8 +168,7 @@
                                            asp-route-fecha="@($"{Model.Año}-{Model.Mes:00}-{Model.Dia:00}")"
                                            asp-route-usuario="@d.TM"
                                            asp-route-turno="@grupo.Turno"
-                                           class="btn btn-sm btn-outline-danger rounded-pill"
-                                           target="_blank">
+                                           class="btn btn-sm btn-outline-danger rounded-pill mb-1">
                                             Ver defectos de @d.TM
                                         </a>
                                     </li>

@@ -19,23 +19,11 @@ namespace ProducScan.Controllers
             _log = log;
         }
 
-        //public IActionResult Index()
-        //{
-        //    var vm = new UsuariosLogsViewModel
-        //    {
-        //        Usuarios = _context.Usuarios.ToList(),
-        //        //Logs = _context.Logs.OrderByDescending(l => l.Fecha).Take(50).ToList() // últimos 50
-        //    };
-        //    return View(vm);
-
-        //}
-
         public IActionResult Index()
         {
             var usuarios = _context.Usuarios.ToList();
             return View(usuarios); // 👈 ahora sí coincide con @model IEnumerable<Usuario>
         }
-
 
         // GET: Modal Crear
         public IActionResult Crear()

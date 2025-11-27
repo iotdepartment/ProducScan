@@ -4,43 +4,55 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <form asp-controller="RegistrodeDefectos" asp-action="EditarDefecto" method="post" id="formEditarDefecto">
+                @Html.AntiForgeryToken()
                 <div class="modal-header bg-warning">
                     <h5 class="modal-title">Editar Defecto</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
+
                 <div class="modal-body">
                     <input type="hidden" asp-for="Id" id="editId" />
 
                     <div class="mb-2">
-                        <label>Mesa</label>
-                        <input asp-for="NuMesa" class="form-control" id="editMesa" />
+                        <label class="form-label">Mesa</label>
+                        <input asp-for="NuMesa" class="form-control" id="editMesa" required />
                     </div>
 
                     <div class="mb-2">
-                        <label>Turno</label>
-                        <input asp-for="Turno" class="form-control" id="editTurno" />
+                        <label class="form-label">Turno</label>
+                        <select asp-for="Turno" class="form-select" id="editTurno" required>
+                            <option value="1">Turno 1</option>
+                            <option value="2">Turno 2</option>
+                            <option value="3">Turno 3</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-2 position-relative">
+                        <label class="form-label">Mandrel</label>
+                        <input asp-for="Mandrel" class="form-control" id="editMandrel" autocomplete="off" />
+                        <div id="mandrelSuggestions" class="list-group position-absolute w-100" style="z-index:1050;"></div>
                     </div>
 
                     <div class="mb-2">
-                        <label>Mandrel</label>
-                        <input asp-for="Mandrel" class="form-control" id="editMandrel" />
-                    </div>
-
-                    <div class="mb-2">
-                        <label>Defecto</label>
-                        <select class="form-select" name="CodigodeDefecto" id="editDefectoSelect" required>
+                        <label class="form-label">Defecto</label>
+                        <select class="form-select" asp-for="CodigodeDefecto" id="editDefectoSelect" required>
                             <option value="">-- Selecciona un defecto --</option>
                             @foreach (var item in ViewBag.DefectosCatalogo)
                             {
                                 <option value="@item.Value">@item.Text</option>
                             }
                         </select>
-
                     </div>
 
                     <div class="mb-2">
-                        <label>Hora</label>
-                        <input asp-for="Hora" type="time" class="form-control" id="editHora" />
+                        <label class="form-label">Hora</label>
+                        <input asp-for="Hora" type="time" class="form-control" id="editHora" required />
+                    </div>
+
+                    <div class="mb-2 position-relative">
+                        <label class="form-label">Team Member (TM)</label>
+                        <input asp-for="Tm" class="form-control" id="editTm" autocomplete="off" />
+                        <div id="tmSuggestions" class="list-group position-absolute w-100" style="z-index:1050;"></div>
                     </div>
                 </div>
 

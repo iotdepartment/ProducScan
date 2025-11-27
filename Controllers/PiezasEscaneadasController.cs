@@ -90,6 +90,7 @@ public class PiezasEscaneadasController : Controller
     }
 
     [Authorize(Roles = "Admin,Editor,Visual")]
+    [HttpGet]
     public IActionResult InspeccionTM(DateTime? fecha, string turno)
     {
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
@@ -218,7 +219,8 @@ public class PiezasEscaneadasController : Controller
 
         return View(lista);
     }
-
+    
+    [HttpGet]
     public IActionResult InspeccionTMTV(DateTime? fecha, string turno)
     {
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
@@ -695,11 +697,12 @@ public class PiezasEscaneadasController : Controller
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost]
-    public IActionResult Update(int Id, string Mandrel, string Ndpiezas, string Turno, string NuMesa, string Hora, RegistrodePiezasEscaneada model)
+    [ValidateAntiForgeryToken]
+    public IActionResult Update(RegistrodePiezasEscaneada model)
     {
         try
         {
-            var registro = _context.RegistrodePiezasEscaneadas.Find(Id);
+            var registro = _context.RegistrodePiezasEscaneadas.Find(model.Id);
             if (registro == null)
                 return Json(new { success = false, error = "Registro no encontrado" });
 
@@ -709,58 +712,35 @@ public class PiezasEscaneadasController : Controller
             var mesaAntes = registro.NuMesa;
             var turnoAntes = registro.Turno;
             var horaAntes = registro.Hora;
+            var tmAntes = registro.Tm;
 
             // Validar mandrel
             bool existeMandrel = _context.Mandriles.Any(m => m.MandrilNombre == model.Mandrel);
             if (!existeMandrel)
-            {
                 return Json(new { success = false, error = "El mandrel ingresado no existe en el catálogo." });
-            }
 
             // Actualizamos campos
-            registro.Mandrel = Mandrel;
-            registro.Ndpiezas = Ndpiezas;
-            registro.Turno = Turno;
-            registro.NuMesa = NuMesa;
-
-            // 👇 Acepta "HH:mm" o "HH:mm:ss"
-            string[] formatos = { "HH:mm", "HH:mm:ss" };
-            if (TimeOnly.TryParseExact(Hora, formatos, CultureInfo.InvariantCulture, DateTimeStyles.None, out var horaParsed))
-            {
-                registro.Hora = horaParsed;
-            }
-            else
-            {
-                return Json(new { success = false, error = "Formato de hora inválido" });
-            }
+            registro.Mandrel = model.Mandrel;
+            registro.Ndpiezas = model.Ndpiezas;
+            registro.Turno = model.Turno;
+            registro.NuMesa = model.NuMesa;
+            registro.Tm = model.Tm;
+            registro.Hora = model.Hora; // 👈 directo, sin parseo
 
             _context.SaveChanges();
 
-            // Usuario actual
-            var usuarioActual = User.Identity?.Name ?? "Sistema";
-
-            // Construimos lista de cambios
+            // Log de cambios
             var cambios = new List<string>();
+            if (piezasAntes != model.Ndpiezas) cambios.Add($"Piezas: {piezasAntes} → {model.Ndpiezas}");
+            if (mandrelAntes != model.Mandrel) cambios.Add($"Mandrel: {mandrelAntes} → {model.Mandrel}");
+            if (mesaAntes != model.NuMesa) cambios.Add($"Mesa: {mesaAntes} → {model.NuMesa}");
+            if (turnoAntes != model.Turno) cambios.Add($"Turno: {turnoAntes} → {model.Turno}");
+            if (horaAntes != registro.Hora) cambios.Add($"Hora: {horaAntes:HH:mm} → {registro.Hora:HH:mm}");
+            if (tmAntes != model.Tm) cambios.Add($"TM: {tmAntes} → {model.Tm}");
 
-            if (piezasAntes != Ndpiezas)
-                cambios.Add($"Piezas: {piezasAntes} → {Ndpiezas}");
-
-            if (mandrelAntes != Mandrel)
-                cambios.Add($"Mandrel: {mandrelAntes} → {Mandrel}");
-
-            if (mesaAntes != NuMesa)
-                cambios.Add($"Mesa: {mesaAntes} → {NuMesa}");
-
-            if (turnoAntes != Turno)
-                cambios.Add($"Turno: {turnoAntes} → {Turno}");
-
-            if (horaAntes != registro.Hora)
-                cambios.Add($"Hora: {horaAntes:HH:mm} → {registro.Hora:HH:mm}");
-
-            // Solo registrar si hubo cambios
             if (cambios.Any())
             {
-                string mensaje = $"Registro [Id={registro.Id} | Mandrel={mandrelAntes}] . " + string.Join("| ", cambios);
+                string mensaje = $"Registro [Id={registro.Id} | TM={tmAntes}] . " + string.Join(" | ", cambios);
                 _log.Registrar("Actualizar Registro", mensaje, "Info", categoria: "Producción");
             }
 

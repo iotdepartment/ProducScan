@@ -207,6 +207,11 @@ public class RegistrodeDefectosController : Controller
                 cambios.Add($"Hora: '{registro.Hora}' → '{model.Hora}'");
                 registro.Hora = model.Hora;
             }
+            if (registro.Tm != model.Tm) // 👈 nuevo bloque para TM
+            {
+                cambios.Add($"TM: '{registro.Tm}' → '{model.Tm}'");
+                registro.Tm = model.Tm;
+            }
 
             // Guardar cambios en la BD
             _context.SaveChanges();
@@ -284,12 +289,12 @@ public class RegistrodeDefectosController : Controller
 
         return Json(tms);
     }
-    
+
     [HttpGet]
     public JsonResult BuscarMandrel(string term)
     {
         var mandriles = _context.Mandriles
-            .Where(m => m.MandrilNombre.Contains(term))
+            .Where(m => m.Area == "INSPECCION" && m.MandrilNombre.Contains(term))
             .Select(m => m.MandrilNombre)
             .Take(10)
             .ToList();

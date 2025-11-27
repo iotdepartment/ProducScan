@@ -40,10 +40,15 @@
                     }
                 </select>
         </div>
-
         <div class="mb-3">
             <label class="form-label">Hora</label>
             <input asp-for="Hora" class="form-control" type="time" required />
+        </div>
+
+        <div class="mb-3 position-relative">
+            <label class="form-label">Team Member (TM)</label>
+            <input asp-for="Tm" class="form-control tm-input" id="editTm" autocomplete="off" />
+            <div id="tmSuggestions" class="list-group position-absolute w-100" style="z-index:1050;"></div>
         </div>
     </div>
 
