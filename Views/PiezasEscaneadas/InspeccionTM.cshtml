@@ -95,8 +95,6 @@
         <div id="cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 hidden">
             @foreach (var tm in Model)
             {
-
-
                 string colorClass;
                 string estado;
 
@@ -126,19 +124,22 @@
                     estado = "En meta";
                 }
 
-                <div class="bg-white shadow-md rounded-lg flex flex-col overflow-hidden">
+                <!-- Card clickeable -->
+                <a asp-action="DetallePorUsuario"
+                   asp-route-fecha="@($"{ViewBag.Año}-{ViewBag.Mes:00}-{ViewBag.Dia:00}")"
+                   asp-route-usuario="@tm.TM"
+                   class="bg-white shadow-md rounded-lg flex flex-col overflow-hidden hover:shadow-lg transition transform hover:scale-105 no-underline text-inherit">
+
                     <!-- Contenido principal -->
                     <div class="p-4 flex items-center space-x-4 flex-grow">
                         <img src="@tm.FotoUrl"
                              alt="Foto de @tm.TM"
-                             class="rounded-full border-2 border-grey-800"
-                             style="width:70px;height:70px;object-fit:cover;" />
+                             class="rounded-full border-2 border-gray-800 w-20 h-20 object-cover" />
                         <div class="flex-1 overflow-hidden">
                             <div class="font-bold truncate text-sm text-gray-800">👤 @tm.TM</div>
                             <div class="text-xs text-gray-500">🪑 @tm.Mesa</div>
                             <div class="font-semibold text-blue-600 text-sm mt-1">📦 Total Piezas</div>
                             <div class="font-bold text-lg text-gray-700">@tm.TotalPiezas</div>
-                            @* <div class="text-xs text-gray-500">🔧 Mandrel: @tm.UltimoMandrel</div> *@
                         </div>
                     </div>
 
@@ -146,7 +147,7 @@
                     <div class="@colorClass w-full py-1 text-center text-xs font-semibold">
                         @estado
                     </div>
-                </div>
+                </a>
             }
         </div>
     </div>

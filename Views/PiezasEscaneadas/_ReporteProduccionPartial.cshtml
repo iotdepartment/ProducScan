@@ -35,7 +35,7 @@
                             }
                         </span>
                         <span><strong>Defectos:</strong> <span class="badge bg-danger rounded-pill">@grupo.TotalDefectos</span></span>
-                        <span><strong>P. Buenas:</strong> <span class="badge bg-primary rounded-pill">@grupo.TotalPiezas</span></span>
+                        <span><strong>P. Buenas:</strong> <span class="badge bg-success rounded-pill">@grupo.TotalPiezas</span></span>
                         <span><strong>TM:</strong> @string.Join(", ", grupo.TeamMembers ?? new List<string>())</span>
                     </button>
                 </h2>
@@ -47,13 +47,13 @@
                         <div class="row">
                             <div class="col-lg-12 col-xl-3">
 
-                                <strong class="text-primary">Inspección por Mesa:</strong>
+                                <strong class="text-success">Inspección por Mesa:</strong>
                                 <ul>
                                     @foreach (var mandrel in grupo.Mandriles)
                                     {
                                         <li>
                                             <strong>@mandrel.Mandrel</strong>:
-                                            <span class="badge bg-primary rounded-pill">@mandrel.TotalPiezas</span>
+                                            <span class="badge bg-success rounded-pill">@mandrel.TotalPiezas</span>
                                         </li>
                                     }
                                 </ul>
@@ -65,20 +65,20 @@
                                     <div class="row">
 
                                         <div class="col-12">
-                                                <strong class="text-primary">Inspeccion por TM:</strong>
+                                                <strong class="text-success">Inspeccion por TM:</strong>
                                                 <ul>
                                                 @foreach (var tm in grupo.TeamMembersProduccion)
                                                 {
                                                     <li>
                                                         <strong>@tm.TM</strong>:
-                                                        <span class="badge bg-primary rounded-pill">@tm.TotalPiezas</span> piezas
+                                                        <span class="badge bg-success rounded-pill">@tm.TotalPiezas</span> piezas
                                                     </li>
                                                     <ul>
                                                         @foreach (var mandrel in tm.Mandriles)
                                                         {
                                                             <li>
                                                                 @mandrel.Mandrel:
-                                                                <span class="badge bg-primary rounded-pill">@mandrel.TotalPiezas</span>
+                                                                <span class="badge bg-sucess rounded-pill">@mandrel.TotalPiezas</span>
                                                             </li>
                                                         }
                                                     </ul>
@@ -135,7 +135,7 @@
                                                asp-route-fecha="@($"{Model.Año}-{Model.Mes:00}-{Model.Dia:00}")"
                                                asp-route-usuario="@tmProd.TM"
                                                asp-route-turno="@grupo.Turno"
-                                               class="btn btn-sm btn-outline-primary rounded-pill mb-1">
+                                               class="btn btn-sm btn-outline-success rounded-pill mb-1">
                                                 Ver Producción de @tmProd.TM
                                             </a> <!-- 👈 cierre correcto -->
                                         </li> <!-- 👈 cierre correcto -->
