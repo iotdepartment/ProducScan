@@ -42,7 +42,7 @@ public class PiezasEscaneadasController : Controller
             TM = registro.Tm,
             Mesa = registro.NuMesa,
             TotalPiezas = int.Parse(registro.Ndpiezas),
-            UltimoMandrel = registro.Mandrel,
+            Mandril = registro.Mandrel,
             Meta = 1800
         };
 
@@ -51,7 +51,6 @@ public class PiezasEscaneadasController : Controller
 
         return Ok();
     }
-
 
     [HttpGet]
     public async Task<IActionResult> Index(int page = 1)
@@ -111,17 +110,19 @@ public class PiezasEscaneadasController : Controller
                 turnoSeleccionado = "3";
         }
 
-        int meta = 1800;
         var usuarios = _context.Users.ToList();
-
+        var mesas = _context.Mesas.ToList();
 
         // --- Producciones ---
-        var producciones = _context.RegistrodePiezasEscaneadas
+        var produccionesRaw = _context.RegistrodePiezasEscaneadas
             .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
             .ToList()
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
                         && r.Turno == turnoSeleccionado)
+            .ToList();
+
+        var producciones = produccionesRaw
             .GroupBy(r => new { r.NuMesa, r.Tm })
             .Select(g => new
             {
@@ -132,144 +133,15 @@ public class PiezasEscaneadasController : Controller
             .ToList();
 
         // --- Defectos ---
-        var defectos = _context.RegistrodeDefectos
+        var defectosRaw = _context.RegistrodeDefectos
             .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
             .ToList()
             .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
                         && d.Turno == turnoSeleccionado)
-            .GroupBy(d => new { d.NuMesa, d.Tm })
-            .Select(g => new
-            {
-                Mesa = g.Key.NuMesa,
-                TM = g.Key.Tm,
-                PiezasMalas = g.Count()
-            })
             .ToList();
 
-        // --- Unión de claves (Mesa + TM) ---
-        var union = producciones.Select(p => new { p.Mesa, p.TM })
-            .Union(
-                    defectos.Select(d => new { d.Mesa, d.TM }))
-            .ToList();
-
-        var lista = union.Select(u =>
-        {
-            var prod = producciones.FirstOrDefault(p => p.Mesa == u.Mesa && p.TM == u.TM);
-            var def = defectos.FirstOrDefault(d => d.Mesa == u.Mesa && d.TM == u.TM);
-
-            int piezasBuenas = prod?.PiezasBuenas ?? 0;
-            int piezasMalas = def?.PiezasMalas ?? 0;
-            int total = piezasBuenas + piezasMalas;
-
-            var usuario = usuarios.FirstOrDefault(x => x.Nombre == u.TM);
-            string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
-            string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
-
-            string fotoPathJPG = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.JPG");
-            string fotoPathjpg = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.jpg");
-
-            string fotoUrl;
-            if (System.IO.File.Exists(fotoPathJPG))
-                fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.JPG";
-            else if (System.IO.File.Exists(fotoPathjpg))
-                fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.jpg";
-            else
-                fotoUrl = "/images/tm/thumbnail.png";
-            string color;
-            if (total >= meta + 400) // sobreproducción
-                color = "bg-danger text-white";            // rojo fuerte
-            else if (total >= meta) // >= 1800
-                color = "bg-success-subtle text-success";  // verde suave
-            else if (total >= meta - 400 && total < meta - 100) // 1400–1699
-                color = "bg-warning-subtle text-dark";     // amarillo suave
-            else if (total < meta - 400) // < 1400
-                color = "bg-secondary-subtle text-dark";   // gris suave
-            else
-                color = "bg-success-subtle text-success";  // verde suave
-
-            return new InspeccionTMViewModel
-            {
-                TM = u.TM,
-                Mesa = u.Mesa,
-                NumeroEmpleado = numeroEmpleadoBD,
-                FotoUrl = fotoUrl,
-                PiezasBuenas = piezasBuenas,
-                PiezasMalas = piezasMalas,
-                TotalPiezas = total,
-                Meta = meta,
-                ColorCard = color
-            };
-        })
-        .OrderBy(m =>
-        {
-            var digits = new string(m.Mesa.Where(char.IsDigit).ToArray());
-            return int.TryParse(digits, out int num) ? num : int.MaxValue;
-        })
-        .ToList();
-
-        ViewBag.Año = fechaFiltro.Year;
-        ViewBag.Mes = fechaFiltro.Month;
-        ViewBag.Dia = fechaFiltro.Day;
-        ViewBag.Turno = turnoSeleccionado;
-
-        // ✅ claves que la vista necesita
-        ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
-        ViewBag.TurnoSeleccionado = turnoSeleccionado;
-
-        return View(lista);
-    }
-    
-    [HttpGet]
-    public IActionResult InspeccionTMTV(DateTime? fecha, string turno)
-    {
-        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-
-        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
-        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
-
-        string turnoSeleccionado = turno;
-        if (string.IsNullOrEmpty(turnoSeleccionado))
-        {
-            var horaActual = ahora.TimeOfDay;
-            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-                turnoSeleccionado = "1";
-            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-                turnoSeleccionado = "2";
-            else
-                turnoSeleccionado = "3";
-        }
-
-        int meta = 1800;
-        var usuarios = _context.Users.ToList();
-
-        // --- Producciones ---
-        var producciones = _context.RegistrodePiezasEscaneadas
-            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
-            .AsEnumerable() // 👈 fuerza evaluación en memoria
-            .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
-                        && r.Turno == turnoSeleccionado)
-            .GroupBy(r => new { r.NuMesa, r.Tm })
-            .Select(g => new
-            {
-                Mesa = g.Key.NuMesa,
-                TM = g.Key.Tm,
-                PiezasBuenas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0),
-                UltimoMandrel = g.OrderByDescending(x => x.Fecha.ToDateTime(x.Hora))
-                                 .Select(x => x.Mandrel)
-                                 .FirstOrDefault()
-            })
-            .ToList();
-
-        // --- Defectos ---
-        var defectos = _context.RegistrodeDefectos
-            .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
-            .AsEnumerable() // 👈 fuerza evaluación en memoria
-            .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
-                        && d.Turno == turnoSeleccionado)
+        var defectos = defectosRaw
             .GroupBy(d => new { d.NuMesa, d.Tm })
             .Select(g => new
             {
@@ -293,6 +165,52 @@ public class PiezasEscaneadasController : Controller
             int piezasMalas = def?.PiezasMalas ?? 0;
             int total = piezasBuenas + piezasMalas;
 
+            // 👇 Extraer número de "MESA#3" → 3
+            string digits = new string(u.Mesa.Where(char.IsDigit).ToArray());
+            int numeroMesa = int.TryParse(digits, out var num) ? num : 0;
+
+            // 👇 Buscar la meta usando IdMesa o NumerodeMesa
+            var mesaInfo = mesas.FirstOrDefault(m => m.IdMesa == numeroMesa
+                                                  || m.NumerodeMesa == numeroMesa.ToString());
+
+            int metaMesa = mesaInfo?.Meta ?? 1800;
+
+            // --- Calcular meta proporcional ---
+            int duracionTurnoMin = 8 * 60;
+            TimeSpan inicioTurno = turnoSeleccionado == "1" ? new TimeSpan(7, 0, 0) :
+                                   turnoSeleccionado == "2" ? new TimeSpan(15, 45, 0) :
+                                   new TimeSpan(23, 50, 0);
+
+            var minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+            if (minutosTranscurridos < 0) minutosTranscurridos = 0;
+            if (minutosTranscurridos > duracionTurnoMin) minutosTranscurridos = duracionTurnoMin;
+
+            int metaEsperada = (int)((metaMesa / (double)duracionTurnoMin) * minutosTranscurridos);
+
+            // --- Estado y color ---
+            string estado;
+            string colorClass;
+            if (total >= metaEsperada + 100)
+            {
+                estado = "Sobreproducción";
+                colorClass = "bg-danger text-white";
+            }
+            else if (total >= metaEsperada)
+            {
+                estado = "En meta";
+                colorClass = "bg-green-500 text-white";
+            }
+            else if (total >= metaEsperada - 100)
+            {
+                estado = "Cerca de la meta";
+                colorClass = "bg-yellow-400 text-black";
+            }
+            else
+            {
+                estado = "Fuera de meta";
+                colorClass = "bg-red-300 text-black";
+            }
+
             var usuario = usuarios.FirstOrDefault(x => x.Nombre == u.TM);
             string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
             string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
@@ -308,6 +226,13 @@ public class PiezasEscaneadasController : Controller
             else
                 fotoUrl = "/images/tm/thumbnail.png";
 
+            // 👇 Obtener el último mandril registrado para esa mesa/TM
+            var ultimoMandril = produccionesRaw
+                .Where(r => r.NuMesa == u.Mesa && r.Tm == u.TM)
+                .OrderByDescending(r => r.Fecha.ToDateTime(r.Hora))
+                .Select(r => r.Mandrel) // asegúrate que tu entidad tiene este campo
+                .FirstOrDefault() ?? "N/A";
+
             return new InspeccionTMViewModel
             {
                 TM = u.TM,
@@ -317,8 +242,11 @@ public class PiezasEscaneadasController : Controller
                 PiezasBuenas = piezasBuenas,
                 PiezasMalas = piezasMalas,
                 TotalPiezas = total,
-                Meta = meta,
-                UltimoMandrel = prod?.UltimoMandrel ?? "N/A"
+                Meta = metaMesa,
+                MetaEsperada = metaEsperada,
+                Estado = estado,
+                ColorClass = colorClass,
+                Mandril = ultimoMandril
             };
         })
         .OrderBy(m =>
@@ -339,6 +267,183 @@ public class PiezasEscaneadasController : Controller
         return View(lista);
     }
 
+    [HttpGet]
+    public IActionResult InspeccionTMTV(DateTime? fecha, string turno)
+    {
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
+        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
+
+        string turnoSeleccionado = turno;
+        if (string.IsNullOrEmpty(turnoSeleccionado))
+        {
+            var horaActual = ahora.TimeOfDay;
+            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
+                turnoSeleccionado = "1";
+            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
+                turnoSeleccionado = "2";
+            else
+                turnoSeleccionado = "3";
+        }
+
+        var usuarios = _context.Users.ToList();
+        var mesas = _context.Mesas.ToList();
+
+        // --- Producciones ---
+        var produccionesRaw = _context.RegistrodePiezasEscaneadas
+            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
+            .ToList()
+            .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+                        && r.Turno == turnoSeleccionado)
+            .ToList();
+
+        var producciones = produccionesRaw
+            .GroupBy(r => new { r.NuMesa, r.Tm })
+            .Select(g => new
+            {
+                Mesa = g.Key.NuMesa,
+                TM = g.Key.Tm,
+                PiezasBuenas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0)
+            })
+            .ToList();
+
+        // --- Defectos ---
+        var defectosRaw = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
+            .ToList()
+            .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+                        && d.Turno == turnoSeleccionado)
+            .ToList();
+
+        var defectos = defectosRaw
+            .GroupBy(d => new { d.NuMesa, d.Tm })
+            .Select(g => new
+            {
+                Mesa = g.Key.NuMesa,
+                TM = g.Key.Tm,
+                PiezasMalas = g.Count()
+            })
+            .ToList();
+
+        // --- Unión de claves (Mesa + TM) ---
+        var union = producciones.Select(p => new { p.Mesa, p.TM })
+            .Union(defectos.Select(d => new { d.Mesa, d.TM }))
+            .ToList();
+
+        var lista = union.Select(u =>
+        {
+            var prod = producciones.FirstOrDefault(p => p.Mesa == u.Mesa && p.TM == u.TM);
+            var def = defectos.FirstOrDefault(d => d.Mesa == u.Mesa && d.TM == u.TM);
+
+            int piezasBuenas = prod?.PiezasBuenas ?? 0;
+            int piezasMalas = def?.PiezasMalas ?? 0;
+            int total = piezasBuenas + piezasMalas;
+
+            // 👇 Extraer número de "MESA#3" → 3
+            string digits = new string(u.Mesa.Where(char.IsDigit).ToArray());
+            int numeroMesa = int.TryParse(digits, out var num) ? num : 0;
+
+            // 👇 Buscar la meta usando IdMesa o NumerodeMesa
+            var mesaInfo = mesas.FirstOrDefault(m => m.IdMesa == numeroMesa
+                                                  || m.NumerodeMesa == numeroMesa.ToString());
+
+            int metaMesa = mesaInfo?.Meta ?? 1800;
+
+            // --- Calcular meta proporcional ---
+            int duracionTurnoMin = 8 * 60;
+            TimeSpan inicioTurno = turnoSeleccionado == "1" ? new TimeSpan(7, 0, 0) :
+                                   turnoSeleccionado == "2" ? new TimeSpan(15, 45, 0) :
+                                   new TimeSpan(23, 50, 0);
+
+            var minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+            if (minutosTranscurridos < 0) minutosTranscurridos = 0;
+            if (minutosTranscurridos > duracionTurnoMin) minutosTranscurridos = duracionTurnoMin;
+
+            int metaEsperada = (int)((metaMesa / (double)duracionTurnoMin) * minutosTranscurridos);
+
+            // --- Estado y color ---
+            string estado;
+            string colorClass;
+            if (total >= metaEsperada + 100)
+            {
+                estado = "Sobreproducción";
+                colorClass = "bg-danger text-white";
+            }
+            else if (total >= metaEsperada)
+            {
+                estado = "En meta";
+                colorClass = "bg-green-500 text-white";
+            }
+            else if (total >= metaEsperada - 100)
+            {
+                estado = "Cerca de la meta";
+                colorClass = "bg-yellow-400 text-black";
+            }
+            else
+            {
+                estado = "Fuera de meta";
+                colorClass = "bg-red-300 text-black";
+            }
+
+            var usuario = usuarios.FirstOrDefault(x => x.Nombre == u.TM);
+            string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
+            string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
+
+            string fotoPathJPG = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.JPG");
+            string fotoPathjpg = Path.Combine("wwwroot/images/tm", $"{numeroEmpleadoFoto}.jpg");
+
+            string fotoUrl;
+            if (System.IO.File.Exists(fotoPathJPG))
+                fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.JPG";
+            else if (System.IO.File.Exists(fotoPathjpg))
+                fotoUrl = $"/images/tm/{numeroEmpleadoFoto}.jpg";
+            else
+                fotoUrl = "/images/tm/thumbnail.png";
+
+            // 👇 Obtener el último mandril registrado para esa mesa/TM
+            var ultimoMandril = produccionesRaw
+                .Where(r => r.NuMesa == u.Mesa && r.Tm == u.TM)
+                .OrderByDescending(r => r.Fecha.ToDateTime(r.Hora))
+                .Select(r => r.Mandrel) // asegúrate que tu entidad tiene este campo
+                .FirstOrDefault() ?? "N/A";
+
+            return new InspeccionTMViewModel
+            {
+                TM = u.TM,
+                Mesa = u.Mesa,
+                NumeroEmpleado = numeroEmpleadoBD,
+                FotoUrl = fotoUrl,
+                PiezasBuenas = piezasBuenas,
+                PiezasMalas = piezasMalas,
+                TotalPiezas = total,
+                Meta = metaMesa,
+                MetaEsperada = metaEsperada,
+                Estado = estado,
+                ColorClass = colorClass,
+                Mandril = ultimoMandril
+            };
+        })
+        .OrderBy(m =>
+        {
+            var digits = new string(m.Mesa.Where(char.IsDigit).ToArray());
+            return int.TryParse(digits, out int num) ? num : int.MaxValue;
+        })
+        .ToList();
+
+        ViewBag.Año = fechaFiltro.Year;
+        ViewBag.Mes = fechaFiltro.Month;
+        ViewBag.Dia = fechaFiltro.Day;
+        ViewBag.Turno = turnoSeleccionado;
+
+        ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
+        ViewBag.TurnoSeleccionado = turnoSeleccionado;
+
+        return View(lista);
+    }
     public IActionResult ExportProduccionDiaLaboral(DateTime? fecha)
     {
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
@@ -649,11 +754,10 @@ public class PiezasEscaneadasController : Controller
         };
 
         var mesas = _context.Mesas
-            .AsEnumerable()
-            .Where(m => int.TryParse(m.Id, out var id) && id >= 3 && id <= 24)
-            .OrderBy(m => int.Parse(m.Id))
-            .Select(m => m.Mesas.ToUpper())
-            .ToList();
+     .Where(m => m.IdMesa >= 3 && m.IdMesa <= 24)   // 👈 ahora usamos IdMesa directamente
+     .OrderBy(m => m.IdMesa)                        // 👈 ordenamos por IdMesa
+     .Select(m => m.Mesas.ToUpper())                // 👈 convertimos el nombre a mayúsculas
+     .ToList();
 
         ViewBag.Mesas = mesas;
         ViewBag.Turnos = new List<string> { "1", "2", "3" };

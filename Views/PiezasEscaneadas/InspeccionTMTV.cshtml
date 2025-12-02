@@ -54,57 +54,66 @@
 
 <div class="row mb-4">
 
-    <div id="cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-6">
+    <div id="cards" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         @foreach (var tm in Model)
         {
-
-            string colorClass;
-            string estado;
-
-            if (tm.TotalPiezas >= tm.Meta + 400)
-            {
-                colorClass = "bg-red-600 text-white";
-                estado = "Sobreproducción";
-            }
-            else if (tm.TotalPiezas >= tm.Meta)
-            {
-                colorClass = "bg-green-500 text-white";
-                estado = "En meta";
-            }
-            else if (tm.TotalPiezas >= tm.Meta - 400 && tm.TotalPiezas < tm.Meta - 100)
-            {
-                colorClass = "bg-yellow-400 text-black";
-                estado = "Cerca de la meta";
-            }
-            else if (tm.TotalPiezas < tm.Meta - 400)
-            {
-                colorClass = "bg-red-300 text-black";
-                estado = "Fuera de meta";
-            }
-            else
-            {
-                colorClass = "bg-green-500 text-white";
-                estado = "En meta";
-            }
-
-            <div class="bg-white shadow-sm rounded-xl flex flex-col overflow-hidden"
+            <div class="bg-white shadow-sm rounded-lg flex flex-col overflow-hidden hover:shadow-md transition transform hover:scale-105"
                  data-tm="@tm.TM" data-mesa="@tm.Mesa">
+
+                <!-- Contenido principal compacto -->
                 <div class="p-2 flex flex-col items-center text-center flex-grow space-y-1">
-                    <div class="w-20 h-20 mb-2">
+                    <!-- Foto reducida -->
+                    <div class="w-16 h-16 mb-1">
                         <img src="@tm.FotoUrl"
                              alt="Foto de @tm.TM"
-                             class="w-full h-full rounded-full border-2 border-white shadow-sm object-cover" />
+                             class="w-full h-full rounded-full border border-gray-300 shadow-sm object-cover" />
                     </div>
-                    <h3 class="text-sm font-semibold text-gray-800 text-center break-words whitespace-normal leading-tight max-w-[120px]">
-                        <i class="bi bi-person-badge me-1"></i> @tm.TM
+
+                    <!-- TM y Mandril -->
+                    <h3 class="text-xs font-semibold text-gray-800 text-center leading-tight">
+                        <i class="bi bi-person-badge me-1"></i> TM: @tm.TM
                     </h3>
-                    <p class="text-xs text-gray-500"><i class="bi bi-grid-3x3-gap me-1"></i> @tm.Mesa</p>
-                    <p class="text-sm font-semibold text-blue-600"><i class="bi bi-box-seam me-1"></i> Total Piezas</p>
-                    <p class="text-xl font-bold text-gray-700 total-piezas">@tm.TotalPiezas</p>
-                    <p class="text-xs text-gray-500 mandrel"><i class="bi bi-tools me-1"></i> Mandrel: @tm.UltimoMandrel</p>
+                    <p class="text-xs text-gray-500">
+                        <i class="bi bi-tools me-1"></i> Mandril: @tm.Mandril
+                    </p>
+
+                    <!-- Mesa -->
+                    <p class="text-xs text-gray-500">
+                        <i class="bi bi-grid-3x3-gap me-1"></i> Mesa: @tm.Mesa
+                    </p>
+
+                    <!-- Producción -->
+                    <p class="text-xs font-semibold text-blue-600">
+                        <i class="bi bi-box-seam me-1"></i> Produccion Actual
+                    </p>
+                    <p class="text-lg font-bold text-gray-700">@tm.TotalPiezas</p>
+
+                    <!-- Meta esperada vs meta total -->
+                    <p class="text-xs text-gray-500">
+                        Meta esperada: <span class="font-semibold">@tm.MetaEsperada</span> / @tm.Meta
+                    </p>
+
+                    @* Buenas y malas (mantener comentado) *@
+                    @* <p class="text-xs text-gray-500">
+                    ✅ Buenas: <span class="font-semibold">@tm.PiezasBuenas</span> |
+                    ❌ Malas: <span class="font-semibold">@tm.PiezasMalas</span>
+                </p> *@
                 </div>
-                <div class="@colorClass w-full py-1 text-center text-xs font-semibold estado-footer">
-                    @estado
+
+                <!-- Footer con barra de progreso y estado -->
+                <div class="w-full py-1 px-2 text-center text-xs font-semibold estado-footer">
+                    @{
+                        var porcentajeReal = (tm.Meta == 0 ? 0 : (tm.TotalPiezas * 100) / tm.Meta);
+                        var porcentajeBarra = Math.Min(porcentajeReal, 100);
+                    }
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                        <div class="h-2 rounded-full @tm.ColorClass"
+                             style="width:@porcentajeBarra%">
+                        </div>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-1">
+                      Avance: @porcentajeReal%
+                    </p>
                 </div>
             </div>
         }

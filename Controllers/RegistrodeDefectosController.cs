@@ -91,11 +91,10 @@ public class RegistrodeDefectosController : Controller
 
         // Traer mesas de la tabla Mesas, IDs 3 a 24, ordenadas numéricamente
         var mesas = _context.Mesas
-            .AsEnumerable() // 👈 pasamos a memoria para poder usar int.Parse
-            .Where(m => int.TryParse(m.Id, out var id) && id >= 3 && id <= 24)
-            .OrderBy(m => int.Parse(m.Id)) // 👈 orden numérico
-            .Select(m => m.Mesas.ToUpper()) // 👈 convertir a mayúsculas
-            .ToList();
+          .Where(m => m.IdMesa >= 3 && m.IdMesa <= 24)   // 👈 filtro directo por IdMesa
+          .OrderBy(m => m.IdMesa)                        // 👈 orden numérico natural
+          .Select(m => m.Mesas.ToUpper())                // 👈 convertir a mayúsculas
+          .ToList();
 
         ViewBag.Mesas = mesas;
         ViewBag.Turnos = new List<string> { "1", "2", "3" };

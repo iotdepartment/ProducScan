@@ -45,6 +45,8 @@
                      data-bs-parent="#reporteAccordion">
                     <div class="accordion-body">
                         <div class="row">
+
+
                             <div class="col-lg-12 col-xl-3">
 
                                 <strong class="text-success">Inspección por Mesa:</strong>
@@ -59,36 +61,44 @@
                                 </ul>
                             </div>
 
-                            <div class="col-lg-12 col-xl-9">
-                                @if (grupo.TeamMembersProduccion.Any())
-                                {
-                                    <div class="row">
 
-                                        <div class="col-12">
-                                                <strong class="text-success">Inspeccion por TM:</strong>
-                                                <ul>
-                                                @foreach (var tm in grupo.TeamMembersProduccion)
-                                                {
-                                                    <li>
-                                                        <strong>@tm.TM</strong>:
-                                                        <span class="badge bg-success rounded-pill">@tm.TotalPiezas</span> piezas
-                                                    </li>
-                                                    <ul>
-                                                        @foreach (var mandrel in tm.Mandriles)
-                                                        {
-                                                            <li>
-                                                                @mandrel.Mandrel:
-                                                                <span class="badge bg-sucess rounded-pill">@mandrel.TotalPiezas</span>
-                                                            </li>
-                                                        }
-                                                    </ul>
-                                                }
-                                                </ul>
-                                            </div>
-                                       
-                                    </div>
-                                }
-                            </div>
+                            @* REPORTE DE INSPECCION POR TM *@
+                            <div class="col-lg-12 col-xl-9">
+    @if (grupo.TeamMembersProduccion?.Any() == true)
+    {
+        <div class="row">
+            <div class="col-12">
+                <strong class="text-success">Inspección por TM:</strong>
+                <ul>
+                    @foreach (var tm in grupo.TeamMembersProduccion)
+                    {
+                        <li class="mb-2">
+                            <!-- Total del TM -->
+                            <strong>@tm.TM</strong>:
+                            <span class="badge bg-success rounded-pill">@tm.TotalPiezas</span> piezas
+
+                            <!-- Desglose por mandril -->
+                            @if (tm.Mandriles?.Any() == true)
+                            {
+                                <ul class="ms-3 mt-1">
+                                    @foreach (var mandrel in tm.Mandriles)
+                                    {
+                                        <li>
+                                            @mandrel.Mandrel:
+                                            <span class="badge bg-success rounded-pill">@mandrel.TotalPiezas</span>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+</div>
+
+
                         </div>
 
                         @if (grupo.DefectosPorMandrel?.Any() == true || grupo.DefectosPorTM?.Any() == true)

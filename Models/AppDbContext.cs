@@ -48,13 +48,24 @@ public partial class AppDbContext : DbContext
 
         modelBuilder.Entity<Mesa>(entity =>
         {
-            entity.HasNoKey();
+            // 👈 Definimos la PK como IdMesa
+            entity.HasKey(e => e.IdMesa);
 
-            entity.Property(e => e.Id)
+            entity.Property(e => e.IdMesa)
+                .HasColumnName("IdMesa");
+
+            entity.Property(e => e.ID)
                 .HasMaxLength(50)
                 .HasColumnName("ID");
-            entity.Property(e => e.Mesas).HasMaxLength(50);
-            entity.Property(e => e.NumerodeMesa).HasMaxLength(50);
+
+            entity.Property(e => e.Mesas)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.NumerodeMesa)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.Meta)
+                .HasColumnName("Meta");
         });
 
         modelBuilder.Entity<RegistrodeDefecto>(entity =>
@@ -114,9 +125,6 @@ public partial class AppDbContext : DbContext
             entity.Property(e => e.Area).HasMaxLength(100);
             entity.Property(e => e.Kanban).HasMaxLength(100);
         });
-
-
-
 
         OnModelCreatingPartial(modelBuilder);
 
