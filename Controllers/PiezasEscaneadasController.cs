@@ -190,17 +190,17 @@ public class PiezasEscaneadasController : Controller
             // --- Estado y color ---
             string estado;
             string colorClass;
-            if (total >= metaEsperada + 100)
+            if (total >= metaEsperada + 200)
             {
                 estado = "Sobreproducción";
                 colorClass = "bg-danger text-white";
             }
-            else if (total >= metaEsperada)
+            else if (total >= metaEsperada + 100)
             {
                 estado = "En meta";
                 colorClass = "bg-green-500 text-white";
             }
-            else if (total >= metaEsperada - 100)
+            else if (total >= metaEsperada - 150)
             {
                 estado = "Cerca de la meta";
                 colorClass = "bg-yellow-400 text-black";
@@ -368,17 +368,17 @@ public class PiezasEscaneadasController : Controller
             // --- Estado y color ---
             string estado;
             string colorClass;
-            if (total >= metaEsperada + 100)
+            if (total >= metaEsperada + 200)
             {
                 estado = "Sobreproducción";
                 colorClass = "bg-danger text-white";
             }
-            else if (total >= metaEsperada)
+            else if (total >= metaEsperada + 100)
             {
                 estado = "En meta";
                 colorClass = "bg-green-500 text-white";
             }
-            else if (total >= metaEsperada - 100)
+            else if (total >= metaEsperada - 150)
             {
                 estado = "Cerca de la meta";
                 colorClass = "bg-yellow-400 text-black";
