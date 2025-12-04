@@ -57,33 +57,50 @@ public class PiezasEscaneadasController : Controller
     {
         int pageSize = 10;
 
-        var Escaneadas = _context.RegistrodePiezasEscaneadas.AsQueryable();
-
-        ViewBag.Mandrels = _context.Mandriles.ToList();
-        ViewBag.Mesas = _context.Mesas.ToList();
-        ViewBag.Usuarios = _context.Users.ToList();
-
-        // --- Determinar turno actual ---
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
         var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-        var horaActual = ahora.TimeOfDay;
+        var hora = ahora.TimeOfDay;
 
-        string turnoSeleccionado;
-        if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-            turnoSeleccionado = "1";
-        else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-            turnoSeleccionado = "2";
-        else
-            turnoSeleccionado = "3";
+        // ✅ Turno actual según tu horario laboral real
+        string turnoActual =
+            hora >= new TimeSpan(7, 10, 0) && hora <= new TimeSpan(15, 44, 59) ? "1" :
+            hora >= new TimeSpan(15, 45, 0) && hora <= new TimeSpan(23, 49, 59) ? "2" :
+            "3";
 
-        // --- Fecha laboral (usando ProduccionHelper) ---
-        var fechaLaboral = DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora));
+        ViewBag.TurnoSeleccionado = turnoActual;
 
-        // ✅ Pasar turno y fecha laboral a la vista
-        ViewBag.TurnoSeleccionado = turnoSeleccionado;
-        ViewBag.FechaSeleccionada = fechaLaboral.ToString("yyyy-MM-dd");
+        // ✅ Fecha laboral actual usando tu helper
+        var fechaSeleccionada = ProduccionHelper.GetFechaProduccion(ahora);
+        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
-        var paginated = await PaginatedList<RegistrodePiezasEscaneada>.CreateAsync(Escaneadas, page, pageSize);
+        // ✅ 1. Traer registros del rango calendario amplio
+        var registros = _context.RegistrodePiezasEscaneadas
+            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
+            .ToList();
+
+        // ✅ 2. Filtrar por fecha laboral real usando tu helper
+        var registrosFecha = registros
+            .Where(r =>
+                ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
+                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+            )
+            .ToList();
+
+        // ✅ 3. Mandriles reales
+        ViewBag.Mandrels = registrosFecha
+            .Select(r => r.Mandrel?.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct()
+            .OrderBy(m => m)
+            .ToList();
+
+        ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
+
+        var paginated = await PaginatedList<RegistrodePiezasEscaneada>.CreateAsync(
+            _context.RegistrodePiezasEscaneadas.AsQueryable(),
+            page,
+            pageSize
+        );
 
         return View(paginated);
     }
@@ -94,6 +111,7 @@ public class PiezasEscaneadasController : Controller
     {
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
         var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
 
         var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
@@ -110,6 +128,17 @@ public class PiezasEscaneadasController : Controller
                 turnoSeleccionado = "3";
         }
 
+        // ✅ Si la fecha consultada NO es hoy → usar hora final del turno
+        if (fechaFiltro != DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora)))
+        {
+            ahora = turnoSeleccionado switch
+            {
+                "1" => fechaFiltro.ToDateTime(new TimeOnly(15, 44, 59)),
+                "2" => fechaFiltro.ToDateTime(new TimeOnly(23, 49, 59)),
+                "3" => fechaFiltro.AddDays(1).ToDateTime(new TimeOnly(7, 9, 59)),
+                _ => ahora
+            };
+        }
         var usuarios = _context.Users.ToList();
         var mesas = _context.Mesas.ToList();
 
@@ -181,7 +210,27 @@ public class PiezasEscaneadasController : Controller
                                    turnoSeleccionado == "2" ? new TimeSpan(15, 45, 0) :
                                    new TimeSpan(23, 50, 0);
 
-            var minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+            double minutosTranscurridos;
+
+            if (turnoSeleccionado == "3")
+            {
+                // ✅ Turno 3 cruza medianoche → ajustar cálculo
+                if (ahora.TimeOfDay < inicioTurno)
+                {
+                    // Ejemplo: 00:16 → 24:16
+                    minutosTranscurridos = (ahora.TimeOfDay + TimeSpan.FromHours(24) - inicioTurno).TotalMinutes;
+                }
+                else
+                {
+                    minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+                }
+            }
+            else
+            {
+                minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+            }
+
+            // ✅ Limitar a rango válido
             if (minutosTranscurridos < 0) minutosTranscurridos = 0;
             if (minutosTranscurridos > duracionTurnoMin) minutosTranscurridos = duracionTurnoMin;
 
@@ -359,9 +408,32 @@ public class PiezasEscaneadasController : Controller
                                    turnoSeleccionado == "2" ? new TimeSpan(15, 45, 0) :
                                    new TimeSpan(23, 50, 0);
 
-            var minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+
+
+            double minutosTranscurridos;
+
+            if (turnoSeleccionado == "3")
+            {
+                // ✅ Turno 3 cruza medianoche → ajustar cálculo
+                if (ahora.TimeOfDay < inicioTurno)
+                {
+                    // Ejemplo: 00:16 → 24:16
+                    minutosTranscurridos = (ahora.TimeOfDay + TimeSpan.FromHours(24) - inicioTurno).TotalMinutes;
+                }
+                else
+                {
+                    minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+                }
+            }
+            else
+            {
+                minutosTranscurridos = (ahora.TimeOfDay - inicioTurno).TotalMinutes;
+            }
+
+            // ✅ Limitar a rango válido
             if (minutosTranscurridos < 0) minutosTranscurridos = 0;
             if (minutosTranscurridos > duracionTurnoMin) minutosTranscurridos = duracionTurnoMin;
+
 
             int metaEsperada = (int)((metaMesa / (double)duracionTurnoMin) * minutosTranscurridos);
 
@@ -444,6 +516,7 @@ public class PiezasEscaneadasController : Controller
 
         return View(lista);
     }
+
     public IActionResult ExportProduccionDiaLaboral(DateTime? fecha)
     {
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
@@ -736,7 +809,6 @@ public class PiezasEscaneadasController : Controller
         }
 
     }
-
 
     //METODOS PARA CREAR PIEZAS BUENAS
     [Authorize(Roles = "Admin,Editor")]
@@ -1510,6 +1582,7 @@ public class PiezasEscaneadasController : Controller
 
         // --- Determinar turno actual si no se seleccionó ---
         string turnoSeleccionado = turno;
+
         if (string.IsNullOrWhiteSpace(turnoSeleccionado))
         {
             var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
@@ -1567,6 +1640,86 @@ public class PiezasEscaneadasController : Controller
             data = data,
             turnoSeleccionado // ✅ lo devolvemos para que la vista pueda marcar el select
         });
+    }
+
+
+    [HttpPost]
+    public IActionResult GetProduccionAgrupada(string fecha, string turno, List<string> mandriles)
+    {
+        DateOnly fechaFiltro = DateOnly.Parse(fecha);
+
+        // ✅ 1. Traer registros del rango calendario amplio
+        var registros = _context.RegistrodePiezasEscaneadas
+            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
+            .ToList();
+
+        // ✅ 2. Filtrar por fecha laboral real usando tu helper
+        registros = registros
+            .Where(r =>
+                ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
+                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+            )
+            .ToList();
+
+        // ✅ 3. Filtrar por turno actual
+        if (!string.IsNullOrEmpty(turno))
+            registros = registros.Where(r => r.Turno == turno).ToList();
+
+        // ✅ 4. Filtrar por mandriles seleccionados
+        if (mandriles != null && mandriles.Any())
+            registros = registros.Where(r => mandriles.Contains(r.Mandrel)).ToList();
+
+        // ✅ 5. Agrupar y sumar
+        var data = registros
+            .GroupBy(r => new { r.Mandrel, r.Turno })
+            .Select(g => new
+            {
+                fecha = fecha,
+                turno = g.Key.Turno,
+                mandrel = g.Key.Mandrel,
+                totalPiezas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0),
+                totalRegistros = g.Count()
+            })
+            .OrderBy(x => x.mandrel)
+            .ToList();
+
+        return Json(new { data });
+    }
+
+    [HttpPost]
+    public IActionResult GetMandrilesPorFechaYTurno(string fecha, string turno)
+    {
+        if (string.IsNullOrEmpty(fecha))
+            return Json(new List<string>());
+
+        DateOnly fechaFiltro = DateOnly.Parse(fecha);
+
+        // ✅ 1. Traer registros del rango calendario amplio
+        var registros = _context.RegistrodePiezasEscaneadas
+            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
+            .ToList();
+
+        // ✅ 2. Filtrar por fecha laboral real usando tu helper
+        registros = registros
+            .Where(r =>
+                ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
+                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+            )
+            .ToList();
+
+        // ✅ 3. Filtrar por turno actual
+        if (!string.IsNullOrEmpty(turno))
+            registros = registros.Where(r => r.Turno == turno).ToList();
+
+        // ✅ 4. Mandriles reales
+        var mandriles = registros
+            .Select(r => r.Mandrel?.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct()
+            .OrderBy(m => m)
+            .ToList();
+
+        return Json(mandriles);
     }
 
 }
