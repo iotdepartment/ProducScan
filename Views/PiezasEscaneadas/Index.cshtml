@@ -6,6 +6,8 @@
     ViewData["Subtitle"] = "Registro de Piezas buenas del día laboral actual.";
 }
 
+
+
 <div class="row align-items-end mb-3">
 
     <div class="col-md-3">
@@ -65,43 +67,15 @@
             <th>Turno</th>
             <th>Mandril</th>
             <th>Total Piezas</th>
-            <th>Total Registros</th>
         </tr>
     </thead>
     <tbody></tbody>
 </table>
-@* 
-<!-- TABLA DETALLADA -->
-<h4 class="mt-4 fw-bold">Registros Individuales</h4>
 
-<table id="tablaProduccion" class="table table-striped table-bordered">
-    <thead class="table-dark">
-        <tr>
-            <th>Fecha</th>
-            <th>Hora</th>
-            <th>Mandrel</th>
-            <th>NPiezas</th>
-            <th>Turno</th>
-            <th>Mesa</th>
-            <th>TM</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@item.Fecha</td>
-                <td>@item.Hora</td>
-                <td>@item.Mandrel</td>
-                <td>@item.Ndpiezas</td>
-                <td>@item.Turno</td>
-                <td>@item.NuMesa</td>
-                <td>@item.Tm</td>
-            </tr>
-        }
-    </tbody>
-</table>
- *@
+
+
+
+
 @section Scripts {
 
     <!-- DataTables -->
@@ -169,36 +143,12 @@
                     { data: 'fecha' },
                     { data: 'turno' },
                     { data: 'mandrel' },
-                    { data: 'totalPiezas' },
-                    { data: 'totalRegistros' }
+                    { data: 'totalPiezas' }
                 ],
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
             });
 
-            // // ✅ Tabla detallada
-            // var tablaProduccion = $('#tablaProduccion').DataTable({
-            //     processing: true,
-            //     serverSide: true,
-            //     ajax: {
-            //         url: '/PiezasEscaneadas/GetProduccion',
-            //         type: 'POST',
-            //         data: function (d) {
-            //             d.fecha = $('#fechaProduccion').val();
-            //             d.turno = $('#turnoFiltro').val();
-            //         }
-            //     },
-            //     columns: [
-            //         { data: 'fecha' },
-            //         { data: 'hora' },
-            //         { data: 'mandrel' },
-            //         { data: 'ndpiezas' },
-            //         { data: 'turno' },
-            //         { data: 'nuMesa' },
-            //         { data: 'tm' }
-            //     ],
-            //     language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
-            // });
-
+          
             // ✅ Recargar mandriles y tablas cuando cambie fecha o turno
             $('#fechaProduccion, #turnoFiltro').on('change', function () {
                 cargarMandriles();

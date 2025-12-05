@@ -1,0 +1,65 @@
+﻿<div class="modal fade" id="modalExportarExcelProduccion" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">Exportar Producción a Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row g-3">
+
+                    <!-- Fecha inicio -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha inicio</label>
+                        <input type="date" id="fechaInicioProd" class="form-control rounded-pill" />
+                    </div>
+
+                    <!-- Fecha fin -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha fin</label>
+                        <input type="date" id="fechaFinProd" class="form-control rounded-pill" />
+                    </div>
+
+                    <!-- Turno -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Turno</label>
+                        <select id="turnoProd" class="form-select rounded-pill">
+                            <option value="">Todos</option>
+                            <option value="1">Turno 1</option>
+                            <option value="2">Turno 2</option>
+                            <option value="3">Turno 3</option>
+                        </select>
+                    </div>
+
+                    <!-- Mandril -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Mandril</label>
+                        <div class="dropdown w-100">
+                            <button class="btn btn-light border w-100 text-start dropdown-toggle"
+                                    type="button"
+                                    data-bs-toggle="dropdown">
+                                Seleccionar mandriles
+                            </button>
+                            <ul class="dropdown-menu w-100 p-2" id="mandrilProdDropdown"
+                                style="max-height: 250px; overflow-y: auto;">
+                            </ul>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-success rounded-pill" id="btnExportarExcelProduccion">
+                    <i class="bi bi-file-earmark-excel"></i> Exportar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>

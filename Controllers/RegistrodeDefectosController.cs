@@ -22,42 +22,70 @@ public class RegistrodeDefectosController : Controller
         _log = log;
     }
 
-    public async Task<IActionResult> Index(int page = 1)
+    [HttpGet]
+    public IActionResult Index(DateTime? fecha, string turno)
     {
-        int pageSize = 10;
-
-        var registros = _context.RegistrodeDefectos.AsQueryable();
-
-        ViewBag.Mandrels = _context.Mandriles.ToList();
-        ViewBag.Mesas = _context.Mesas.ToList();
-        ViewBag.Usuarios = _context.Users.ToList();
-
-        // --- Determinar turno actual ---
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
         var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+        // ✅ Fecha laboral actual
+        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
+        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
+
+        // ✅ Turno actual
+        string turnoSeleccionado = turno;
         var horaActual = ahora.TimeOfDay;
 
-        string turnoSeleccionado;
-        if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-            turnoSeleccionado = "1";
-        else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-            turnoSeleccionado = "2";
-        else
-            turnoSeleccionado = "3";
+        if (string.IsNullOrEmpty(turnoSeleccionado))
+        {
+            turnoSeleccionado =
+                horaActual >= new TimeSpan(7, 10, 0) && horaActual <= new TimeSpan(15, 44, 59) ? "1" :
+                horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59) ? "2" :
+                "3";
+        }
 
-        // Normalizar con ProduccionHelper
-        var fechaLaboral = DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora));
+        // ✅ 1. Reducir dataset desde SQL (solo columnas necesarias)
+        var defectosQuery = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
+            .Select(d => new
+            {
+                d.Fecha,
+                d.Hora,
+                d.Mandrel,
+                d.CodigodeDefecto,
+                d.Defecto,
+                d.Turno
+            })
+            .ToList(); // ✅ Solo 1 ToList()
 
+        // ✅ 2. Filtrar por día laboral real (en memoria)
+        var defectosRaw = defectosQuery
+            .Where(d =>
+                ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
+                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+            )
+            .ToList();
 
-        // ✅ Pasar turno y fecha laboral a la vista
-        ViewBag.FechaSeleccionada = fechaLaboral.ToString("yyyy-MM-dd");
+        // ✅ Mandriles únicos
+        ViewBag.Mandriles = defectosRaw
+            .Select(d => d.Mandrel?.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct()
+            .OrderBy(m => m)
+            .ToList();
+
+        // ✅ Códigos de defecto únicos
+        ViewBag.CodigosDefecto = defectosRaw
+            .Select(d => d.CodigodeDefecto?.Trim())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+
+        ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
         ViewBag.TurnoSeleccionado = turnoSeleccionado;
 
-
-
-        var paginated = await PaginatedList<RegistrodeDefecto>.CreateAsync(registros, page, pageSize);
-
-        return View(paginated);
+        return View();
     }
 
     [HttpGet]
@@ -382,129 +410,385 @@ public class RegistrodeDefectosController : Controller
         return View(vm);
     }
 
-    [HttpPost]
-    public async Task<IActionResult> GetDefectos([FromForm] DataTablesRequest request, string fecha, string turno)
+
+    private List<RegistrodeDefecto> ObtenerDefectosFiltrados(DateOnly fechaFiltro, string turno)
     {
-        var baseQuery = _context.RegistrodeDefectos.AsQueryable();
-        List<RegistrodeDefecto> registros;
-
-        if (!string.IsNullOrEmpty(fecha) && DateOnly.TryParse(fecha, out var fechaFiltro))
-        {
-            // Rango de +/-1 día para no traer toda la tabla
-            var fechaInicio = fechaFiltro.AddDays(-1);
-            var fechaFin = fechaFiltro.AddDays(1);
-
-            // Traemos en SQL solo por rango de fechas naturales
-            registros = await baseQuery
-                .Where(x => x.Fecha >= fechaInicio && x.Fecha <= fechaFin)
-                .ToListAsync();
-
-            // Ahora aplicamos el helper en memoria
-            registros = registros
-                .Where(x => ProduccionHelper
-                    .GetFechaProduccion(x.Fecha.ToDateTime(x.Hora)).Date
-                    == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
-                .ToList();
-        }
-        else
-        {
-            registros = await baseQuery.ToListAsync();
-        }
-
-        // --- Determinar turno actual si no se seleccionó ---
-        string turnoSeleccionado = turno;
-        if (string.IsNullOrWhiteSpace(turnoSeleccionado))
-        {
-            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-            var horaActual = ahora.TimeOfDay;
-
-            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-                turnoSeleccionado = "1";
-            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-                turnoSeleccionado = "2";
-            else
-                turnoSeleccionado = "3";
-        }
-
-        // Convertimos a IQueryable para seguir aplicando filtros
-        var query = registros.AsQueryable();
-
-        // ✅ Filtro por turno (solo si no es "Todos")
-        if (!string.IsNullOrEmpty(turnoSeleccionado))
-        {
-            query = query.Where(x => x.Turno == turnoSeleccionado);
-        }
-
-        // Filtro global (búsqueda)
-        if (!string.IsNullOrEmpty(request.Search?.Value))
-        {
-            var search = request.Search.Value.ToLower();
-            query = query.Where(x =>
-                x.Mandrel.ToLower().Contains(search) ||
-                x.CodigodeDefecto.ToLower().Contains(search) ||
-                x.NuMesa.ToLower().Contains(search) ||
-                x.Tm.ToLower().Contains(search)
-            );
-        }
-
-        var totalRecords = await _context.RegistrodeDefectos.CountAsync();
-        var filteredRecords = query.Count();
-
-        // Orden dinámico
-        if (request.Order != null && request.Order.Any())
-        {
-            var order = request.Order.First();
-            var columnName = request.Columns[order.Column].Data;
-            var direction = order.Dir; // "asc" o "desc"
-
-            switch (columnName.ToLower())
+        // ✅ 1. Reducir dataset desde SQL (solo columnas necesarias)
+        var query = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
+            .Select(d => new RegistrodeDefecto
             {
-                case "fecha":
-                    query = direction == "asc" ? query.OrderBy(x => x.Fecha) : query.OrderByDescending(x => x.Fecha);
-                    break;
-                case "hora":
-                    query = direction == "asc" ? query.OrderBy(x => x.Hora) : query.OrderByDescending(x => x.Hora);
-                    break;
-                case "mandrel":
-                    query = direction == "asc" ? query.OrderBy(x => x.Mandrel) : query.OrderByDescending(x => x.Mandrel);
-                    break;
-                case "codigodedefecto":
-                    query = direction == "asc" ? query.OrderBy(x => x.CodigodeDefecto) : query.OrderByDescending(x => x.CodigodeDefecto);
-                    break;
-                case "defecto":
-                    query = direction == "asc" ? query.OrderBy(x => x.Defecto) : query.OrderByDescending(x => x.Defecto);
-                    break;
-                case "numesa":
-                    query = direction == "asc" ? query.OrderBy(x => x.NuMesa) : query.OrderByDescending(x => x.NuMesa);
-                    break;
-                case "turno":
-                    query = direction == "asc" ? query.OrderBy(x => x.Turno) : query.OrderByDescending(x => x.Turno);
-                    break;
-                case "tm":
-                    query = direction == "asc" ? query.OrderBy(x => x.Tm) : query.OrderByDescending(x => x.Tm);
-                    break;
-                default:
-                    query = query.OrderBy(x => x.Id); // orden por defecto
-                    break;
-            }
-        }
+                Fecha = d.Fecha,
+                Hora = d.Hora,
+                Mandrel = d.Mandrel,
+                CodigodeDefecto = d.CodigodeDefecto,
+                Defecto = d.Defecto,
+                Turno = d.Turno
+            })
+            .ToList(); // ✅ Solo 1 ToList()
 
-        // 📄 Paginación
-        var data = query
-            .Skip(request.Start)
-            .Take(request.Length)
+        // ✅ 2. Filtrar por día laboral real (en memoria)
+        query = query
+            .Where(d =>
+                ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
+                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+            )
             .ToList();
 
-        // 📤 Respuesta en formato que DataTables espera
-        return Json(new
-        {
-            draw = request.Draw,
-            recordsTotal = totalRecords,
-            recordsFiltered = filteredRecords,
-            data = data,
-            turnoSeleccionado // ✅ lo devolvemos para que la vista pueda marcar el select
-        });
+        // ✅ 3. Filtrar por turno
+        if (!string.IsNullOrEmpty(turno))
+            query = query.Where(d => d.Turno == turno).ToList();
+
+        return query;
     }
+
+
+    [HttpPost]
+    public IActionResult GetDefectosAgrupados(string fecha, string turno, List<string> mandriles, List<string> codigos)
+    {
+        DateOnly fechaFiltro = DateOnly.Parse(fecha);
+
+        var defectos = ObtenerDefectosFiltrados(fechaFiltro, turno);
+
+        if (mandriles != null && mandriles.Any())
+            defectos = defectos.Where(d => mandriles.Contains(d.Mandrel)).ToList();
+
+        if (codigos != null && codigos.Any())
+            defectos = defectos.Where(d => codigos.Contains(d.CodigodeDefecto)).ToList();
+
+        var data = defectos
+            .GroupBy(d => new { d.Turno, d.Mandrel, d.CodigodeDefecto, d.Defecto })
+            .Select(g => new
+            {
+                turno = g.Key.Turno,
+                mandril = g.Key.Mandrel,
+                totalPiezas = g.Count(),
+                defectoCompleto = $"{g.Key.CodigodeDefecto} - {g.Key.Defecto}"
+            })
+            .OrderBy(x => x.turno)
+            .ThenBy(x => x.mandril)
+            .ToList();
+
+        return Json(new { data });
+    }
+
+    private string ObtenerDescripcionDefecto(string codigo)
+    {
+        var defecto = _context.RegistrodeDefectos
+            .FirstOrDefault(x => x.CodigodeDefecto == codigo);
+
+        return defecto?.Defecto ?? "Sin descripción";
+    }
+
+    [HttpPost]
+    public IActionResult GetCodigos(string fecha, string turno)
+    {
+        DateOnly fechaFiltro = DateOnly.Parse(fecha);
+
+        var defectos = ObtenerDefectosFiltrados(fechaFiltro, turno);
+
+        var lista = defectos
+            .Where(d => !string.IsNullOrWhiteSpace(d.CodigodeDefecto))
+            .Select(d => new
+            {
+                value = d.CodigodeDefecto!.Trim(),
+                text = $"{d.CodigodeDefecto!.Trim()} - {d.Defecto?.Trim()}"
+            })
+            .Distinct()
+            .OrderBy(x => x.value)
+            .ToList();
+
+        return Json(lista);
+    }
+
+
+    [HttpPost]
+    public IActionResult GetMandriles(string fecha, string turno)
+    {
+        DateOnly fechaFiltro = DateOnly.Parse(fecha);
+
+        var defectos = ObtenerDefectosFiltrados(fechaFiltro, turno);
+
+        var mandriles = defectos
+            .Select(d => d.Mandrel?.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct()
+            .OrderBy(m => m)
+            .ToList();
+
+        return Json(mandriles);
+    }
+
+
+    [HttpPost]
+    public IActionResult ExportarExcel(
+     DateTime fechaInicio,
+     DateTime fechaFin,
+     string turno,
+     List<string> mandriles,
+     List<string> codigos)
+    {
+        DateOnly inicio = DateOnly.FromDateTime(fechaInicio);
+        DateOnly fin = DateOnly.FromDateTime(fechaFin);
+
+        // ✅ 1. Reducir dataset desde SQL
+        var query = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
+            .Select(d => new
+            {
+                d.Fecha,
+                d.Hora,
+                d.Mandrel,
+                d.CodigodeDefecto,
+                d.Defecto,
+                d.Turno
+            })
+            .ToList();
+
+        // ✅ 2. Filtrar por fecha laboral real
+        var defectos = query
+            .Select(d => new
+            {
+                FechaLaboral = ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date,
+                d.Turno,
+                d.Mandrel,
+                d.CodigodeDefecto,
+                d.Defecto
+            })
+            .Where(d => d.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                        d.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+            .ToList();
+
+        // ✅ 3. Filtrar por turno
+        if (!string.IsNullOrEmpty(turno))
+            defectos = defectos.Where(d => d.Turno == turno).ToList();
+
+        // ✅ 4. Filtrar por mandriles
+        if (mandriles != null && mandriles.Any())
+            defectos = defectos.Where(d => mandriles.Contains(d.Mandrel)).ToList();
+
+        // ✅ 5. Filtrar por códigos
+        if (codigos != null && codigos.Any())
+            defectos = defectos.Where(d => codigos.Contains(d.CodigodeDefecto)).ToList();
+
+        // ✅ 6. Agrupar para hoja principal
+        var data = defectos
+            .GroupBy(d => new
+            {
+                d.FechaLaboral,
+                d.Turno,
+                d.Mandrel,
+                d.CodigodeDefecto,
+                d.Defecto
+            })
+            .Select(g => new
+            {
+                Fecha = g.Key.FechaLaboral,
+                Turno = g.Key.Turno,
+                Mandril = g.Key.Mandrel,
+                Codigo = g.Key.CodigodeDefecto,
+                Defecto = g.Key.Defecto,
+                TotalPiezas = g.Count()
+            })
+            .OrderBy(x => x.Fecha)
+            .ThenBy(x => x.Turno)
+            .ThenBy(x => x.Mandril)
+            .ToList();
+
+        // ✅ 7. Totales por día
+        var totalesPorDia = data
+            .GroupBy(x => x.Fecha)
+            .Select(g => new
+            {
+                Fecha = g.Key,
+                Total = g.Sum(x => x.TotalPiezas)
+            })
+            .OrderBy(x => x.Fecha)
+            .ToList();
+
+        // ✅ 8. Totales por turno
+        var totalesPorTurno = data
+            .GroupBy(x => x.Turno)
+            .Select(g => new
+            {
+                Turno = g.Key,
+                Total = g.Sum(x => x.TotalPiezas)
+            })
+            .OrderBy(x => x.Turno)
+            .ToList();
+
+
+        // ✅ 9. Totales por turno por día (pivot)
+        var totalesPorDiaTurno = data
+            .GroupBy(x => new { x.Fecha, x.Turno })
+            .Select(g => new
+            {
+                Fecha = g.Key.Fecha,
+                Turno = g.Key.Turno,
+                Total = g.Sum(x => x.TotalPiezas)
+            })
+            .OrderBy(x => x.Fecha)
+            .ThenBy(x => x.Turno)
+            .ToList();
+
+        // ✅ Convertir a estructura pivot
+        var fechasUnicas = totalesPorDiaTurno.Select(x => x.Fecha).Distinct().OrderBy(x => x).ToList();
+
+        // ✅ 9. Crear Excel
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+
+        /* ---------------------------------------------------------
+           ✅ HOJA 1: DETALLES
+        --------------------------------------------------------- */
+        var ws = workbook.Worksheets.Add("Defectos");
+
+        ws.Cell(1, 1).Value = "Fecha";
+        ws.Cell(1, 2).Value = "Turno";
+        ws.Cell(1, 3).Value = "Mandril";
+        ws.Cell(1, 4).Value = "Código";
+        ws.Cell(1, 5).Value = "Defecto";
+        ws.Cell(1, 6).Value = "Total Piezas";
+
+        ws.Range("A1:F1").Style.Font.Bold = true;
+        ws.Range("A1:F1").Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGray;
+
+        // ✅ Encabezados con columna extra
+        ws.Cell(1, 1).Value = "Fecha";
+        ws.Cell(1, 2).Value = "Turno";
+        ws.Cell(1, 3).Value = "Etiqueta Turno";
+        ws.Cell(1, 4).Value = "Mandril";
+        ws.Cell(1, 5).Value = "Código";
+        ws.Cell(1, 6).Value = "Defecto";
+        ws.Cell(1, 7).Value = "Total Piezas";
+
+        ws.Range("A1:G1").Style.Font.Bold = true;
+        ws.Range("A1:G1").Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGray;
+
+        int row = 2;
+
+        foreach (var item in data)
+        {
+            // ✅ Escribir datos
+            ws.Cell(row, 1).Value = item.Fecha.ToString("yyyy-MM-dd");
+            ws.Cell(row, 2).Value = item.Turno;
+
+            // ✅ Etiqueta visible
+            string etiqueta =
+                item.Turno == "1" ? "TURNO 1" :
+                item.Turno == "2" ? "TURNO 2" :
+                "TURNO 3";
+
+            ws.Cell(row, 3).Value = etiqueta;
+            ws.Cell(row, 4).Value = item.Mandril;
+            ws.Cell(row, 5).Value = item.Codigo;
+            ws.Cell(row, 6).Value = item.Defecto;
+            ws.Cell(row, 7).Value = item.TotalPiezas;
+
+            // ✅ Colorear fila según turno
+            var fila = ws.Range($"A{row}:G{row}");
+
+            if (item.Turno == "1")
+                fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightBlue;
+
+            else if (item.Turno == "2")
+                fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightYellow;
+
+            else if (item.Turno == "3")
+                fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGreen;
+
+            row++;
+        }
+
+        ws.Columns().AdjustToContents();
+
+        /* ---------------------------------------------------------
+           ✅ HOJA 2: RESUMEN
+        --------------------------------------------------------- */
+        /* ---------------------------------------------------------
+    ✅ HOJA 2: RESUMEN
+ --------------------------------------------------------- */
+        var resumen = workbook.Worksheets.Add("Resumen");
+
+        /* -------------------------------
+           ✅ TOTALES POR DÍA
+        -------------------------------- */
+        resumen.Cell(1, 1).Value = "Totales por día";
+        resumen.Cell(1, 1).Style.Font.Bold = true;
+
+        resumen.Cell(2, 1).Value = "Fecha";
+        resumen.Cell(2, 2).Value = "Total piezas";
+        resumen.Range("A2:B2").Style.Font.Bold = true;
+
+        int r = 3;
+        foreach (var item in totalesPorDia)
+        {
+            resumen.Cell(r, 1).Value = item.Fecha.ToString("yyyy-MM-dd");
+            resumen.Cell(r, 2).Value = item.Total;
+            r++;
+        }
+
+        r += 2;
+
+        /* -------------------------------
+           ✅ TOTALES POR TURNO POR DÍA (PIVOT)
+        -------------------------------- */
+        resumen.Cell(r, 1).Value = "Producción por turno por día";
+        resumen.Cell(r, 1).Style.Font.Bold = true;
+
+        r++;
+
+        resumen.Cell(r, 1).Value = "Fecha";
+        resumen.Cell(r, 2).Value = "Turno 1";
+        resumen.Cell(r, 3).Value = "Turno 2";
+        resumen.Cell(r, 4).Value = "Turno 3";
+        resumen.Cell(r, 5).Value = "Total Día";
+
+        resumen.Range($"A{r}:E{r}").Style.Font.Bold = true;
+
+        r++;
+
+        foreach (var fecha in fechasUnicas)
+        {
+            int totalDia = 0;
+
+            resumen.Cell(r, 1).Value = fecha.ToString("yyyy-MM-dd");
+
+            // Turno 1
+            var t1 = totalesPorDiaTurno.FirstOrDefault(x => x.Fecha == fecha && x.Turno == "1")?.Total ?? 0;
+            resumen.Cell(r, 2).Value = t1;
+            totalDia += t1;
+
+            // Turno 2
+            var t2 = totalesPorDiaTurno.FirstOrDefault(x => x.Fecha == fecha && x.Turno == "2")?.Total ?? 0;
+            resumen.Cell(r, 3).Value = t2;
+            totalDia += t2;
+
+            // Turno 3
+            var t3 = totalesPorDiaTurno.FirstOrDefault(x => x.Fecha == fecha && x.Turno == "3")?.Total ?? 0;
+            resumen.Cell(r, 4).Value = t3;
+            totalDia += t3;
+
+            // Total del día
+            resumen.Cell(r, 5).Value = totalDia;
+
+            r++;
+        }
+
+        resumen.Columns().AdjustToContents();
+
+        /* ---------------------------------------------------------
+           ✅ DESCARGA
+        --------------------------------------------------------- */
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var content = stream.ToArray();
+
+        return File(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"Defectos_{inicio}_{fin}.xlsx"
+        );
+    }
+
 }
 

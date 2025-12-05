@@ -1722,5 +1722,233 @@ public class PiezasEscaneadasController : Controller
         return Json(mandriles);
     }
 
+
+    [HttpPost]
+    public IActionResult ExportarExcelProduccion(
+    DateTime fechaInicio,
+    DateTime fechaFin,
+    string turno,
+    List<string> mandriles)
+    {
+        DateOnly inicio = DateOnly.FromDateTime(fechaInicio);
+        DateOnly fin = DateOnly.FromDateTime(fechaFin);
+
+        // ✅ 1. Reducir dataset desde SQL
+        var query = _context.RegistrodePiezasEscaneadas
+            .Where(p => p.Fecha >= inicio.AddDays(-1) && p.Fecha <= fin.AddDays(1))
+            .Select(p => new
+            {
+                p.Fecha,
+                p.Hora,
+                p.Mandrel,
+                p.Turno
+            })
+            .ToList();
+
+        // ✅ 2. Calcular fecha laboral real
+        var produccion = query
+            .Select(p => new
+            {
+                FechaLaboral = ProduccionHelper.GetFechaProduccion(p.Fecha.ToDateTime(p.Hora)).Date,
+                p.Turno,
+                p.Mandrel
+            })
+            .Where(p => p.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                        p.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+            .ToList();
+
+        // ✅ 3. Filtrar por turno
+        if (!string.IsNullOrEmpty(turno))
+            produccion = produccion.Where(p => p.Turno == turno).ToList();
+
+        // ✅ 4. Filtrar por mandriles
+        if (mandriles != null && mandriles.Any())
+            produccion = produccion.Where(p => mandriles.Contains(p.Mandrel)).ToList();
+
+        // ✅ 5. Agrupar para hoja principal
+        var data = produccion
+            .GroupBy(p => new
+            {
+                p.FechaLaboral,
+                p.Turno,
+                p.Mandrel
+            })
+            .Select(g => new
+            {
+                Fecha = g.Key.FechaLaboral,
+                Turno = g.Key.Turno,
+                Mandril = g.Key.Mandrel,
+                TotalPiezas = g.Count()
+            })
+            .OrderBy(x => x.Fecha)
+            .ThenBy(x => x.Turno)
+            .ThenBy(x => x.Mandril)
+            .ToList();
+
+        // ✅ 6. Totales por día
+        var totalesPorDia = data
+            .GroupBy(x => x.Fecha)
+            .Select(g => new
+            {
+                Fecha = g.Key,
+                Total = g.Sum(x => x.TotalPiezas)
+            })
+            .OrderBy(x => x.Fecha)
+            .ToList();
+
+        // ✅ 7. Totales por turno
+        var totalesPorTurno = data
+            .GroupBy(x => x.Turno)
+            .Select(g => new
+            {
+                Turno = g.Key,
+                Total = g.Sum(x => x.TotalPiezas)
+            })
+            .OrderBy(x => x.Turno)
+            .ToList();
+
+        // ✅ 8. Totales por turno por día (pivot)
+        var totalesPorDiaTurno = data
+            .GroupBy(x => new { x.Fecha, x.Turno })
+            .Select(g => new
+            {
+                Fecha = g.Key.Fecha,
+                Turno = g.Key.Turno,
+                Total = g.Sum(x => x.TotalPiezas)
+            })
+            .OrderBy(x => x.Fecha)
+            .ThenBy(x => x.Turno)
+            .ToList();
+
+        var fechasUnicas = totalesPorDiaTurno
+            .Select(x => x.Fecha)
+            .Distinct()
+            .OrderBy(x => x)
+            .ToList();
+
+        // ✅ 9. Crear Excel
+        using var workbook = new ClosedXML.Excel.XLWorkbook();
+
+        /* ---------------------------------------------------------
+           ✅ HOJA 1: PRODUCCIÓN DETALLADA
+        --------------------------------------------------------- */
+        var ws = workbook.Worksheets.Add("Producción");
+
+        ws.Cell(1, 1).Value = "Fecha";
+        ws.Cell(1, 2).Value = "Turno";
+        ws.Cell(1, 3).Value = "Etiqueta Turno";
+        ws.Cell(1, 4).Value = "Mandril";
+        ws.Cell(1, 5).Value = "Total Piezas";
+
+        ws.Range("A1:E1").Style.Font.Bold = true;
+        ws.Range("A1:E1").Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGray;
+
+        int row = 2;
+
+        foreach (var item in data)
+        {
+            ws.Cell(row, 1).Value = item.Fecha.ToString("yyyy-MM-dd");
+            ws.Cell(row, 2).Value = item.Turno;
+
+            string etiqueta =
+                item.Turno == "1" ? "TURNO 1" :
+                item.Turno == "2" ? "TURNO 2" :
+                "TURNO 3";
+
+            ws.Cell(row, 3).Value = etiqueta;
+            ws.Cell(row, 4).Value = item.Mandril;
+            ws.Cell(row, 5).Value = item.TotalPiezas;
+
+            // ✅ Colorear fila según turno
+            var fila = ws.Range($"A{row}:E{row}");
+
+            if (item.Turno == "1")
+                fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightBlue;
+
+            else if (item.Turno == "2")
+                fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightYellow;
+
+            else if (item.Turno == "3")
+                fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGreen;
+
+            row++;
+        }
+
+        ws.Columns().AdjustToContents();
+
+
+        /* ---------------------------------------------------------
+           ✅ HOJA 2: RESUMEN
+        --------------------------------------------------------- */
+        var resumen = workbook.Worksheets.Add("Resumen");
+
+        resumen.Cell(1, 1).Value = "Totales por día";
+        resumen.Cell(1, 1).Style.Font.Bold = true;
+
+        resumen.Cell(2, 1).Value = "Fecha";
+        resumen.Cell(2, 2).Value = "Total piezas";
+        resumen.Range("A2:B2").Style.Font.Bold = true;
+
+        int r = 3;
+        foreach (var item in totalesPorDia)
+        {
+            resumen.Cell(r, 1).Value = item.Fecha.ToString("yyyy-MM-dd");
+            resumen.Cell(r, 2).Value = item.Total;
+            r++;
+        }
+
+        r += 2;
+
+        resumen.Cell(r, 1).Value = "Producción por turno por día";
+        resumen.Cell(r, 1).Style.Font.Bold = true;
+
+        r++;
+
+        resumen.Cell(r, 1).Value = "Fecha";
+        resumen.Cell(r, 2).Value = "Turno 1";
+        resumen.Cell(r, 3).Value = "Turno 2";
+        resumen.Cell(r, 4).Value = "Turno 3";
+        resumen.Cell(r, 5).Value = "Total Día";
+
+        resumen.Range($"A{r}:E{r}").Style.Font.Bold = true;
+
+        r++;
+
+        foreach (var fecha in fechasUnicas)
+        {
+            int totalDia = 0;
+
+            resumen.Cell(r, 1).Value = fecha.ToString("yyyy-MM-dd");
+
+            var t1 = totalesPorDiaTurno.FirstOrDefault(x => x.Fecha == fecha && x.Turno == "1")?.Total ?? 0;
+            var t2 = totalesPorDiaTurno.FirstOrDefault(x => x.Fecha == fecha && x.Turno == "2")?.Total ?? 0;
+            var t3 = totalesPorDiaTurno.FirstOrDefault(x => x.Fecha == fecha && x.Turno == "3")?.Total ?? 0;
+
+            resumen.Cell(r, 2).Value = t1;
+            resumen.Cell(r, 3).Value = t2;
+            resumen.Cell(r, 4).Value = t3;
+
+            totalDia = t1 + t2 + t3;
+            resumen.Cell(r, 5).Value = totalDia;
+
+            r++;
+        }
+
+        resumen.Columns().AdjustToContents();
+
+        /* ---------------------------------------------------------
+           ✅ DESCARGA
+        --------------------------------------------------------- */
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var content = stream.ToArray();
+
+        return File(
+            content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            $"Produccion_{inicio}_{fin}.xlsx"
+        );
+    }
+
 }
 
