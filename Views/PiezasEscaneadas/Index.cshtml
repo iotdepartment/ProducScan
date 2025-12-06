@@ -5,16 +5,23 @@
     ViewData["PageTitle"] = "Registro de Piezas Buenas";
     ViewData["Subtitle"] = "Registro de Piezas buenas del día laboral actual.";
 }
-
-
-
+<div class="row mb-2">
+    <div class="col-md-3">
+        <button class="btn btn-success rounded-pill  w-100"
+                data-bs-toggle="modal"
+                data-bs-target="#modalExportarExcelProduccion">
+            <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
+        </button>
+    </div>
+</div>
+        
 <div class="row align-items-end mb-3">
 
-    <div class="col-md-3">
+    @* <div class="col-md-3">
         <a class="btn btn-success rounded-pill" asp-controller="PiezasEscaneadas" asp-action="ReporteProduccion">
             <i class="bi bi-table"></i> Reporte Inspección
         </a>
-    </div>
+    </div> *@
 
     <!-- Fecha -->
     <div class="col-md-3">
@@ -25,28 +32,26 @@
                max="@DateTime.Now.ToString("yyyy-MM-dd")" />
     </div>
 
-    <!-- Mandril (Dropdown con checkboxes) -->
+    <!-- Mandril -->
     <div class="col-md-3">
         <label class="form-label fw-bold">Mandril</label>
 
         <div class="dropdown w-100">
             <button class="btn btn-light border w-100 text-start dropdown-toggle"
                     type="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false">
+                    data-bs-toggle="dropdown">
                 Seleccionar mandriles
             </button>
 
             <ul class="dropdown-menu w-100 p-2" id="mandrilDropdown"
                 style="max-height: 250px; overflow-y: auto;">
-                <!-- Se llena dinámicamente -->
             </ul>
         </div>
     </div>
 
     <!-- Turno -->
     <div class="col-md-3">
-        <label for="turnoFiltro" class="form-label fw-bold"><strong>Turno</strong></label>
+        <label for="turnoFiltro" class="form-label fw-bold">Turno</label>
         <select id="turnoFiltro" name="turno" class="form-select rounded-pill">
             <option value="" selected="@(ViewBag.TurnoSeleccionado == "" ? "selected" : null)">Todos</option>
             <option value="1" selected="@(ViewBag.TurnoSeleccionado == "1" ? "selected" : null)">Turno 1</option>
@@ -58,12 +63,10 @@
 </div>
 
 <!-- TABLA AGRUPADA -->
-@* <h4 class="mt-4 fw-bold">Producción Agrupada por Mandril</h4> *@
-
 <table id="tablaAgrupada" class="table table-striped table-bordered">
     <thead class="table-dark">
         <tr>
-            <th>Fecha</th>
+            @* <th>Fecha</th> *@
             <th>Turno</th>
             <th>Mandril</th>
             <th>Total Piezas</th>
@@ -72,9 +75,7 @@
     <tbody></tbody>
 </table>
 
-
-
-
+@await Html.PartialAsync("_ExportarExcelProduccion")
 
 @section Scripts {
 
@@ -86,12 +87,15 @@
 
     <script>
 
+        /* ---------------------------------------------------------
+           ✅ CARGAR MANDRILES (FILTRO PRINCIPAL)
+        --------------------------------------------------------- */
         function cargarMandriles() {
             $.post('/PiezasEscaneadas/GetMandrilesPorFechaYTurno',
                 {
-                        fecha: $('#fechaProduccion').val(),
-        turno: $('#turnoFiltro').val() // ✅ AQUÍ TAMBIÉN
-
+                    fechaInicio: $('#fechaProduccion').val(),
+                    fechaFin: $('#fechaProduccion').val(),
+                    turno: $('#turnoFiltro').val()
                 },
                 function (mandriles) {
 
@@ -112,35 +116,102 @@
             );
         }
 
-        // ✅ Obtener mandriles seleccionados
-        function obtenerMandrilesSeleccionados() {
-            let seleccionados = [];
-            $('.mandril-check:checked').each(function () {
-                seleccionados.push($(this).val());
-            });
-            return seleccionados;
+        /* ---------------------------------------------------------
+           ✅ CARGAR MANDRILES (MODAL EXPORTACIÓN)
+        --------------------------------------------------------- */
+        function cargarMandrilesProduccion() {
+            $.post('/PiezasEscaneadas/GetMandrilesPorFechaYTurno',
+                {
+                    fechaInicio: $('#fechaInicioProd').val(),
+                    fechaFin: $('#fechaFinProd').val(),
+                    turno: $('#turnoProd').val()
+                },
+                function (mandriles) {
+
+                    let contenedor = $('#mandrilProdDropdown');
+                    contenedor.empty();
+
+                    mandriles.forEach(m => {
+                        contenedor.append(`
+                            <li>
+                                <label class="dropdown-item">
+                                    <input type="checkbox" class="form-check-input me-2 mandril-prod-check" value="${m}">
+                                    ${m}
+                                </label>
+                            </li>
+                        `);
+                    });
+                }
+            );
         }
 
+        /* ✅ Cargar mandriles del modal al abrirlo */
+        $('#modalExportarExcelProduccion').on('shown.bs.modal', function () {
+            cargarMandrilesProduccion();
+        });
+
+        /* ✅ Recargar mandriles del modal al cambiar filtros */
+        $('#fechaInicioProd, #fechaFinProd, #turnoProd').on('change', function () {
+            cargarMandrilesProduccion();
+        });
+
+        /* ✅ Obtener mandriles seleccionados del filtro principal */
+        function obtenerMandrilesSeleccionados() {
+            return $('.mandril-check:checked').map(function () { return this.value }).get();
+        }
+
+        /* ✅ Obtener mandriles seleccionados del modal */
+        function obtenerMandrilesModal() {
+            return $('.mandril-prod-check:checked').map(function () { return this.value }).get();
+        }
+
+        /* ---------------------------------------------------------
+           ✅ EXPORTAR EXCEL PRODUCCIÓN
+        --------------------------------------------------------- */
+        $('#btnExportarExcelProduccion').on('click', function () {
+
+            let filtros = {
+                fechaInicio: $('#fechaInicioProd').val(),
+                fechaFin: $('#fechaFinProd').val(),
+                turno: $('#turnoProd').val(),
+                mandriles: obtenerMandrilesModal()
+            };
+
+            $.ajax({
+                url: '/PiezasEscaneadas/ExportarExcelProduccion',
+                type: 'POST',
+                data: filtros,
+                xhrFields: { responseType: 'blob' },
+                success: function (data) {
+                    const url = window.URL.createObjectURL(data);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = "Produccion.xlsx";
+                    a.click();
+                }
+            });
+        });
+
+        /* ---------------------------------------------------------
+           ✅ DATATABLE
+        --------------------------------------------------------- */
         $(document).ready(function () {
 
-            // ✅ Cargar mandriles al iniciar
             cargarMandriles();
 
-            // ✅ Tabla agrupada
             var tablaAgrupada = $('#tablaAgrupada').DataTable({
                 processing: true,
                 ajax: {
                     url: '/PiezasEscaneadas/GetProduccionAgrupada',
                     type: 'POST',
-                           data: function (d) {
-            d.fecha = $('#fechaProduccion').val();
-            d.turno = $('#turnoFiltro').val(); // ✅ AQUÍ SE ENVÍA EL TURNO ACTUAL
-            d.mandriles = obtenerMandrilesSeleccionados();
-        }
-
+                    data: function (d) {
+                        d.fecha = $('#fechaProduccion').val();
+                        d.turno = $('#turnoFiltro').val();
+                        d.mandriles = obtenerMandrilesSeleccionados();
+                    }
                 },
                 columns: [
-                    { data: 'fecha' },
+                    // { data: 'fecha' },
                     { data: 'turno' },
                     { data: 'mandrel' },
                     { data: 'totalPiezas' }
@@ -148,18 +219,13 @@
                 language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
             });
 
-          
-            // ✅ Recargar mandriles y tablas cuando cambie fecha o turno
             $('#fechaProduccion, #turnoFiltro').on('change', function () {
                 cargarMandriles();
                 tablaAgrupada.ajax.reload();
-                tablaProduccion.ajax.reload();
             });
 
-            // ✅ Recargar tablas cuando cambien los checkboxes
             $(document).on('change', '.mandril-check', function () {
                 tablaAgrupada.ajax.reload();
-                tablaProduccion.ajax.reload();
             });
 
         });

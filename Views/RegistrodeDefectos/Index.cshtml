@@ -5,8 +5,7 @@
     ViewData["PageTitle"] = "Registro de defectos";
     ViewData["Subtitle"] = "Defectos detectados en la labor de inspección del día laboral actual.";
 }
-@if (User.IsInRole("Admin"))
-        {
+
  <div class="row mb-2">
         <div class="col-md-3">
             <button class="btn btn-success rounded-pill w-100"
@@ -17,8 +16,6 @@
         </div>
  </div>
 
-
-        }
 <div class="row align-items-end mb-3">
 
     <!-- Fecha -->
@@ -120,8 +117,8 @@
         <tr>
             <th>Turno</th>
             <th>Mandril</th>
-            <th>Total Piezas</th>
             <th>Defecto + Código</th>
+            <th>Total Piezas</th>
         </tr>
     </thead>
     <tbody></tbody>
@@ -311,8 +308,8 @@
                 columns: [
                     { data: 'turno' },
                     { data: 'mandril' },
-                    { data: 'totalPiezas' },
-                    { data: 'defectoCompleto' }
+                    { data: 'defectoCompleto' },
+                    { data: 'totalPiezas' }
                 ],
 
                 // ✅ ESTA LÍNEA ARREGLA EL BUSCADOR Y EL PAGINADOR

@@ -66,25 +66,38 @@
                 </div>
             </div>
         </div>
+        <!-- ✅ CARD: Total Piezas Buenas -->
         <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
-            <div class="card bg-success-subtle shadow-sm border-0 rounded-4 card-hover">
-                <div class="card-body m-1">
-                    <h5 class="fw-bold text-success-emphasis">
-                        <i class="bi bi-check-circle me-2"></i> Total Piezas Buenas
-                    </h5>
-                    <h3 class="fw-bold text-success-emphasis">@Model.TotalPiezasBuenas</h3>
+            <a asp-controller="PiezasEscaneadas" asp-action="Index"
+               class="text-decoration-none">
+                <div class="card bg-success-subtle shadow-sm border-0 rounded-4 card-hover">
+                    <div class="card-body m-1">
+                        <h5 class="fw-bold text-success-emphasis d-flex align-items-center">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Total Piezas Buenas
+                            <i class="bi bi-box-arrow-up-right ms-2 small"></i>
+                        </h5>
+                        <h3 class="fw-bold text-success-emphasis">@Model.TotalPiezasBuenas</h3>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
+
+        <!-- ✅ CARD: Total Defectos -->
         <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
-            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
-                <div class="card-body m-1">
-                    <h5 class="fw-bold text-danger-emphasis">
-                        <i class="bi bi-exclamation-triangle me-2"></i> Total Defectos
-                    </h5>
-                    <h3 class="fw-bold text-danger-emphasis">@Model.TotalDefectos</h3>
+            <a asp-controller="RegistrodeDefectos" asp-action="Index"
+               class="text-decoration-none">
+                <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+                    <div class="card-body m-1">
+                        <h5 class="fw-bold text-danger-emphasis d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Total Defectos
+                            <i class="bi bi-box-arrow-up-right ms-2 small"></i>
+                        </h5>
+                        <h3 class="fw-bold text-danger-emphasis">@Model.TotalDefectos</h3>
+                    </div>
                 </div>
-            </div>
+            </a>
         </div>
 
 </div>

@@ -525,42 +525,84 @@ public class PiezasEscaneadasController : Controller
         var fechaSeleccionada = fecha ?? ahora;
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
-        // --- Producciones agrupadas por Mesa + Mandril + Turno ---
+        var estacionesMandriles = _context.Mandriles
+     .Where(m => m.Area == "INSPECCION")   // ✅ SOLO INSPECCION
+     .ToDictionary(m => m.MandrilNombre, m => m.Estacion);
+
+        // ✅ 2. Producciones agrupadas por MesaReal + Mandril + Turno
         var producciones = _context.RegistrodePiezasEscaneadas
             .ToList()
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora))
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue))
-            .GroupBy(r => new { r.NuMesa, r.Mandrel, r.Turno })
+            .Select(r =>
+            {
+                // ✅ Obtener estación asignada al mandril
+                string estacionAsignada = estacionesMandriles.ContainsKey(r.Mandrel)
+                    ? estacionesMandriles[r.Mandrel]
+                    : null;
+
+                // ✅ Mesa real = estación asignada o mesa escaneada
+                string mesaReal = !string.IsNullOrWhiteSpace(estacionAsignada)
+                    ? $"MESA#{estacionAsignada}"
+                    : r.NuMesa;
+
+                return new
+                {
+                    MesaReal = mesaReal,
+                    Mandril = r.Mandrel,
+                    Turno = r.Turno,
+                    PiezasBuenas = int.TryParse(r.Ndpiezas, out var n) ? n : 0
+                };
+            })
+            .GroupBy(x => new { x.MesaReal, x.Mandril, x.Turno })
             .Select(g => new
             {
-                Mesa = g.Key.NuMesa,
-                Mandril = g.Key.Mandrel,
+                Mesa = g.Key.MesaReal,
+                Mandril = g.Key.Mandril,
                 Turno = g.Key.Turno,
-                PiezasBuenas = g.Sum(x => int.TryParse(x.Ndpiezas, out var n) ? n : 0)
+                PiezasBuenas = g.Sum(x => x.PiezasBuenas)
             })
             .ToList();
 
-        // --- Defectos agrupados por Mesa + Mandril + Turno ---
+        // ✅ 3. Defectos agrupados por MesaReal + Mandril + Turno
         var defectos = _context.RegistrodeDefectos
             .ToList()
             .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora))
                         == fechaFiltro.ToDateTime(TimeOnly.MinValue))
-            .GroupBy(d => new { d.NuMesa, d.Mandrel, d.Turno })
+            .Select(d =>
+            {
+                string estacionAsignada = estacionesMandriles.ContainsKey(d.Mandrel)
+                    ? estacionesMandriles[d.Mandrel]
+                    : null;
+
+                string mesaReal = !string.IsNullOrWhiteSpace(estacionAsignada)
+                    ? $"MESA#{estacionAsignada}"
+                    : d.NuMesa;
+
+                return new
+                {
+                    MesaReal = mesaReal,
+                    Mandril = d.Mandrel,
+                    Turno = d.Turno,
+                    PiezasMalas = 1
+                };
+            })
+            .GroupBy(x => new { x.MesaReal, x.Mandril, x.Turno })
             .Select(g => new
             {
-                Mesa = g.Key.NuMesa,
-                Mandril = g.Key.Mandrel,
+                Mesa = g.Key.MesaReal,
+                Mandril = g.Key.Mandril,
                 Turno = g.Key.Turno,
-                PiezasMalas = g.Count()
+                PiezasMalas = g.Sum(x => x.PiezasMalas)
             })
             .ToList();
 
-        // --- Unión de claves (Mesa + Mandril + Turno) ---
+        // ✅ 4. Unión de claves
         var union = producciones.Select(p => new { p.Mesa, p.Mandril, p.Turno })
             .Union(defectos.Select(d => new { d.Mesa, d.Mandril, d.Turno }))
             .ToList();
 
-        // --- Pivot: filas = Mesa+Mandril, columnas = Turnos ---
+        // ✅ 5. Pivot final — MISMAS VARIABLES QUE YA USAS
         var lista = union
             .GroupBy(u => new { u.Mesa, u.Mandril })
             .Select(g =>
@@ -1642,7 +1684,6 @@ public class PiezasEscaneadasController : Controller
         });
     }
 
-
     [HttpPost]
     public IActionResult GetProduccionAgrupada(string fecha, string turno, List<string> mandriles)
     {
@@ -1687,27 +1728,39 @@ public class PiezasEscaneadasController : Controller
     }
 
     [HttpPost]
-    public IActionResult GetMandrilesPorFechaYTurno(string fecha, string turno)
+    public IActionResult GetMandrilesPorFechaYTurno(string fechaInicio, string fechaFin, string turno)
     {
-        if (string.IsNullOrEmpty(fecha))
+        if (string.IsNullOrEmpty(fechaInicio))
             return Json(new List<string>());
 
-        DateOnly fechaFiltro = DateOnly.Parse(fecha);
+        DateOnly inicio = DateOnly.Parse(fechaInicio);
+        DateOnly fin = string.IsNullOrEmpty(fechaFin)
+            ? inicio
+            : DateOnly.Parse(fechaFin);
 
-        // ✅ 1. Traer registros del rango calendario amplio
+        // ✅ 1. Reducir dataset desde SQL
         var registros = _context.RegistrodePiezasEscaneadas
-            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
+            .Where(r => r.Fecha >= inicio.AddDays(-1) && r.Fecha <= fin.AddDays(1))
+            .Select(r => new
+            {
+                r.Fecha,
+                r.Hora,
+                r.Mandrel,
+                r.Turno
+            })
             .ToList();
 
-        // ✅ 2. Filtrar por fecha laboral real usando tu helper
+        // ✅ 2. Filtrar por fecha laboral real
         registros = registros
             .Where(r =>
-                ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
-                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
-            )
+            {
+                var fechaLaboral = ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date;
+                return fechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                       fechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date;
+            })
             .ToList();
 
-        // ✅ 3. Filtrar por turno actual
+        // ✅ 3. Filtrar por turno
         if (!string.IsNullOrEmpty(turno))
             registros = registros.Where(r => r.Turno == turno).ToList();
 
@@ -1724,16 +1777,12 @@ public class PiezasEscaneadasController : Controller
 
 
     [HttpPost]
-    public IActionResult ExportarExcelProduccion(
-    DateTime fechaInicio,
-    DateTime fechaFin,
-    string turno,
-    List<string> mandriles)
+    public IActionResult ExportarExcelProduccion(DateTime fechaInicio, DateTime fechaFin, string turno, List<string> mandriles)
     {
         DateOnly inicio = DateOnly.FromDateTime(fechaInicio);
         DateOnly fin = DateOnly.FromDateTime(fechaFin);
 
-        // ✅ 1. Reducir dataset desde SQL
+        // ✅ 1. Reducir dataset desde SQL (AHORA INCLUYE NDPiezas)
         var query = _context.RegistrodePiezasEscaneadas
             .Where(p => p.Fecha >= inicio.AddDays(-1) && p.Fecha <= fin.AddDays(1))
             .Select(p => new
@@ -1741,7 +1790,8 @@ public class PiezasEscaneadasController : Controller
                 p.Fecha,
                 p.Hora,
                 p.Mandrel,
-                p.Turno
+                p.Turno,
+                p.Ndpiezas   // ✅ IMPORTANTE
             })
             .ToList();
 
@@ -1751,7 +1801,8 @@ public class PiezasEscaneadasController : Controller
             {
                 FechaLaboral = ProduccionHelper.GetFechaProduccion(p.Fecha.ToDateTime(p.Hora)).Date,
                 p.Turno,
-                p.Mandrel
+                p.Mandrel,
+                p.Ndpiezas
             })
             .Where(p => p.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
                         p.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
@@ -1765,25 +1816,27 @@ public class PiezasEscaneadasController : Controller
         if (mandriles != null && mandriles.Any())
             produccion = produccion.Where(p => mandriles.Contains(p.Mandrel)).ToList();
 
-        // ✅ 5. Agrupar para hoja principal
+        // ✅ 5. Agrupar SUMANDO NDPiezas
         var data = produccion
-            .GroupBy(p => new
-            {
-                p.FechaLaboral,
-                p.Turno,
-                p.Mandrel
-            })
-            .Select(g => new
-            {
-                Fecha = g.Key.FechaLaboral,
-                Turno = g.Key.Turno,
-                Mandril = g.Key.Mandrel,
-                TotalPiezas = g.Count()
-            })
-            .OrderBy(x => x.Fecha)
-            .ThenBy(x => x.Turno)
-            .ThenBy(x => x.Mandril)
-            .ToList();
+     .GroupBy(p => new
+     {
+         p.FechaLaboral,
+         p.Turno,
+         p.Mandrel
+     })
+     .Select(g => new
+     {
+         Fecha = g.Key.FechaLaboral,
+         Turno = g.Key.Turno,
+         Mandril = g.Key.Mandrel,
+         TotalPiezas = g.Sum(x =>
+        long.TryParse(x.Ndpiezas, out var val) ? val : 0
+         )
+     })
+     .OrderBy(x => x.Fecha)
+     .ThenBy(x => x.Turno)
+     .ThenBy(x => x.Mandril)
+     .ToList();
 
         // ✅ 6. Totales por día
         var totalesPorDia = data
@@ -1829,9 +1882,6 @@ public class PiezasEscaneadasController : Controller
         // ✅ 9. Crear Excel
         using var workbook = new ClosedXML.Excel.XLWorkbook();
 
-        /* ---------------------------------------------------------
-           ✅ HOJA 1: PRODUCCIÓN DETALLADA
-        --------------------------------------------------------- */
         var ws = workbook.Worksheets.Add("Producción");
 
         ws.Cell(1, 1).Value = "Fecha";
@@ -1859,15 +1909,12 @@ public class PiezasEscaneadasController : Controller
             ws.Cell(row, 4).Value = item.Mandril;
             ws.Cell(row, 5).Value = item.TotalPiezas;
 
-            // ✅ Colorear fila según turno
             var fila = ws.Range($"A{row}:E{row}");
 
             if (item.Turno == "1")
                 fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightBlue;
-
             else if (item.Turno == "2")
                 fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightYellow;
-
             else if (item.Turno == "3")
                 fila.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.LightGreen;
 
@@ -1875,7 +1922,6 @@ public class PiezasEscaneadasController : Controller
         }
 
         ws.Columns().AdjustToContents();
-
 
         /* ---------------------------------------------------------
            ✅ HOJA 2: RESUMEN
@@ -1928,7 +1974,8 @@ public class PiezasEscaneadasController : Controller
             resumen.Cell(r, 3).Value = t2;
             resumen.Cell(r, 4).Value = t3;
 
-            totalDia = t1 + t2 + t3;
+            totalDia = (int)(t1 + t2 + t3);   // ✅ CORREGIDO
+
             resumen.Cell(r, 5).Value = totalDia;
 
             r++;
@@ -1936,9 +1983,6 @@ public class PiezasEscaneadasController : Controller
 
         resumen.Columns().AdjustToContents();
 
-        /* ---------------------------------------------------------
-           ✅ DESCARGA
-        --------------------------------------------------------- */
         using var stream = new MemoryStream();
         workbook.SaveAs(stream);
         var content = stream.ToArray();

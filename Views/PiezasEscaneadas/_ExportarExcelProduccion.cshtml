@@ -3,7 +3,7 @@
         <div class="modal-content">
 
             <div class="modal-header bg-success text-white">
-                <h5 class="modal-title">Exportar Producción a Excel</h5>
+                <h5 class="modal-title">Exportar Piezas Buenas a Excel</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
 
@@ -14,13 +14,15 @@
                     <!-- Fecha inicio -->
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Fecha inicio</label>
-                        <input type="date" id="fechaInicioProd" class="form-control rounded-pill" />
+                        <input type="date" id="fechaInicioProd" class="form-control rounded-pill"
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <!-- Fecha fin -->
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Fecha fin</label>
-                        <input type="date" id="fechaFinProd" class="form-control rounded-pill" />
+                        <input type="date" id="fechaFinProd" class="form-control rounded-pill"
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <!-- Turno -->
