@@ -1455,26 +1455,27 @@ public class PiezasEscaneadasController : Controller
     {
         // Zona horaria de Matamoros
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-
-        // Si no se seleccionó fecha, usar la fecha laboral local de Matamoros
         var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+        // ✅ Si no se seleccionó fecha, usar la fecha laboral del momento actual
         var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
-        // --- Producciones ---
+        // ✅ Convertir fechaFiltro a DateTime para comparar
+        var fechaFiltroDT = fechaFiltro.ToDateTime(TimeOnly.MinValue);
+
+        // ✅ PRODUCCIONES (solo del día laboral correcto)
         var producciones = _context.RegistrodePiezasEscaneadas
-            .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
-            .ToList()
+            .ToList() // EF no puede evaluar tu helper, así que cargamos y filtramos en memoria
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
+                        == fechaFiltroDT.Date)
             .ToList();
 
-        // --- Defectos ---
+        // ✅ DEFECTOS (solo del día laboral correcto)
         var defectos = _context.RegistrodeDefectos
-            .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
             .ToList()
             .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
+                        == fechaFiltroDT.Date)
             .ToList();
 
         // --- Totales ---
@@ -1486,20 +1487,17 @@ public class PiezasEscaneadasController : Controller
         double fpy = totalPiezas > 0 ? (double)totalBuenas / totalPiezas * 100 : 0;
         double scrap = totalPiezas > 0 ? (double)totalDefectos / totalPiezas * 100 : 0;
 
-        // --- Defectos por categoría (excluyendo los códigos indicados) ---
+        // --- Defectos por categoría ---
         int defectosPrintIllegible = defectos.Count(d => !new[] { "17a", "17b", "21" }.Contains(d.CodigodeDefecto));
         int defectosMaterialLub = defectos.Count(d => !new[] { "17a", "17b", "21", "54" }.Contains(d.CodigodeDefecto));
         int defectosVulcanization = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24" }.Contains(d.CodigodeDefecto));
         int defectosUncured = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24", "23" }.Contains(d.CodigodeDefecto));
 
-        // --- Porcentajes (respecto al total de defectos) ---
-        double porcPrintIllegible = totalDefectos > 0 ? (double)defectosPrintIllegible / totalPiezas * 100 : 0;
-        double porcMaterialLub = totalDefectos > 0 ? (double)defectosMaterialLub / totalPiezas * 100 : 0;
-        double porcVulcanization = totalDefectos > 0 ? (double)defectosVulcanization / totalPiezas * 100 : 0;
-        double porcUncured = totalDefectos > 0 ? (double)defectosUncured / totalPiezas * 100 : 0;
-
-
-
+        // --- Porcentajes ---
+        double porcPrintIllegible = totalPiezas > 0 ? (double)defectosPrintIllegible / totalPiezas * 100 : 0;
+        double porcMaterialLub = totalPiezas > 0 ? (double)defectosMaterialLub / totalPiezas * 100 : 0;
+        double porcVulcanization = totalPiezas > 0 ? (double)defectosVulcanization / totalPiezas * 100 : 0;
+        double porcUncured = totalPiezas > 0 ? (double)defectosUncured / totalPiezas * 100 : 0;
 
         var viewModel = new DashboardResumenViewModel
         {
@@ -1513,8 +1511,7 @@ public class PiezasEscaneadasController : Controller
             PorcentajeUncured = porcUncured
         };
 
-
-        // --- Producción por turno (para Chart.js) ---
+        // ✅ Producción por turno
         var produccionPorTurno = producciones
             .GroupBy(r => r.Turno?.Trim())
             .Select(g => new
@@ -1525,7 +1522,7 @@ public class PiezasEscaneadasController : Controller
             .OrderBy(g => int.TryParse(g.Turno, out var turnoNum) ? turnoNum : int.MaxValue)
             .ToList();
 
-        // --- Producción por mesa y turno ---
+        // ✅ Producción por mesa y turno
         var produccionPorMesaYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.NuMesa) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.NuMesa.Trim())
@@ -1543,7 +1540,7 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // --- Producción por TM y turno ---
+        // ✅ Producción por TM y turno
         var produccionPorTMYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.Tm) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.Tm.Trim())
@@ -1556,11 +1553,11 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // --- Producción por Mandrel y turno ---
+        // ✅ Producción por Mandrel y turno
         var produccionPorMandrelYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.Mandrel) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.Mandrel.Trim())
-            .OrderBy(g => g.Key) // orden alfabético de mandrel
+            .OrderBy(g => g.Key)
             .ToDictionary(
                 g => g.Key,
                 g => g.GroupBy(r => r.Turno.Trim())
@@ -1570,13 +1567,12 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // --- Preparar datos para Chart.js ---
+        // ✅ Preparar datos para Chart.js
         ViewBag.MandrelLabels = produccionPorMandrelYTurno.Keys.ToList();
         ViewBag.Turno1PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("1") ? m["1"] : 0).ToList();
         ViewBag.Turno2PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("2") ? m["2"] : 0).ToList();
         ViewBag.Turno3PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("3") ? m["3"] : 0).ToList();
 
-        // --- Preparar datos para Chart.js ---
         ViewBag.MesaLabels = produccionPorMesaYTurno.Keys.ToList();
         ViewBag.Turno1PorMesa = produccionPorMesaYTurno.Values.Select(m => m.ContainsKey("1") ? m["1"] : 0).ToList();
         ViewBag.Turno2PorMesa = produccionPorMesaYTurno.Values.Select(m => m.ContainsKey("2") ? m["2"] : 0).ToList();
@@ -1591,7 +1587,6 @@ public class PiezasEscaneadasController : Controller
         ViewBag.ProduccionTurnoData = produccionPorTurno.Select(x => x.Total).ToList();
 
         ViewBag.FechaSeleccionada = fechaSeleccionada.ToString("yyyy-MM-dd");
-        //ViewBag.FechaTitulo = fechaSeleccionada.ToString("dd MMMM yyyy");
 
         return View(viewModel);
     }
@@ -1774,7 +1769,6 @@ public class PiezasEscaneadasController : Controller
 
         return Json(mandriles);
     }
-
 
     [HttpPost]
     public IActionResult ExportarExcelProduccion(DateTime fechaInicio, DateTime fechaFin, string turno, List<string> mandriles)
