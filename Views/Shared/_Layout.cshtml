@@ -135,7 +135,7 @@
                         @{
                             bool produccionOpen =
                             (currentController == "PiezasEscaneadas" && (currentAction == "Index" || currentAction == "ReporteProduccion" || currentAction == "DetalleProduccionMesa" || currentAction == "DetallePorUsuario"))
-                            || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios")) || (currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
+                                || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios" || currentAction == "RegistroDeDefectos")) || (currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
                         }
                             <a class="nav-link d-flex align-items-center w-100 @(produccionOpen ? "active fw-bold bg-primary text-white" : "fw-bold text-dark")"
                                 data-bs-toggle="collapse" href="#produccionSubmenu" role="button"
@@ -172,9 +172,20 @@
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-exclamation-triangle"></i>
                                     </span>
-                                    <span class="ms-2 sidebar-text">Registro de defectos</span>
+                                    <span class="ms-2 sidebar-text">Registro de Defectos</span>
                                 </a>
                             </li>
+                                    @if (User.IsInRole("Admin") || User.IsInRole("Gerente")){
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeDefectos" && currentAction == "RegistroDeDefectos" ? "active fw-bold bg-danger text-white" : "text-dark")"
+                                    asp-controller="RegistrodeDefectos" asp-action="RegistroDeDefectos">
+                                    <span class="d-flex justify-content-center" style="width:40px;">
+                                        <i class="bi bi-coin"></i>
+                                    </span>
+                                        <span class="ms-2 sidebar-text">Reporte de Costos</span>
+                                </a>
+                            </li>
+                            }
                             <li class="nav-item">
                                 <a class="nav-link d-flex align-items-center w-100 @(
                                     (currentController == "PiezasEscaneadas" && (currentAction == "ReporteProduccion" || currentAction == "DetalleProduccionMesa" || currentAction == "DetallePorUsuario"))

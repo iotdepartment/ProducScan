@@ -1,0 +1,51 @@
+﻿<div class="modal fade" id="modalExportarExcel" tabindex="-1" aria-labelledby="modalExportarExcelLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalExportarExcelLabel">Reporte de Costos de Defectos</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+
+                <div class="row g-3">
+
+                    <!-- Fecha Inicio -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha Inicio</label>
+                        <input type="date" id="fechaInicioExcel" class="form-control rounded-pill" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <!-- Fecha Fin -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha Fin</label>
+                        <input type="date" id="fechaFinExcel" class="form-control rounded-pill" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                    </div>
+
+                    <!-- Turno -->
+                    <div class="col-md-12">
+                        <label class="form-label fw-bold">Turno</label>
+                        <select id="turnoExcel" class="form-select rounded-pill">
+                            <option value="">Todos</option>
+                            <option value="1">Turno 1</option>
+                            <option value="2">Turno 2</option>
+                            <option value="3">Turno 3</option>
+                        </select>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+
+                <button id="btnGenerarExcel" class="btn btn-success rounded-pill">
+                    <i class="bi bi-file-earmark-excel"></i> Generar Excel
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>

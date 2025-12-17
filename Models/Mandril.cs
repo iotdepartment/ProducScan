@@ -10,6 +10,7 @@
         public string? Area { get; set; }
         public string? Kanban { get; set; }
         public string? Estacion { get; set; }
+        public double? Costo { get; set; }
     }
 
 }

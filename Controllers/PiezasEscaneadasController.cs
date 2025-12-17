@@ -22,7 +22,6 @@ public class PiezasEscaneadasController : Controller
     private readonly ILogService _log;
     private readonly IHubContext<ProduccionHub> _hubContext;
 
-
     public PiezasEscaneadasController(AppDbContext context, ILogService log, IHubContext<ProduccionHub> hubContext)
     {
         _context = context;

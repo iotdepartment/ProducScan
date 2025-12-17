@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using ClosedXML.Excel;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +8,6 @@ using ProducScan.Models;
 using ProducScan.Services;
 using ProducScan.ViewModels;
 using System.Globalization;
-
 
 [Authorize]
 public class RegistrodeDefectosController : Controller
@@ -410,7 +410,7 @@ public class RegistrodeDefectosController : Controller
         return View(vm);
     }
 
-
+    [HttpGet]
     private List<RegistrodeDefecto> ObtenerDefectosFiltrados(DateOnly fechaFiltro, string turno)
     {
         // ✅ 1. Reducir dataset desde SQL (solo columnas necesarias)
@@ -441,7 +441,6 @@ public class RegistrodeDefectosController : Controller
 
         return query;
     }
-
 
     [HttpPost]
     public IActionResult GetDefectosAgrupados(string fecha, string turno, List<string> mandriles, List<string> codigos)
@@ -501,7 +500,6 @@ public class RegistrodeDefectosController : Controller
         return Json(lista);
     }
 
-
     [HttpPost]
     public IActionResult GetMandriles(string fecha, string turno)
     {
@@ -519,14 +517,8 @@ public class RegistrodeDefectosController : Controller
         return Json(mandriles);
     }
 
-
     [HttpPost]
-    public IActionResult ExportarExcel(
-     DateTime fechaInicio,
-     DateTime fechaFin,
-     string turno,
-     List<string> mandriles,
-     List<string> codigos)
+    public IActionResult ExportarExcel(DateTime fechaInicio, DateTime fechaFin, string turno, List<string> mandriles, List<string> codigos)
     {
         DateOnly inicio = DateOnly.FromDateTime(fechaInicio);
         DateOnly fin = DateOnly.FromDateTime(fechaFin);
@@ -702,9 +694,6 @@ public class RegistrodeDefectosController : Controller
         ws.Columns().AdjustToContents();
 
         /* ---------------------------------------------------------
-           ✅ HOJA 2: RESUMEN
-        --------------------------------------------------------- */
-        /* ---------------------------------------------------------
     ✅ HOJA 2: RESUMEN
  --------------------------------------------------------- */
         var resumen = workbook.Worksheets.Add("Resumen");
@@ -788,6 +777,340 @@ public class RegistrodeDefectosController : Controller
             "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             $"Defectos_{inicio}_{fin}.xlsx"
         );
+    }
+
+    [Authorize(Roles = "Admin,Gerente")]
+    [HttpGet]
+    public IActionResult RegistroDeDefectos(DateTime? fecha, string turno)
+    {
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+        // ✅ Fecha laboral actual
+        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
+        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
+
+        // ✅ Turno actual
+        string turnoSeleccionado = turno;
+        var horaActual = ahora.TimeOfDay;
+
+        if (string.IsNullOrEmpty(turnoSeleccionado))
+        {
+            turnoSeleccionado =
+                horaActual >= new TimeSpan(7, 10, 0) && horaActual <= new TimeSpan(15, 44, 59) ? "1" :
+                horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59) ? "2" :
+                "3";
+        }
+
+        // ✅ 1. Reducir dataset desde SQL (solo columnas necesarias)
+        var defectosQuery = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
+            .Select(d => new
+            {
+                d.Fecha,
+                d.Hora,
+                d.Mandrel,
+                d.CodigodeDefecto,
+                d.Defecto,
+                d.Turno
+            })
+            .ToList(); // ✅ Solo 1 ToList()
+
+        // ✅ 2. Filtrar por día laboral real (en memoria)
+        var defectosRaw = defectosQuery
+            .Where(d =>
+                ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
+                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+            )
+            .ToList();
+
+        // ✅ Mandriles únicos
+        ViewBag.Mandriles = defectosRaw
+            .Select(d => d.Mandrel?.Trim())
+            .Where(m => !string.IsNullOrWhiteSpace(m))
+            .Distinct()
+            .OrderBy(m => m)
+            .ToList();
+
+        // ✅ Códigos de defecto únicos
+        ViewBag.CodigosDefecto = defectosRaw
+            .Select(d => d.CodigodeDefecto?.Trim())
+            .Where(c => !string.IsNullOrWhiteSpace(c))
+            .Distinct()
+            .OrderBy(c => c)
+            .ToList();
+
+        ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
+        ViewBag.TurnoSeleccionado = turnoSeleccionado;
+
+        return View();
+    }
+
+    [Authorize(Roles = "Admin,Gerente")]
+    [HttpPost]
+    public IActionResult GetDefectosAgrupadosConCosto(DateTime fecha, string turno, List<string> mandriles, List<string> codigos)
+    {
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+        var fechaFiltro = DateOnly.FromDateTime(fecha);
+
+        // ✅ 1) Cargar costos de mandriles (pocos registros, no hay problema)
+        var costosMandriles = _context.Mandriles
+            .Where(m => m.Area == "INSPECCION")
+            .Select(m => new
+            {
+                m.MandrilNombre,
+                Costo = m.Costo ?? 0d
+            })
+            .ToDictionary(m => m.MandrilNombre, m => m.Costo);
+
+        // ✅ 2) Reducir dataset desde SQL por rango de fechas y columnas mínimas
+        var fechaInicio = fechaFiltro.AddDays(-1);
+        var fechaFin = fechaFiltro.AddDays(1);
+
+        var defectosSql = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= fechaInicio && d.Fecha <= fechaFin)
+            .Select(d => new
+            {
+                d.Fecha,
+                d.Hora,
+                d.Turno,
+                d.Mandrel,
+                d.CodigodeDefecto
+            })
+            .AsEnumerable(); // ✅ de aquí en adelante ya en memoria
+
+        // ✅ 3) Filtrar por fecha laboral real en memoria (usa ProduccionHelper)
+        var defectos = defectosSql
+            .Where(d =>
+                ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
+                == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+            )
+            .ToList();
+
+        // ✅ 4) Filtros opcionales en memoria (ya con dataset reducido)
+        if (!string.IsNullOrEmpty(turno))
+            defectos = defectos.Where(d => d.Turno == turno).ToList();
+
+        if (mandriles != null && mandriles.Any())
+            defectos = defectos.Where(d => mandriles.Contains(d.Mandrel)).ToList();
+
+        if (codigos != null && codigos.Any())
+            defectos = defectos.Where(d => codigos.Contains(d.CodigodeDefecto)).ToList();
+
+        IEnumerable<dynamic> resultado;
+
+        // ✅ 5) Agrupación y cálculo de costos
+        if (string.IsNullOrEmpty(turno))
+        {
+            // "Todos" → agrupar solo por Mandril
+            resultado = defectos
+                .GroupBy(d => d.Mandrel)
+                .Select(g =>
+                {
+                    int totalPiezas = g.Count();
+
+                    double costoMandril = costosMandriles.ContainsKey(g.Key)
+                        ? costosMandriles[g.Key]
+                        : 0d;
+
+                    double costoTotal = totalPiezas * costoMandril;
+
+                    return new
+                    {
+                        turno = "Todos",
+                        mandril = g.Key,
+                        totalPiezas = totalPiezas,
+                        costo = costoTotal,
+                        costoTexto = $"${costoTotal:0.00} USD"
+                    };
+                })
+                .OrderByDescending(x => x.costo)
+                .ToList();
+        }
+        else
+        {
+            // Turno específico → agrupar por Turno + Mandril
+            resultado = defectos
+                .GroupBy(d => new { d.Turno, d.Mandrel })
+                .Select(g =>
+                {
+                    int totalPiezas = g.Count();
+
+                    double costoMandril = costosMandriles.ContainsKey(g.Key.Mandrel)
+                        ? costosMandriles[g.Key.Mandrel]
+                        : 0d;
+
+                    double costoTotal = totalPiezas * costoMandril;
+
+                    return new
+                    {
+                        turno = g.Key.Turno,
+                        mandril = g.Key.Mandrel,
+                        totalPiezas = totalPiezas,
+                        costo = costoTotal,
+                        costoTexto = $"${costoTotal:0.00} USD"
+                    };
+                })
+                .OrderByDescending(x => x.costo)
+                .ToList();
+        }
+
+        // ✅ 6) Enviar al DataTable: texto para mostrar, numérico para ordenar
+        return Json(new
+        {
+            data = resultado.Select(x => new
+            {
+                x.turno,
+                x.mandril,
+                x.totalPiezas,
+                costo = x.costoTexto,
+                costoOrden = x.costo
+            })
+        });
+    }
+
+    [Authorize(Roles = "Admin,Gerente")]
+    [HttpGet]
+    public IActionResult ExportarDefectosExcel(DateTime fechaInicio, DateTime fechaFin, string turno)
+    {
+        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+
+        var inicio = DateOnly.FromDateTime(fechaInicio);
+        var fin = DateOnly.FromDateTime(fechaFin);
+
+        // ✅ Cargar costos de mandriles
+        var costosMandriles = _context.Mandriles
+            .Where(m => m.Area == "INSPECCION")
+            .Select(m => new
+            {
+                m.MandrilNombre,
+                Costo = m.Costo ?? 0d
+            })
+            .ToDictionary(m => m.MandrilNombre, m => m.Costo);
+
+        // ✅ Reducir dataset desde SQL
+        var defectosSql = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
+            .Select(d => new
+            {
+                d.Fecha,
+                d.Hora,
+                d.Turno,
+                d.Mandrel,
+                d.CodigodeDefecto
+            })
+            .AsEnumerable();
+
+        // ✅ Filtrar por fecha laboral real
+        var defectos = defectosSql
+            .Where(d =>
+            {
+                var fechaProd = ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date;
+                return fechaProd >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                       fechaProd <= fin.ToDateTime(TimeOnly.MinValue).Date;
+            })
+            .ToList();
+
+        // ✅ Filtrar por turno si aplica
+        if (!string.IsNullOrEmpty(turno))
+            defectos = defectos.Where(d => d.Turno == turno).ToList();
+
+        // ✅ Agrupación
+        IEnumerable<dynamic> resultado;
+
+        if (string.IsNullOrEmpty(turno))
+        {
+            resultado = defectos
+                .GroupBy(d => d.Mandrel)
+                .Select(g =>
+                {
+                    int totalPiezas = g.Count();
+                    double costoMandril = costosMandriles.ContainsKey(g.Key) ? costosMandriles[g.Key] : 0d;
+                    double costoTotal = totalPiezas * costoMandril;
+
+                    return new
+                    {
+                        Turno = "Todos",
+                        Mandril = g.Key,
+                        TotalPiezas = totalPiezas,
+                        Costo = costoTotal
+                    };
+                })
+                .OrderByDescending(x => x.Costo)
+                .ToList();
+        }
+        else
+        {
+            resultado = defectos
+                .GroupBy(d => new { d.Turno, d.Mandrel })
+                .Select(g =>
+                {
+                    int totalPiezas = g.Count();
+                    double costoMandril = costosMandriles.ContainsKey(g.Key.Mandrel) ? costosMandriles[g.Key.Mandrel] : 0d;
+                    double costoTotal = totalPiezas * costoMandril;
+
+                    return new
+                    {
+                        Turno = g.Key.Turno,
+                        Mandril = g.Key.Mandrel,
+                        TotalPiezas = totalPiezas,
+                        Costo = costoTotal
+                    };
+                })
+                .OrderByDescending(x => x.Costo)
+                .ToList();
+        }
+
+        // ✅ Crear Excel con ClosedXML
+        using var workbook = new XLWorkbook();
+        var ws = workbook.Worksheets.Add("Reporte Defectos");
+
+        // ✅ ENCABEZADO DEL REPORTE
+        ws.Cell(1, 1).Value = "Reporte de Costos de Defectos";
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 16;
+
+        // ✅ FECHA INICIO Y FIN
+        ws.Cell(3, 1).Value = "Fecha Inicio:";
+        ws.Cell(3, 2).Value = inicio.ToString();
+        ws.Cell(4, 1).Value = "Fecha Fin:";
+        ws.Cell(4, 2).Value = fin.ToString();
+
+        ws.Range("A3:A4").Style.Font.Bold = true;
+
+        // ✅ Encabezados de la tabla (fila 6)
+        ws.Cell(6, 1).Value = "Turno";
+        ws.Cell(6, 2).Value = "Mandril";
+        ws.Cell(6, 3).Value = "Total Piezas";
+        ws.Cell(6, 4).Value = "Costo (USD)";
+
+        ws.Range("A6:D6").Style.Font.Bold = true;
+
+        int row = 7;
+
+        foreach (var item in resultado)
+        {
+            ws.Cell(row, 1).Value = item.Turno;
+            ws.Cell(row, 2).Value = item.Mandril;
+            ws.Cell(row, 3).Value = item.TotalPiezas;
+
+            ws.Cell(row, 4).Value = item.Costo;
+            ws.Cell(row, 4).Style.NumberFormat.Format = "$#,##0.00";
+
+            row++;
+        }
+
+        ws.Columns().AdjustToContents();
+
+        using var stream = new MemoryStream();
+        workbook.SaveAs(stream);
+        var content = stream.ToArray();
+
+        string fileName = $"ReporteDefectos_{inicio}_{fin}.xlsx";
+
+        return File(content,
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            fileName);
     }
 
 }
