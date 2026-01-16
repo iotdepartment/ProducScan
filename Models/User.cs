@@ -5,7 +5,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace ProducScan.Models;
 
-
 [Table("User")]
 public partial class User
 {

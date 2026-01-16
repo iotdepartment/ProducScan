@@ -18,6 +18,8 @@
             <th>Barcode</th>
             <th>Kanban</th>
             <th>Estación</th>
+            <th>Familia</th>     <!-- NUEVO -->
+            <th>Proceso</th>     <!-- NUEVO -->
             <th>Acciones</th>
         </tr>
     </thead>
@@ -72,28 +74,30 @@
                     type: "GET",
                     datatype: "json"
                 },
-                columns: [
-                    { data: "mandrilNombre" },
-                    { data: "centrodeCostos" },
-                    { data: "cantidaddeEmpaque" },
-                    { data: "barcode" },
-                    { data: "kanban" },
-                    { data: "estacion" }, // columna estación
-                    {
-                        data: "id",
-                        render: function (data, type, row) {
-                            return `
-                                <button class="btn btn-sm btn-warning rounded-pill"
-                                    onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}', '${row.estacion ?? ""}')">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </button>
-                                <button class="btn btn-sm btn-danger rounded-pill"
-                                    onclick="openDeleteModal(${data})">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>`;
-                        }
-                    }
-                ],
+                       columns: [
+            { data: "mandrilNombre" },
+            { data: "centrodeCostos" },
+            { data: "cantidaddeEmpaque" },
+            { data: "barcode" },
+            { data: "kanban" },
+            { data: "estacion" },
+            { data: "familia" },   // NUEVO
+            { data: "proceso" },   // NUEVO
+            {
+                data: "id",
+                render: function (data, type, row) {
+                    return `
+                        <button class="btn btn-sm btn-warning rounded-pill"
+                            onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}', '${row.estacion ?? ""}', '${row.familia ?? ""}', '${row.proceso ?? ""}')">
+                            <i class="bi bi-pencil-fill"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger rounded-pill"
+                            onclick="openDeleteModal(${data})">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>`;
+                }
+            }
+        ],
                 pageLength: 10,
                 lengthMenu: [10, 20, 50, 100],
                 ordering: false,
@@ -156,16 +160,23 @@
             $(this).find('form').removeClass('was-validated');
         });
 
-        function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban, estacion) {
+        function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban, estacion, familia, proceso) {
+
             document.getElementById("modalTitle").innerText = "Editar Mandril";
             document.getElementById("createEditForm").action = "/Mandriles/Edit";
+
             document.getElementById("mandrilId").value = id;
             document.getElementById("mandrilNombre").value = mandrilNombre;
             document.getElementById("centrodeCostos").value = centrodeCostos;
             document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
             document.getElementById("barcode").value = barcode;
             document.getElementById("kanban").value = kanban;
-            document.getElementById("estacion").value = estacion || ""; // ahora sí se llena
+            document.getElementById("estacion").value = estacion || "";
+
+            // 👇 Selects nuevos
+            document.getElementById("familia").value = familia || "";
+            document.getElementById("proceso").value = proceso || "";
+
             $('#createEditModal').modal('show');
         }
 

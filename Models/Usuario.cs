@@ -1,6 +1,11 @@
 ﻿// Models/Usuario.cs
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace ProducScan.Models
 {
+
+    [Table("Usuarios")]
+
     public class Usuario
     {
         public int Id { get; set; }

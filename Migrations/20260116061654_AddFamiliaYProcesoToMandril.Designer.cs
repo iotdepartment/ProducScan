@@ -12,8 +12,8 @@ using ProducScan.Models;
 namespace ProducScan.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251017034431_AddLogging")]
-    partial class AddLogging
+    [Migration("20260116061654_AddFamiliaYProcesoToMandril")]
+    partial class AddFamiliaYProcesoToMandril
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -56,6 +56,10 @@ namespace ProducScan.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Detalles")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -80,83 +84,65 @@ namespace ProducScan.Migrations
                     b.ToTable("Logs");
                 });
 
-            modelBuilder.Entity("ProducScan.Models.Mandrel", b =>
+            modelBuilder.Entity("ProducScan.Models.Mandril", b =>
                 {
-                    b.Property<string>("BarCode")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("ID");
 
-                    b.Property<string>("Cantidadempaqueinspeccion")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("CANTIDADEMPAQUEINSPECCION");
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Cantidadkanbanfinalcaja")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("CANTIDADKANBANFINALCAJA");
+                    b.Property<string>("Area")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Diametroexterior")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("DIAMETROEXTERIOR");
+                    b.Property<string>("Barcode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Diametrointerior")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("DIAMETROINTERIOR");
+                    b.Property<string>("CantidaddeEmpaque")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Espesordepared")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("ESPESORDEPARED");
+                    b.Property<string>("CentrodeCostos")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Kanbanfinal")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("KANBANFINAL");
+                    b.Property<double?>("Costo")
+                        .HasColumnType("float");
 
-                    b.Property<string>("Kanbanoven")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("KANBANOVEN");
+                    b.Property<string>("Estacion")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Mandril")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("MANDRIL");
+                    b.Property<string>("Familia")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Num")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("NUM");
+                    b.Property<string>("Kanban")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Nupartedemanguera")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("NUPARTEDEMANGUERA");
+                    b.Property<string>("MandrilNombre")
+                        .HasColumnType("nvarchar(max)")
+                        .HasColumnName("Mandril");
 
-                    b.Property<string>("Nupartefinal")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("NUPARTEFINAL");
+                    b.Property<string>("Proceso")
+                        .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("Nurackinspeccion")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("NURACKINSPECCION");
+                    b.HasKey("Id");
 
-                    b.Property<string>("Nurackoven")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("NURACKOVEN");
-
-                    b.ToTable("Mandrels");
+                    b.ToTable("Mandriles", "dbo");
                 });
 
             modelBuilder.Entity("ProducScan.Models.Mesa", b =>
                 {
-                    b.Property<string>("Id")
+                    b.Property<int>("IdMesa")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasColumnName("IdMesa");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("IdMesa"));
+
+                    b.Property<string>("ID")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)")
                         .HasColumnName("ID");
@@ -165,9 +151,15 @@ namespace ProducScan.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("Meta")
+                        .HasColumnType("int")
+                        .HasColumnName("Meta");
+
                     b.Property<string>("NumerodeMesa")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("IdMesa");
 
                     b.ToTable("Mesas");
                 });
@@ -293,10 +285,11 @@ namespace ProducScan.Migrations
 
             modelBuilder.Entity("ProducScan.Models.User", b =>
                 {
-                    b.Property<string>("Id")
-                        .HasMaxLength(50)
-                        .HasColumnType("nvarchar(50)")
-                        .HasColumnName("ID");
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Nombre")
                         .HasMaxLength(50)
@@ -305,6 +298,8 @@ namespace ProducScan.Migrations
                     b.Property<string>("NumerodeEmpleado")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.HasKey("Id");
 
                     b.ToTable("User", (string)null);
                 });
