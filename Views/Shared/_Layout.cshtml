@@ -177,8 +177,8 @@
                             </li>
                                     @if (User.IsInRole("Admin") || User.IsInRole("Gerente")){
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeDefectos" && currentAction == "RegistroDeDefectos" ? "active fw-bold bg-danger text-white" : "text-dark")"
-                                    asp-controller="RegistrodeDefectos" asp-action="RegistroDeDefectos">
+                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeDefectos" && currentAction == "ReporteDeCostos" ? "active fw-bold bg-danger text-white" : "text-dark")"
+                                               asp-controller="RegistrodeDefectos" asp-action="ReporteDeCostos">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-coin"></i>
                                     </span>

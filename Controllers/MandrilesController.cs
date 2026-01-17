@@ -102,11 +102,8 @@ namespace ProducScan.Controllers
                 existing.Barcode = mandril.Barcode;
                 existing.Kanban = mandril.Kanban;
                 existing.Estacion = mandril.Estacion;
-
-                // 👇 NUEVOS CAMPOS
                 existing.Familia = mandril.Familia;
                 existing.Proceso = mandril.Proceso;
-
                 existing.Area = "INSPECCION";
 
                 await _context.SaveChangesAsync();

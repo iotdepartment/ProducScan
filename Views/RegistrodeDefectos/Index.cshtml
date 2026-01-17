@@ -1,8 +1,8 @@
 ﻿@model PaginatedList<RegistrodeDefecto>
 
 @{
-    ViewData["Title"] = "Registro de defectos";
-    ViewData["PageTitle"] = "Registro de defectos";
+    ViewData["Title"] = "Registro de Defectos";
+    ViewData["PageTitle"] = "Registro de Defectos";
     ViewData["Subtitle"] = "Defectos detectados en la labor de inspección del día laboral actual.";
 }
 
@@ -142,7 +142,7 @@
         --------------------------------------------------------- */
 
         function cargarMandriles() {
-            $.post('/RegistrodeDefectos/GetMandriles', {
+            $.post('/RegistrodeDefectos/GetMandrilesPorDiaYTurno', {
                 fecha: $('#fechaDefectos').val(),
                 turno: $('#turnoFiltro').val()
             }, function (mandriles) {
@@ -163,8 +163,8 @@
             });
         }
 
-        function cargarCodigos() {
-            $.post('/RegistrodeDefectos/GetCodigos', {
+                function cargarCodigos() {
+            $.post('/RegistrodeDefectos/GetCodigosPorDiaYTurno', {
                 fecha: $('#fechaDefectos').val(),
                 turno: $('#turnoFiltro').val()
             }, function (codigos) {

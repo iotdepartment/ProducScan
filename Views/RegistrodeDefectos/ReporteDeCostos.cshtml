@@ -1,0 +1,296 @@
+﻿@model PaginatedList<RegistrodeDefecto>
+
+@{
+    ViewData["Title"] = "Reporte de Costos";
+    ViewData["PageTitle"] = "Registro de defectos";
+    ViewData["Subtitle"] = "Defectos detectados en la labor de inspección.";
+}
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+
+<!-- BOTÓN EXCEL -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <button class="btn btn-success rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#modalExportarExcel">
+            <i class="bi bi-file-earmark-excel"></i> Generar Reporte Excel
+        </button>
+    </div>
+</div>
+
+<!-- FILTROS -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">Filtros</h5>
+
+        <div class="row g-3">
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Inicio</label>
+                <input type="date" id="fechaInicio" class="form-control rounded-pill" value="@ViewBag.FechaLaboral" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Fecha Fin</label>
+                <input type="date" id="fechaFin" class="form-control rounded-pill" value="@ViewBag.FechaLaboral" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Mandril</label>
+                <div class="dropdown w-100">
+                    <button class="btn btn-light border w-100 text-start dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Seleccionar mandriles
+                    </button>
+                    <ul class="dropdown-menu w-100 p-2" id="mandrilDropdown" style="max-height: 250px; overflow-y: auto;"></ul>
+                </div>
+            </div>
+
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Código de defecto</label>
+                <div class="dropdown w-100">
+                    <button class="btn btn-light border w-100 text-start dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        Seleccionar códigos
+                    </button>
+                    <ul class="dropdown-menu w-100 p-2" id="codigoDropdown" style="max-height: 250px; overflow-y: auto;"></ul>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- GRÁFICO -->
+<div class="card shadow-sm mb-5">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">Top Mandriles por Costo</h5>
+        <canvas id="chartMandrilesCostos" height="120"></canvas>
+    </div>
+</div>
+
+<!-- TABLA -->
+<div class="card shadow-sm mb-5">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">Detalle de Defectos</h5>
+
+        <table id="tablaDefectos" class="table table-striped table-bordered">
+            <thead class="table-dark">
+                <tr>
+                    <th>Fecha</th>
+                    <th>Mandril</th>
+                    <th>Código</th>
+                    <th>Total Piezas</th>
+                    <th>Costo</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+@await Html.PartialAsync("_ModalExportarExcelCostos")
+
+@section Scripts {
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+
+                // Copiar fechas actuales al abrir el modal
+        $('#modalExportarExcel').on('show.bs.modal', function () {
+            $('#fechaInicioExcel').val($('#fechaInicio').val());
+            $('#fechaFinExcel').val($('#fechaFin').val());
+        });
+
+        // Generar Excel
+        $(document).on("click", "#btnGenerarExcel", function () {
+
+            let inicio = $("#fechaInicioExcel").val();
+            let fin = $("#fechaFinExcel").val();
+
+            if (!inicio || !fin) {
+                alert("Selecciona un rango de fechas válido.");
+                return;
+            }
+
+            window.location = `/RegistrodeDefectos/ExportarDefectosExcel?fechaInicio=${inicio}&fechaFin=${fin}`;
+        });
+
+        /* ---------------------------------------------------------
+           📌 Chart Mandriles
+        --------------------------------------------------------- */
+
+        let chartMandriles;
+
+        function cargarChartMandriles() {
+
+            $.post('/RegistrodeDefectos/GetTopMandrilesPorDia', {
+                fechaInicio: $('#fechaInicio').val(),
+                fechaFin: $('#fechaFin').val(),
+                mandriles: obtenerMandrilesSeleccionados(),
+                codigos: obtenerCodigosSeleccionados()
+            })
+            .done(function (response) {
+
+                if (!response || !response.labels || response.labels.length === 0) {
+                    if (chartMandriles) chartMandriles.destroy();
+                    return;
+                }
+
+                if (chartMandriles) chartMandriles.destroy();
+
+                const ctx = document.getElementById('chartMandrilesCostos').getContext('2d');
+
+                        chartMandriles = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: response.labels,
+                datasets: response.datasets.map((ds, i) => ({
+                    ...ds,
+                    backgroundColor: [
+                        'rgba(255, 99, 132, 0.7)',
+                        'rgba(54, 162, 235, 0.7)',
+                        'rgba(255, 206, 86, 0.7)',
+                        'rgba(75, 192, 192, 0.7)',
+                        'rgba(153, 102, 255, 0.7)',
+                        'rgba(255, 159, 64, 0.7)'
+                    ][i % 6]
+                }))
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' }
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true }
+                }
+            }
+        });
+            });
+        }
+
+        /* ---------------------------------------------------------
+           📌 Cargar Mandriles y Códigos
+        --------------------------------------------------------- */
+
+        function cargarMandriles(callback) {
+            $.post('/RegistrodeDefectos/GetMandriles', {
+                fechaInicio: $('#fechaInicio').val(),
+                fechaFin: $('#fechaFin').val()
+            }, function (mandriles) {
+
+                let contenedor = $('#mandrilDropdown');
+                contenedor.empty();
+
+                mandriles.forEach(m => {
+                    contenedor.append(`
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="form-check-input me-2 mandril-check" value="${m}">
+                                ${m}
+                            </label>
+                        </li>
+                    `);
+                });
+
+                if (callback) callback();
+            });
+        }
+
+        function cargarCodigos(callback) {
+            $.post('/RegistrodeDefectos/GetCodigos', {
+                fechaInicio: $('#fechaInicio').val(),
+                fechaFin: $('#fechaFin').val()
+            }, function (codigos) {
+
+                let contenedor = $('#codigoDropdown');
+                contenedor.empty();
+
+                codigos.forEach(c => {
+                    contenedor.append(`
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="form-check-input me-2 codigo-check" value="${c.value}">
+                                ${c.text}
+                            </label>
+                        </li>
+                    `);
+                });
+
+                if (callback) callback();
+            });
+        }
+
+        function obtenerMandrilesSeleccionados() {
+            return $('.mandril-check:checked').map(function () { return this.value }).get();
+        }
+
+        function obtenerCodigosSeleccionados() {
+            return $('.codigo-check:checked').map(function () { return this.value }).get();
+        }
+
+        /* ---------------------------------------------------------
+           📌 DataTable + Chart Initialization
+        --------------------------------------------------------- */
+
+        $(document).ready(function () {
+
+            // 🔥 Primero cargamos filtros, luego tabla, luego chart
+            cargarMandriles(function () {
+                cargarCodigos(function () {
+
+                    var tabla = $('#tablaDefectos').DataTable({
+                        processing: true,
+                        serverSide: false,
+
+                        ajax: {
+                            url: '/RegistrodeDefectos/GetDefectosAgrupadosConCosto',
+                            type: 'POST',
+                            data: function (d) {
+                                d.fechaInicio = $('#fechaInicio').val();
+                                d.fechaFin = $('#fechaFin').val();
+                                d.mandriles = obtenerMandrilesSeleccionados();
+                                d.codigos = obtenerCodigosSeleccionados();
+                            }
+                        },
+
+                        columns: [
+                            { data: 'fecha' },
+                            { data: 'mandril' },
+                            { data: 'codigo' },
+                            { data: 'totalPiezas' },
+                            { data: 'costo' }
+                        ],
+
+                        order: [[3, "desc"]],
+                        language: { url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json' }
+                    });
+
+                    // 🔥 Ahora sí cargamos el chart
+                    cargarChartMandriles();
+
+                    // Recargar filtros cuando cambian fechas
+                    $('#fechaInicio, #fechaFin').on('change', function () {
+                        cargarMandriles();
+                        cargarCodigos();
+                        tabla.ajax.reload();
+                        cargarChartMandriles();
+                    });
+
+                    // Recargar tabla y chart al cambiar checkboxes
+                    $(document).on('change', '.mandril-check, .codigo-check', function () {
+                        tabla.ajax.reload();
+                        cargarChartMandriles();
+                    });
+
+                });
+            });
+
+        });
+
+    </script>
+
+}
