@@ -74,6 +74,7 @@
             <thead class="table-dark">
                 <tr>
                     <th>Fecha</th>
+                    <th>Familia</th>
                     <th>Mandril</th>
                     <th>Código</th>
                     <th>Total Piezas</th>
@@ -97,7 +98,7 @@
     <script>
 
 
-                // Copiar fechas actuales al abrir el modal
+        // Copiar fechas actuales al abrir el modal
         $('#modalExportarExcel').on('show.bs.modal', function () {
             $('#fechaInicioExcel').val($('#fechaInicio').val());
             $('#fechaFinExcel').val($('#fechaFin').val());
@@ -117,11 +118,9 @@
             window.location = `/RegistrodeDefectos/ExportarDefectosExcel?fechaInicio=${inicio}&fechaFin=${fin}`;
         });
 
-        /* ---------------------------------------------------------
-           📌 Chart Mandriles
-        --------------------------------------------------------- */
+         // chart Mandriles
 
-        let chartMandriles;
+               let chartMandriles;
 
         function cargarChartMandriles() {
 
@@ -133,42 +132,57 @@
             })
             .done(function (response) {
 
+                // Si no hay datos, destruir chart
                 if (!response || !response.labels || response.labels.length === 0) {
                     if (chartMandriles) chartMandriles.destroy();
                     return;
                 }
 
+                // Destruir chart previo
                 if (chartMandriles) chartMandriles.destroy();
 
                 const ctx = document.getElementById('chartMandrilesCostos').getContext('2d');
 
-                        chartMandriles = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: response.labels,
-                datasets: response.datasets.map((ds, i) => ({
-                    ...ds,
-                    backgroundColor: [
-                        'rgba(255, 99, 132, 0.7)',
-                        'rgba(54, 162, 235, 0.7)',
-                        'rgba(255, 206, 86, 0.7)',
-                        'rgba(75, 192, 192, 0.7)',
-                        'rgba(153, 102, 255, 0.7)',
-                        'rgba(255, 159, 64, 0.7)'
-                    ][i % 6]
-                }))
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' }
-                },
-                scales: {
-                    x: { stacked: true },
-                    y: { stacked: true }
-                }
-            }
-        });
+                chartMandriles = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                      labels: response.labels, // ahora son familias   // 🔥 Los 5 mandriles
+                        datasets: response.datasets.map((ds, i) => ({
+                            ...ds,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.7)',
+                                'rgba(54, 162, 235, 0.7)',
+                                'rgba(255, 206, 86, 0.7)',
+                                'rgba(75, 192, 192, 0.7)',
+                                'rgba(153, 102, 255, 0.7)',
+                                'rgba(255, 159, 64, 0.7)'
+                            ][i % 6]
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: { position: 'top' },
+
+                            // 🔥 Tooltip mejorado (opcional)
+                                   tooltip: {
+                                        callbacks: {
+                                            label: function (context) {
+                                                const label = context.dataset.label || '';
+                                                const costo = context.raw || 0;
+
+                                                // Obtener piezas desde dataset auxiliar si quieres
+                                                return `${label}: $${costo.toFixed(2)} USD`;
+                                            }
+                                        }
+                                    }
+                        },
+                        scales: {
+                            x: { stacked: true },
+                            y: { stacked: true }
+                        }
+                    }
+                });
             });
         }
 
@@ -259,6 +273,7 @@
 
                         columns: [
                             { data: 'fecha' },
+                            { data: 'familia' },
                             { data: 'mandril' },
                             { data: 'codigo' },
                             { data: 'totalPiezas' },
