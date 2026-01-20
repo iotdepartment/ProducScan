@@ -1,0 +1,91 @@
+﻿@{
+    ViewData["Title"] = "Reporte de Costos Ingeniería";
+}
+
+<!-- BOTÓN ARRIBA -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <button class="btn btn-success rounded-pill"
+                data-bs-toggle="modal"
+                data-bs-target="#modalExportarIng">
+            <i class="bi bi-file-earmark-excel"></i> Generar Reporte Ingeniería
+        </button>
+    </div>
+</div>
+
+<!-- FILTROS -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">Filtros</h5>
+
+        <!-- FILA 1: FECHAS -->
+        <div class="row g-3 mb-3">
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Fecha Inicio</label>
+                <input type="date" id="fechaInicioIngFiltro"
+                       class="form-control rounded-pill"
+                       onclick="this.showPicker()"
+                       value="@ViewBag.FechaLaboral"
+                       max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            </div>
+
+            <div class="col-md-6">
+                <label class="form-label fw-bold">Fecha Fin</label>
+                <input type="date" id="fechaFinIngFiltro"
+                       class="form-control rounded-pill"
+                       onclick="this.showPicker()"
+                       value="@ViewBag.FechaLaboral"
+                       max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+            </div>
+
+        </div>
+
+        <!-- FILA 2: MANDRIL, CÓDIGO, FAMILIA -->
+        <div class="row g-3">
+
+            <!-- Mandril -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Mandril</label>
+                <div class="dropdown w-100">
+                    <button class="btn btn-light border w-100 text-start dropdown-toggle"
+                            type="button" data-bs-toggle="dropdown">
+                        Seleccionar mandriles
+                    </button>
+                    <ul class="dropdown-menu w-100 p-2" id="mandrilDropdownIng"
+                        style="max-height: 250px; overflow-y: auto;"></ul>
+                </div>
+            </div>
+
+            <!-- Código de defecto -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Código de defecto</label>
+                <div class="dropdown w-100">
+                    <button class="btn btn-light border w-100 text-start dropdown-toggle"
+                            type="button" data-bs-toggle="dropdown">
+                        Seleccionar códigos
+                    </button>
+                    <ul class="dropdown-menu w-100 p-2" id="codigoDropdownIng"
+                        style="max-height: 250px; overflow-y: auto;"></ul>
+                </div>
+            </div>
+
+            <!-- Familia -->
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Familia</label>
+                <div class="dropdown w-100">
+                    <button class="btn btn-light border w-100 text-start dropdown-toggle"
+                            type="button" data-bs-toggle="dropdown">
+                        Seleccionar familias
+                    </button>
+                    <ul class="dropdown-menu w-100 p-2" id="familiaDropdownIng"
+                        style="max-height: 250px; overflow-y: auto;"></ul>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+@await Html.PartialAsync("~/Views/RegistrodeDefectos/Partials/ModalExportarIng.cshtml")

@@ -1,0 +1,65 @@
+﻿<div class="modal fade" id="modalExportarIng" tabindex="-1" aria-labelledby="modalExportarIngLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+
+            <!-- HEADER -->
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title" id="modalExportarIngLabel">Reporte de Ingeniería</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- BODY -->
+            <div class="modal-body">
+
+                <div class="row g-3">
+
+                    <!-- Fecha Inicio -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha Inicio</label>
+                        <input type="date" id="fechaInicioIng"
+                               class="form-control rounded-pill"
+                               onclick="this.showPicker()"
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+
+                    </div>
+
+                    <!-- Fecha Fin -->
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Fecha Fin</label>
+                        <input type="date" id="fechaFinIng"
+                               class="form-control rounded-pill"
+                               onclick="this.showPicker()"
+                               max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- FOOTER -->
+            <div class="modal-footer">
+                <button class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+
+                <button class="btn btn-success rounded-pill" onclick="exportarReporteIng()">
+                    <i class="bi bi-file-earmark-excel"></i> Generar Excel
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    function exportarReporteIng() {
+        const inicio = document.getElementById("fechaInicioIng").value;
+        const fin = document.getElementById("fechaFinIng").value;
+
+        if (!inicio || !fin) {
+            alert("Selecciona ambas fechas");
+            return;
+        }
+
+        window.location.href = `/RegistrodeDefectos/ExportarReporteIng?fechaInicio=${inicio}&fechaFin=${fin}`;
+    }
+</script>

@@ -9,10 +9,22 @@
 
 <!-- BOTÓN EXCEL -->
 <div class="row mb-4">
-    <div class="col-md-3">
-        <button class="btn btn-success rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#modalExportarExcel">
+    <div class="d-flex justify-content-between">
+
+        <!-- Izquierda -->
+        <button class="btn btn-success rounded-pill"
+                data-bs-toggle="modal"
+                data-bs-target="#modalExportarExcel">
             <i class="bi bi-file-earmark-excel"></i> Generar Reporte Excel
         </button>
+
+        <!-- Derecha -->
+        <a asp-controller="RegistrodeDefectos"
+           asp-action="ReporteIng"
+           class="btn btn-warning rounded-pill">
+            <i class="bi bi-cone"></i> Reporte de Ingeniería
+        </a>
+
     </div>
 </div>
 
@@ -97,7 +109,6 @@
 
     <script>
 
-
         // Copiar fechas actuales al abrir el modal
         $('#modalExportarExcel').on('show.bs.modal', function () {
             $('#fechaInicioExcel').val($('#fechaInicio').val());
@@ -118,9 +129,8 @@
             window.location = `/RegistrodeDefectos/ExportarDefectosExcel?fechaInicio=${inicio}&fechaFin=${fin}`;
         });
 
-         // chart Mandriles
-
-               let chartMandriles;
+         // Chat Mandriles
+        let chartMandriles;
 
         function cargarChartMandriles() {
 
@@ -146,7 +156,7 @@
                 chartMandriles = new Chart(ctx, {
                     type: 'bar',
                     data: {
-                      labels: response.labels, // ahora son familias   // 🔥 Los 5 mandriles
+                      labels: response.labels, 
                         datasets: response.datasets.map((ds, i) => ({
                             ...ds,
                             backgroundColor: [
@@ -164,7 +174,6 @@
                         plugins: {
                             legend: { position: 'top' },
 
-                            // 🔥 Tooltip mejorado (opcional)
                                    tooltip: {
                                         callbacks: {
                                             label: function (context) {
@@ -186,10 +195,7 @@
             });
         }
 
-        /* ---------------------------------------------------------
-           📌 Cargar Mandriles y Códigos
-        --------------------------------------------------------- */
-
+        // Cargar Mandriles y Códigos
         function cargarMandriles(callback) {
             $.post('/RegistrodeDefectos/GetMandriles', {
                 fechaInicio: $('#fechaInicio').val(),
@@ -238,18 +244,17 @@
             });
         }
 
+        // Obtener valores seleccionados Mandriles
         function obtenerMandrilesSeleccionados() {
             return $('.mandril-check:checked').map(function () { return this.value }).get();
         }
 
+        // Obtener valores seleccionados Códigos
         function obtenerCodigosSeleccionados() {
             return $('.codigo-check:checked').map(function () { return this.value }).get();
         }
 
-        /* ---------------------------------------------------------
-           📌 DataTable + Chart Initialization
-        --------------------------------------------------------- */
-
+        // DataTable + Chart Initialization
         $(document).ready(function () {
 
             // 🔥 Primero cargamos filtros, luego tabla, luego chart

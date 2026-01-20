@@ -792,489 +792,6 @@ namespace ProducScan.Controllers
             );
         }
 
-
-
-
-        [Authorize(Roles = "Admin,Gerente")]
-        [HttpPost]
-        public IActionResult GetTopMandrilesPorDia(DateTime fechaInicio, DateTime fechaFin, List<string> mandriles, List<string> codigos)
-        {
-            var inicio = fechaInicio.Date;
-            var fin = fechaFin.Date;
-
-            // 🔥 Cargar costo y familia del mandril (solo INSPECCION)
-            var mandrilInfo = _context.Mandriles
-                .Where(m => m.Area == "INSPECCION")
-                .Select(m => new
-                {
-                    m.MandrilNombre,
-                    Costo = m.Costo ?? 0d,
-                    Familia = m.Familia ?? "SIN FAMILIA"
-                })
-                .ToDictionary(m => m.MandrilNombre, m => new { m.Costo, m.Familia });
-
-            // 🔥 Rango de fechas "bruto" en SQL (incluye posible día anterior por turno 3)
-            var fechaMin = DateOnly.FromDateTime(inicio.AddDays(-1));
-            var fechaMax = DateOnly.FromDateTime(fin);
-
-            var mandrilesValidos = mandrilInfo.Keys.ToList();
-
-            var defectosQuery = _context.RegistrodeDefectos
-                .Where(d => d.Fecha >= fechaMin && d.Fecha <= fechaMax)
-                .Where(d => mandrilesValidos.Contains(d.Mandrel)); // ✔ YA NO TRUENA
-
-            if (mandriles?.Any() == true)
-                defectosQuery = defectosQuery.Where(d => mandriles.Contains(d.Mandrel));
-
-            if (codigos?.Any() == true)
-                defectosQuery = defectosQuery.Where(d => codigos.Contains(d.CodigodeDefecto));
-
-            // 🔥 Pasamos a memoria SOLO lo necesario y calculamos FechaLaboral con tu lógica
-            var defectos = defectosQuery
-                .AsEnumerable()
-                .Select(d =>
-                {
-                    var fechaEvento = d.Fecha.ToDateTime(d.Hora);
-                    var hora = fechaEvento.TimeOfDay;
-
-                    DateTime fechaLaboral;
-
-                    if (hora >= new TimeSpan(23, 50, 0) && hora <= new TimeSpan(23, 59, 59))
-                        fechaLaboral = fechaEvento.Date;
-                    else if (hora >= TimeSpan.Zero && hora <= new TimeSpan(7, 9, 59))
-                        fechaLaboral = fechaEvento.Date.AddDays(-1);
-                    else
-                        fechaLaboral = fechaEvento.Date;
-
-                    return new
-                    {
-                        d.Mandrel,
-                        d.CodigodeDefecto,
-                        FechaLaboral = fechaLaboral
-                    };
-                })
-                .Where(x => x.FechaLaboral >= inicio && x.FechaLaboral <= fin)
-                .ToList();
-
-            // 🔥 Si no hay datos, regresamos vacío
-            if (!defectos.Any())
-            {
-                return Json(new
-                {
-                    labels = new List<string>(),
-                    datasets = new List<object>()
-                });
-            }
-
-            // 🔥 Agrupar por familia
-            var familias = defectos
-                .GroupBy(d => mandrilInfo[d.Mandrel].Familia)
-                .Select(g => g.Key)
-                .OrderBy(f => f)
-                .ToList();
-
-            // 🔥 Top 5 mandriles por familia (por costo)
-            var topMandrilesPorFamilia = familias.ToDictionary(
-                fam => fam,
-                fam =>
-                    defectos
-                        .Where(d => mandrilInfo[d.Mandrel].Familia == fam)
-                        .GroupBy(d => d.Mandrel)
-                        .Select(g =>
-                        {
-                            double costo = mandrilInfo[g.Key].Costo;
-                            return new
-                            {
-                                Mandril = g.Key,
-                                CostoTotal = g.Count() * costo
-                            };
-                        })
-                        .OrderByDescending(x => x.CostoTotal)
-                        .Take(5)
-                        .Select(x => x.Mandril)
-                        .ToList()
-            );
-
-            // 🔥 Construir eje X = Familia - Mandril + separadores
-            var labels = new List<string>();
-
-            foreach (var fam in familias)
-            {
-                foreach (var mandril in topMandrilesPorFamilia[fam])
-                    labels.Add($"{fam} - {mandril}");
-
-                labels.Add("SEPARADOR");
-            }
-
-            if (labels.Last() == "SEPARADOR")
-                labels.RemoveAt(labels.Count - 1);
-
-            // 🔥 Top 3 defectos por mandril (piezas + costo)
-            var defectosPorMandril = new Dictionary<string, List<dynamic>>();
-
-            foreach (var label in labels)
-            {
-                if (label == "SEPARADOR")
-                {
-                    defectosPorMandril[label] = new List<dynamic>();
-                    continue;
-                }
-
-                var parts = label.Split(" - ");
-                var mandril = parts[1];
-                double costoMandril = mandrilInfo[mandril].Costo;
-
-                var lista = defectos
-                    .Where(d => d.Mandrel == mandril)
-                    .GroupBy(d => d.CodigodeDefecto)
-                    .Select(g => new
-                    {
-                        Codigo = g.Key,
-                        TotalPiezas = g.Count(),
-                        CostoTotal = g.Count() * costoMandril
-                    })
-                    .OrderByDescending(x => x.TotalPiezas)
-                    .Take(3)
-                    .ToList<dynamic>();
-
-                defectosPorMandril[label] = lista;
-            }
-
-            // 🔥 Defectos únicos
-            var defectosUnicos = defectosPorMandril
-                .SelectMany(x => x.Value)
-                .Select(x => x.Codigo)
-                .Distinct()
-                .ToList();
-
-            // 🔥 Crear datasets
-            var datasets = new List<object>();
-
-            foreach (var codigo in defectosUnicos)
-            {
-                var data = new List<double>();
-
-                foreach (var label in labels)
-                {
-                    if (label == "SEPARADOR")
-                    {
-                        data.Add(0);
-                        continue;
-                    }
-
-                    var def = defectosPorMandril[label].FirstOrDefault(x => x.Codigo == codigo);
-                    data.Add(def?.CostoTotal ?? 0);
-                }
-
-                datasets.Add(new
-                {
-                    label = $"Defecto {codigo}",
-                    data = data,
-                    stack = "stack1"
-                });
-            }
-
-            return Json(new
-            {
-                labels,
-                datasets
-            });
-        }
-
-        [Authorize(Roles = "Admin,Gerente")]
-        [HttpGet]
-        public IActionResult ReporteDeCostos(DateTime? fecha, string turno)
-        {
-            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-
-            // 🔥 Fecha laboral actual
-            var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
-            var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
-
-            // 🔥 Turno actual
-            string turnoSeleccionado = turno;
-            var horaActual = ahora.TimeOfDay;
-
-            if (string.IsNullOrEmpty(turnoSeleccionado))
-            {
-                turnoSeleccionado =
-                    horaActual >= new TimeSpan(7, 10, 0) && horaActual <= new TimeSpan(15, 44, 59) ? "1" :
-                    horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59) ? "2" :
-                    "3";
-            }
-
-            // 🔥 Reducir dataset
-            var defectosQuery = _context.RegistrodeDefectos
-                .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
-                .Select(d => new
-                {
-                    d.Fecha,
-                    d.Hora,
-                    d.Mandrel,
-                    d.CodigodeDefecto,
-                    d.Defecto,
-                    d.Turno
-                })
-                .ToList();
-
-            // 🔥 Filtrar por fecha laboral real
-            var defectosRaw = defectosQuery
-                .Where(d =>
-                    ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
-                    == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
-                )
-                .ToList();
-
-            // Mandriles
-            ViewBag.Mandriles = defectosRaw
-                .Select(d => d.Mandrel?.Trim())
-                .Where(m => !string.IsNullOrWhiteSpace(m))
-                .Distinct()
-                .OrderBy(m => m)
-                .ToList();
-
-            // Códigos
-            ViewBag.CodigosDefecto = defectosRaw
-                .Select(d => d.CodigodeDefecto?.Trim())
-                .Where(c => !string.IsNullOrWhiteSpace(c))
-                .Distinct()
-                .OrderBy(c => c)
-                .ToList();
-
-            // 🔥 ESTA ES LA LÍNEA QUE FALTABA
-            ViewBag.FechaLaboral = fechaFiltro.ToString("yyyy-MM-dd");
-
-            ViewBag.TurnoSeleccionado = turnoSeleccionado;
-
-            return View();
-        }
-
-        [Authorize(Roles = "Admin,Gerente")]
-        [HttpPost]
-        public IActionResult GetDefectosAgrupadosConCosto(DateTime fechaInicio, DateTime fechaFin, List<string> mandriles, List<string> codigos)
-        {
-            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-
-            var inicio = DateOnly.FromDateTime(fechaInicio);
-            var fin = DateOnly.FromDateTime(fechaFin);
-
-            // 🔥 Cargar costos y familia del mandril
-            var mandrilInfo = _context.Mandriles
-                .Where(m => m.Area == "INSPECCION")
-                .Select(m => new
-                {
-                    m.MandrilNombre,
-                    Costo = m.Costo ?? 0d,
-                    Familia = m.Familia ?? ""
-                })
-                .ToDictionary(m => m.MandrilNombre, m => new { m.Costo, m.Familia });
-
-            // 🔥 Dataset base con fecha laboral
-            var defectosSql = _context.RegistrodeDefectos
-                .Select(d => new
-                {
-                    d.Fecha,
-                    d.Hora,
-                    d.Mandrel,
-                    d.CodigodeDefecto,
-                    FechaLaboral = ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora))
-                })
-                .AsEnumerable()
-                .Where(d =>
-                    DateOnly.FromDateTime(d.FechaLaboral) >= inicio &&
-                    DateOnly.FromDateTime(d.FechaLaboral) <= fin
-                );
-
-            // 🔥 Filtros
-            if (mandriles != null && mandriles.Any())
-                defectosSql = defectosSql.Where(d => mandriles.Contains(d.Mandrel));
-
-            if (codigos != null && codigos.Any())
-                defectosSql = defectosSql.Where(d => codigos.Contains(d.CodigodeDefecto));
-
-            // 🔥 Agrupación por fecha laboral + mandril + código
-            var resultado = defectosSql
-                .GroupBy(d => new { Fecha = d.FechaLaboral, d.Mandrel, d.CodigodeDefecto })
-                .Select(g =>
-                {
-                    int totalPiezas = g.Count();
-
-                    // Obtener costo y familia del mandril
-                    double costoMandril = mandrilInfo.ContainsKey(g.Key.Mandrel)
-                        ? mandrilInfo[g.Key.Mandrel].Costo
-                        : 0d;
-
-                    string familiaMandril = mandrilInfo.ContainsKey(g.Key.Mandrel)
-                        ? mandrilInfo[g.Key.Mandrel].Familia
-                        : "SIN FAMILIA";
-
-                    double costoTotal = totalPiezas * costoMandril;
-
-                    return new
-                    {
-                        fecha = g.Key.Fecha.ToString("yyyy-MM-dd"),
-                        mandril = g.Key.Mandrel,
-                        familia = familiaMandril,   
-                        codigo = g.Key.CodigodeDefecto,
-                        totalPiezas = totalPiezas,
-                        costo = $"${costoTotal:0.00} USD"
-                    };
-                })
-                .OrderByDescending(x => x.totalPiezas)
-                .ToList();
-
-            return Json(new { data = resultado });
-        }
-
-        [Authorize(Roles = "Admin,Gerente")]
-        [HttpGet]
-        public IActionResult ExportarDefectosExcel(DateTime fechaInicio, DateTime fechaFin)
-        {
-            var inicio = DateOnly.FromDateTime(fechaInicio);
-            var fin = DateOnly.FromDateTime(fechaFin);
-
-            // Costos por mandril
-            var costosMandriles = _context.Mandriles
-                .Where(m => m.Area == "INSPECCION")
-                .ToDictionary(m => m.MandrilNombre, m => m.Costo ?? 0d);
-
-            // Dataset base
-            var defectosSql = _context.RegistrodeDefectos
-                .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
-                .Select(d => new
-                {
-                    d.Fecha,
-                    d.Hora,
-                    d.Mandrel,
-                    d.CodigodeDefecto
-                })
-                .AsEnumerable();
-
-            // Filtrar por fecha laboral real
-            var defectos = defectosSql
-                .Where(d =>
-                {
-                    var fechaProd = ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date;
-                    return fechaProd >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
-                           fechaProd <= fin.ToDateTime(TimeOnly.MinValue).Date;
-                })
-                .ToList();
-
-            // Agrupar por día laboral
-            var dias = defectos
-                .GroupBy(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date)
-                .OrderBy(g => g.Key)
-                .ToList();
-
-            using var workbook = new XLWorkbook();
-            var ws = workbook.Worksheets.Add("Reporte Defectos");
-
-            // Título
-            ws.Cell(1, 1).Value = "Reporte de Costos de Defectos (Top 5 Mandriles por Día, Top 3 Defectos por Mandril)";
-            ws.Cell(1, 1).Style.Font.Bold = true;
-            ws.Cell(1, 1).Style.Font.FontSize = 16;
-
-            // Rango de fechas
-            ws.Cell(3, 1).Value = "Fecha Inicio:";
-            ws.Cell(3, 2).Value = inicio.ToString();
-            ws.Cell(4, 1).Value = "Fecha Fin:";
-            ws.Cell(4, 2).Value = fin.ToString();
-            ws.Range("A3:A4").Style.Font.Bold = true;
-
-            // Encabezados
-            ws.Cell(6, 1).Value = "Fecha Laboral";
-            ws.Cell(6, 2).Value = "Mandril";
-            ws.Cell(6, 3).Value = "Defecto";
-            ws.Cell(6, 4).Value = "Total Piezas";
-            ws.Cell(6, 5).Value = "Costo Defecto (USD)";
-            ws.Cell(6, 6).Value = "Costo Total Mandril (USD)";
-            ws.Range("A6:F6").Style.Font.Bold = true;
-
-            int row = 7;
-
-            foreach (var dia in dias)
-            {
-                var fecha = dia.Key;
-
-                // Top 5 mandriles del día
-                var topMandriles = dia
-                    .GroupBy(d => d.Mandrel)
-                    .Select(g =>
-                    {
-                        double costoMandril = costosMandriles.ContainsKey(g.Key) ? costosMandriles[g.Key] : 0;
-                        return new
-                        {
-                            Mandril = g.Key,
-                            TotalPiezas = g.Count(),
-                            CostoTotal = g.Count() * costoMandril,
-                            Registros = g.ToList()
-                        };
-                    })
-                    .OrderByDescending(x => x.CostoTotal)
-                    .Take(5)
-                    .ToList();
-
-                foreach (var mandril in topMandriles)
-                {
-                    // Top 3 defectos del mandril
-                    var topDefectos = mandril.Registros
-                        .GroupBy(d => d.CodigodeDefecto)
-                        .Select(g =>
-                        {
-                            double costoMandril = costosMandriles.ContainsKey(mandril.Mandril) ? costosMandriles[mandril.Mandril] : 0;
-                            return new
-                            {
-                                Codigo = g.Key,
-                                TotalPiezas = g.Count(),
-                                Costo = g.Count() * costoMandril
-                            };
-                        })
-                        .OrderByDescending(x => x.Costo)
-                        .Take(3)
-                        .ToList();
-
-                    foreach (var def in topDefectos)
-                    {
-                        ws.Cell(row, 1).Value = fecha.ToString("yyyy-MM-dd");
-                        ws.Cell(row, 2).Value = mandril.Mandril;
-                        ws.Cell(row, 3).Value = def.Codigo;
-                        ws.Cell(row, 4).Value = def.TotalPiezas;
-
-                        ws.Cell(row, 5).Value = def.Costo;
-                        ws.Cell(row, 5).Style.NumberFormat.Format = "$#,##0.00";
-
-                        ws.Cell(row, 6).Value = mandril.CostoTotal;
-                        ws.Cell(row, 6).Style.NumberFormat.Format = "$#,##0.00";
-
-                        row++;
-                    }
-                }
-
-                // 🔥🔥🔥 SALTO DE LÍNEA DESPUÉS DE CADA DÍA 🔥🔥🔥
-                row++;
-            }
-
-            ws.Columns().AdjustToContents();
-
-            using var stream = new MemoryStream();
-            workbook.SaveAs(stream);
-            var content = stream.ToArray();
-
-            string fileName = $"ReporteDefectos_{inicio}_{fin}.xlsx";
-
-            return File(content,
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                fileName);
-        }
-
-
-
-
-
-
-
         [HttpPost]
         public IActionResult GetMandrilesPorDiaYTurno(DateTime fecha, string turno)
         {
@@ -1355,6 +872,702 @@ namespace ProducScan.Controllers
 
             return Json(new { data = resultado });
         }
+
+
+
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpPost]
+        public IActionResult GetTopMandrilesPorDia(DateTime fechaInicio, DateTime fechaFin, List<string> mandriles, List<string> codigos)
+        {
+            var inicio = fechaInicio.Date;
+            var fin = fechaFin.Date;
+
+            //   Cargar costo y familia del mandril (solo INSPECCION)
+            var mandrilInfo = _context.Mandriles
+                .Where(m => m.Area == "INSPECCION")
+                .Select(m => new
+                {
+                    m.MandrilNombre,
+                    Costo = m.Costo ?? 0d,
+                    Familia = m.Familia ?? "SIN FAMILIA"
+                })
+                .ToDictionary(m => m.MandrilNombre, m => new { m.Costo, m.Familia });
+
+            //   Rango de fechas "bruto" en SQL (incluye posible día anterior por turno 3)
+            var fechaMin = DateOnly.FromDateTime(inicio.AddDays(-1));
+            var fechaMax = DateOnly.FromDateTime(fin);
+
+            var mandrilesValidos = mandrilInfo.Keys.ToList();
+
+            var defectosQuery = _context.RegistrodeDefectos
+                .Where(d => d.Fecha >= fechaMin && d.Fecha <= fechaMax)
+                .Where(d => mandrilesValidos.Contains(d.Mandrel));
+
+            if (mandriles?.Any() == true)
+                defectosQuery = defectosQuery.Where(d => mandriles.Contains(d.Mandrel));
+
+            if (codigos?.Any() == true)
+                defectosQuery = defectosQuery.Where(d => codigos.Contains(d.CodigodeDefecto));
+
+            //   Pasamos a memoria SOLO lo necesario y calculamos FechaLaboral con tu lógica
+            var defectos = defectosQuery
+                .AsEnumerable()
+                .Select(d =>
+                {
+                    var fechaEvento = d.Fecha.ToDateTime(d.Hora);
+                    var hora = fechaEvento.TimeOfDay;
+
+                    DateTime fechaLaboral;
+
+                    if (hora >= new TimeSpan(23, 50, 0) && hora <= new TimeSpan(23, 59, 59))
+                        fechaLaboral = fechaEvento.Date;
+                    else if (hora >= TimeSpan.Zero && hora <= new TimeSpan(7, 9, 59))
+                        fechaLaboral = fechaEvento.Date.AddDays(-1);
+                    else
+                        fechaLaboral = fechaEvento.Date;
+
+                    return new
+                    {
+                        d.Mandrel,
+                        d.CodigodeDefecto,
+                        FechaLaboral = fechaLaboral
+                    };
+                })
+                .Where(x => x.FechaLaboral >= inicio && x.FechaLaboral <= fin)
+                .ToList();
+
+            //   Si no hay datos, regresamos vacío
+            if (!defectos.Any())
+            {
+                return Json(new
+                {
+                    labels = new List<string>(),
+                    datasets = new List<object>()
+                });
+            }
+
+            //   Agrupar por familia
+            var familias = defectos
+                .GroupBy(d => mandrilInfo[d.Mandrel].Familia)
+                .Select(g => g.Key)
+                .OrderBy(f => f)
+                .ToList();
+
+            //   Top 5 mandriles por familia (por costo)
+            var topMandrilesPorFamilia = familias.ToDictionary(
+                fam => fam,
+                fam =>
+                    defectos
+                        .Where(d => mandrilInfo[d.Mandrel].Familia == fam)
+                        .GroupBy(d => d.Mandrel)
+                        .Select(g =>
+                        {
+                            double costo = mandrilInfo[g.Key].Costo;
+                            return new
+                            {
+                                Mandril = g.Key,
+                                CostoTotal = g.Count() * costo
+                            };
+                        })
+                        .OrderByDescending(x => x.CostoTotal)
+                        .Take(5)
+                        .Select(x => x.Mandril)
+                        .ToList()
+            );
+
+            //   Construir eje X = Familia - Mandril + separadores
+            var labels = new List<string>();
+
+            foreach (var fam in familias)
+            {
+                foreach (var mandril in topMandrilesPorFamilia[fam])
+                    labels.Add($"{fam} - {mandril}");
+
+                labels.Add(".");
+            }
+
+            if (labels.Last() == ".")
+                labels.RemoveAt(labels.Count - 1);
+
+            //   Top 3 defectos por mandril (piezas + costo)
+            var defectosPorMandril = new Dictionary<string, List<dynamic>>();
+
+            foreach (var label in labels)
+            {
+                if (label == ".")
+                {
+                    defectosPorMandril[label] = new List<dynamic>();
+                    continue;
+                }
+
+                var parts = label.Split(" - ");
+                var mandril = parts[1];
+                double costoMandril = mandrilInfo[mandril].Costo;
+
+                var lista = defectos
+                    .Where(d => d.Mandrel == mandril)
+                    .GroupBy(d => d.CodigodeDefecto)
+                    .Select(g => new
+                    {
+                        Codigo = g.Key,
+                        TotalPiezas = g.Count(),
+                        CostoTotal = g.Count() * costoMandril
+                    })
+                    .OrderByDescending(x => x.TotalPiezas)
+                    .Take(3)
+                    .ToList<dynamic>();
+
+                defectosPorMandril[label] = lista;
+            }
+
+            //   Defectos únicos
+            var defectosUnicos = defectosPorMandril
+                .SelectMany(x => x.Value)
+                .Select(x => x.Codigo)
+                .Distinct()
+                .ToList();
+
+            //   Crear datasets
+            var datasets = new List<object>();
+
+            foreach (var codigo in defectosUnicos)
+            {
+                var data = new List<double>();
+
+                foreach (var label in labels)
+                {
+                    if (label == ".")
+                    {
+                        data.Add(0);
+                        continue;
+                    }
+
+                    var def = defectosPorMandril[label].FirstOrDefault(x => x.Codigo == codigo);
+                    data.Add(def?.CostoTotal ?? 0);
+                }
+
+                datasets.Add(new
+                {
+                    label = $"Defecto {codigo}",
+                    data = data,
+                    stack = "stack1"
+                });
+            }
+
+            return Json(new
+            {
+                labels,
+                datasets
+            });
+        }
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpGet]
+        public IActionResult ReporteDeCostos(DateTime? fecha, string turno)
+        {
+            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+            //   Fecha laboral actual
+            var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
+            var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
+
+            //   Turno actual
+            string turnoSeleccionado = turno;
+            var horaActual = ahora.TimeOfDay;
+
+            if (string.IsNullOrEmpty(turnoSeleccionado))
+            {
+                turnoSeleccionado =
+                    horaActual >= new TimeSpan(7, 10, 0) && horaActual <= new TimeSpan(15, 44, 59) ? "1" :
+                    horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59) ? "2" :
+                    "3";
+            }
+
+            //   Reducir dataset
+            var defectosQuery = _context.RegistrodeDefectos
+                .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
+                .Select(d => new
+                {
+                    d.Fecha,
+                    d.Hora,
+                    d.Mandrel,
+                    d.CodigodeDefecto,
+                    d.Defecto,
+                    d.Turno
+                })
+                .ToList();
+
+            //   Filtrar por fecha laboral real
+            var defectosRaw = defectosQuery
+                .Where(d =>
+                    ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
+                    == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date
+                )
+                .ToList();
+
+            // Mandriles
+            ViewBag.Mandriles = defectosRaw
+                .Select(d => d.Mandrel?.Trim())
+                .Where(m => !string.IsNullOrWhiteSpace(m))
+                .Distinct()
+                .OrderBy(m => m)
+                .ToList();
+
+            // Códigos
+            ViewBag.CodigosDefecto = defectosRaw
+                .Select(d => d.CodigodeDefecto?.Trim())
+                .Where(c => !string.IsNullOrWhiteSpace(c))
+                .Distinct()
+                .OrderBy(c => c)
+                .ToList();
+
+            //   ESTA ES LA LÍNEA QUE FALTABA
+            ViewBag.FechaLaboral = fechaFiltro.ToString("yyyy-MM-dd");
+
+            ViewBag.TurnoSeleccionado = turnoSeleccionado;
+
+            return View();
+        }
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpPost]
+        public IActionResult GetDefectosAgrupadosConCosto(DateTime fechaInicio, DateTime fechaFin, List<string> mandriles, List<string> codigos)
+        {
+            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
+            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+
+            var inicio = DateOnly.FromDateTime(fechaInicio);
+            var fin = DateOnly.FromDateTime(fechaFin);
+
+            //   Cargar costos y familia del mandril
+            var mandrilInfo = _context.Mandriles
+                .Where(m => m.Area == "INSPECCION")
+                .Select(m => new
+                {
+                    m.MandrilNombre,
+                    Costo = m.Costo ?? 0d,
+                    Familia = m.Familia ?? ""
+                })
+                .ToDictionary(m => m.MandrilNombre, m => new { m.Costo, m.Familia });
+
+            //   Dataset base con fecha laboral
+            var defectosSql = _context.RegistrodeDefectos
+                .Select(d => new
+                {
+                    d.Fecha,
+                    d.Hora,
+                    d.Mandrel,
+                    d.CodigodeDefecto,
+                    FechaLaboral = ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora))
+                })
+                .AsEnumerable()
+                .Where(d =>
+                    DateOnly.FromDateTime(d.FechaLaboral) >= inicio &&
+                    DateOnly.FromDateTime(d.FechaLaboral) <= fin
+                );
+
+            //   Filtros
+            if (mandriles != null && mandriles.Any())
+                defectosSql = defectosSql.Where(d => mandriles.Contains(d.Mandrel));
+
+            if (codigos != null && codigos.Any())
+                defectosSql = defectosSql.Where(d => codigos.Contains(d.CodigodeDefecto));
+
+            //   Agrupación por fecha laboral + mandril + código
+            var resultado = defectosSql
+                .GroupBy(d => new { Fecha = d.FechaLaboral, d.Mandrel, d.CodigodeDefecto })
+                .Select(g =>
+                {
+                    int totalPiezas = g.Count();
+
+                    // Obtener costo y familia del mandril
+                    double costoMandril = mandrilInfo.ContainsKey(g.Key.Mandrel)
+                        ? mandrilInfo[g.Key.Mandrel].Costo
+                        : 0d;
+
+                    string familiaMandril = mandrilInfo.ContainsKey(g.Key.Mandrel)
+                        ? mandrilInfo[g.Key.Mandrel].Familia
+                        : "SIN FAMILIA";
+
+                    double costoTotal = totalPiezas * costoMandril;
+
+                    return new
+                    {
+                        fecha = g.Key.Fecha.ToString("yyyy-MM-dd"),
+                        mandril = g.Key.Mandrel,
+                        familia = familiaMandril,   
+                        codigo = g.Key.CodigodeDefecto,
+                        totalPiezas = totalPiezas,
+                        costo = $"${costoTotal:0.00} USD"
+                    };
+                })
+                .OrderByDescending(x => x.totalPiezas)
+                .ToList();
+
+            return Json(new { data = resultado });
+        }
+
+        // Generar Reporte de Excel con costos por rango de fechas
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpGet]
+        public IActionResult ExportarDefectosExcel(DateTime fechaInicio, DateTime fechaFin)
+        {
+            var inicio = DateOnly.FromDateTime(fechaInicio);
+            var fin = DateOnly.FromDateTime(fechaFin);
+
+            // Costos por mandril
+            var costosMandriles = _context.Mandriles
+                .Where(m => m.Area == "INSPECCION")
+                .ToDictionary(m => m.MandrilNombre, m => m.Costo ?? 0d);
+
+            // Dataset base
+            var defectosSql = _context.RegistrodeDefectos
+                .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
+                .Select(d => new
+                {
+                    d.Fecha,
+                    d.Hora,
+                    d.Mandrel,
+                    d.CodigodeDefecto
+                })
+                .AsEnumerable();
+
+            // Filtrar por fecha laboral real
+            var defectos = defectosSql
+                .Where(d =>
+                {
+                    var fechaProd = ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date;
+                    return fechaProd >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                           fechaProd <= fin.ToDateTime(TimeOnly.MinValue).Date;
+                })
+                .ToList();
+
+            // Agrupar por día laboral
+            var dias = defectos
+                .GroupBy(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Reporte Defectos");
+
+            // Título
+            ws.Cell(1, 1).Value = "Reporte de Costos de Defectos (Top 5 Mandriles por Día, Top 3 Defectos por Mandril)";
+            ws.Cell(1, 1).Style.Font.Bold = true;
+            ws.Cell(1, 1).Style.Font.FontSize = 16;
+
+            // Rango de fechas
+            ws.Cell(3, 1).Value = "Fecha Inicio:";
+            ws.Cell(3, 2).Value = inicio.ToString();
+            ws.Cell(4, 1).Value = "Fecha Fin:";
+            ws.Cell(4, 2).Value = fin.ToString();
+            ws.Range("A3:A4").Style.Font.Bold = true;
+
+            // Encabezados
+            ws.Cell(6, 1).Value = "Fecha Laboral";
+            ws.Cell(6, 2).Value = "Mandril";
+            ws.Cell(6, 3).Value = "Defecto";
+            ws.Cell(6, 4).Value = "Total Piezas";
+            ws.Cell(6, 5).Value = "Costo Pieza (USD)";
+            ws.Cell(6, 6).Value = "Costo Total Mandril (USD)";
+            ws.Range("A6:F6").Style.Font.Bold = true;
+
+            int row = 7;
+
+            foreach (var dia in dias)
+            {
+                var fecha = dia.Key;
+
+                // Top 5 mandriles del día
+                var topMandriles = dia
+                    .GroupBy(d => d.Mandrel)
+                    .Select(g =>
+                    {
+                        double costoMandril = costosMandriles.ContainsKey(g.Key) ? costosMandriles[g.Key] : 0;
+                        return new
+                        {
+                            Mandril = g.Key,
+                            TotalPiezas = g.Count(),
+                            CostoTotal = g.Count() * costoMandril,
+                            Registros = g.ToList()
+                        };
+                    })
+                    .OrderByDescending(x => x.CostoTotal)
+                    .Take(5)
+                    .ToList();
+
+                foreach (var mandril in topMandriles)
+                {
+                    // Top 3 defectos del mandril
+                    var topDefectos = mandril.Registros
+                        .GroupBy(d => d.CodigodeDefecto)
+                        .Select(g =>
+                        {
+                            double costoMandril = costosMandriles.ContainsKey(mandril.Mandril) ? costosMandriles[mandril.Mandril] : 0;
+                            return new
+                            {
+                                Codigo = g.Key,
+                                TotalPiezas = g.Count(),
+                                Costo = g.Count() * costoMandril
+                            };
+                        })
+                        .OrderByDescending(x => x.Costo)
+                        .Take(3)
+                        .ToList();
+
+                    foreach (var def in topDefectos)
+                    {
+                        ws.Cell(row, 1).Value = fecha.ToString("yyyy-MM-dd");
+                        ws.Cell(row, 2).Value = mandril.Mandril;
+                        ws.Cell(row, 3).Value = def.Codigo;
+                        ws.Cell(row, 4).Value = def.TotalPiezas;
+
+                        ws.Cell(row, 5).Value = def.Costo;
+                        ws.Cell(row, 5).Style.NumberFormat.Format = "$#,##0.00";
+
+                        ws.Cell(row, 6).Value = mandril.CostoTotal;
+                        ws.Cell(row, 6).Style.NumberFormat.Format = "$#,##0.00";
+
+                        row++;
+                    }
+                }
+
+                // SALTO DE LÍNEA DESPUÉS DE CADA DÍA 
+                row++;
+            }
+
+            ws.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+
+            string fileName = $"ReporteDefectos_{inicio}_{fin}.xlsx";
+
+            return File(content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
+
+        // Metodos de Vista Reporte de Costos Ingenieria 
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpGet]
+        public IActionResult ReporteIng()
+        {
+            return View();
+        }
+
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpGet]
+        public IActionResult ExportarReporteIng(DateTime fechaInicio, DateTime fechaFin)
+        {
+            var inicio = DateOnly.FromDateTime(fechaInicio);
+            var fin = DateOnly.FromDateTime(fechaFin);
+
+            // ============================
+            // 1. Cargar catálogos (mandriles)
+            // ============================
+            var mandrilInfo = _context.Mandriles
+                .Where(m => m.Area == "INSPECCION")
+                .ToDictionary(
+                    m => m.MandrilNombre,
+                    m => new
+                    {
+                        Costo = m.Costo ?? 0d,
+                        Familia = m.Familia ?? "SIN FAMILIA"
+                    }
+                );
+
+            // ============================
+            // 2. Cargar TODOS los defectos del rango ampliado
+            // ============================
+            var defectosRaw = _context.RegistrodeDefectos
+                .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
+                .ToList();
+
+            // ============================
+            // 3. Cargar TODAS las piezas escaneadas del rango ampliado
+            // ============================
+            var piezasRaw = _context.RegistrodePiezasEscaneadas
+                .Where(p => p.Fecha >= inicio.AddDays(-1) && p.Fecha <= fin.AddDays(1))
+                .ToList();
+
+            // ============================
+            // 4. Calcular fecha laboral UNA SOLA VEZ
+            // ============================
+            var defectos = defectosRaw
+                .Select(d =>
+                {
+                    var fechaEvento = d.Fecha.ToDateTime(d.Hora);
+                    var hora = fechaEvento.TimeOfDay;
+
+                    DateTime fechaLaboral =
+                        (hora >= new TimeSpan(23, 50, 0) && hora <= new TimeSpan(23, 59, 59))
+                            ? fechaEvento.Date
+                        : (hora >= TimeSpan.Zero && hora <= new TimeSpan(7, 9, 59))
+                            ? fechaEvento.Date.AddDays(-1)
+                        : fechaEvento.Date;
+
+                    return new
+                    {
+                        FechaLaboral = fechaLaboral,
+                        d.Mandrel,
+                        d.CodigodeDefecto
+                    };
+                })
+                .Where(x => x.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                            x.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+                .ToList();
+
+            var piezas = piezasRaw
+                .Select(p =>
+                {
+                    var fechaEvento = p.Fecha.ToDateTime(p.Hora);
+                    var hora = fechaEvento.TimeOfDay;
+
+                    DateTime fechaLaboral =
+                        (hora >= new TimeSpan(23, 50, 0) && hora <= new TimeSpan(23, 59, 59))
+                            ? fechaEvento.Date
+                        : (hora >= TimeSpan.Zero && hora <= new TimeSpan(7, 9, 59))
+                            ? fechaEvento.Date.AddDays(-1)
+                        : fechaEvento.Date;
+
+                    return new
+                    {
+                        FechaLaboral = fechaLaboral,
+                        p.Mandrel,
+                        Ndpiezas = int.TryParse(p.Ndpiezas, out var n) ? n : 0
+                    };
+                })
+                .Where(x => x.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                            x.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+                .ToList();
+
+            // ============================
+            // 5. Agrupar por día laboral
+            // ============================
+            var dias = defectos
+                .GroupBy(x => x.FechaLaboral)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            // ============================
+            // 6. Costo total del rango
+            // ============================
+            double costoTotalRango = defectos.Sum(x =>
+                mandrilInfo.ContainsKey(x.Mandrel) ? mandrilInfo[x.Mandrel].Costo : 0
+            );
+
+            // ============================
+            // 7. Crear Excel
+            // ============================
+            using var workbook = new XLWorkbook();
+            var ws = workbook.Worksheets.Add("Reporte Ingeniería");
+
+            ws.Cell(1, 1).Value = "Reporte de Ingeniería - Producción y Defectos por Mandril";
+            ws.Cell(1, 1).Style.Font.Bold = true;
+            ws.Cell(1, 1).Style.Font.FontSize = 16;
+
+            ws.Cell(3, 1).Value = "Fecha Inicio:";
+            ws.Cell(3, 2).Value = inicio.ToString();
+            ws.Cell(4, 1).Value = "Fecha Fin:";
+            ws.Cell(4, 2).Value = fin.ToString();
+            ws.Range("A3:A4").Style.Font.Bold = true;
+
+            ws.Cell(6, 1).Value = "Costo Total del Rango:";
+            ws.Cell(6, 2).Value = costoTotalRango;
+            ws.Cell(6, 2).Style.NumberFormat.Format = "$#,##0.00";
+            ws.Range("A6").Style.Font.Bold = true;
+
+            // Encabezados
+            ws.Cell(8, 1).Value = "Fecha Laboral";
+            ws.Cell(8, 2).Value = "Mandril";
+            ws.Cell(8, 3).Value = "Familia";
+            ws.Cell(8, 4).Value = "Total Defectos";
+            ws.Cell(8, 5).Value = "Producción Total";
+            ws.Cell(8, 6).Value = "% Defectos";
+            ws.Cell(8, 7).Value = "Costo Mandril Día (USD)";
+            ws.Range("A8:G8").Style.Font.Bold = true;
+
+            int row = 9;
+
+            // ============================
+            // 8. Procesar cada día
+            // ============================
+            foreach (var dia in dias)
+            {
+                var fecha = dia.Key;
+
+                // Defectos del día agrupados por mandril
+                var defectosPorMandril = dia
+                    .GroupBy(x => x.Mandrel)
+                    .ToDictionary(g => g.Key, g => g.Count());
+
+                // Producción del día agrupada por mandril
+                var piezasPorMandril = piezas
+                    .Where(x => x.FechaLaboral == fecha)
+                    .GroupBy(x => x.Mandrel)
+                    .ToDictionary(g => g.Key, g => g.Sum(x => x.Ndpiezas));
+
+                // Mandriles del día SOLO con defectos
+                var mandrilesDia = defectosPorMandril.Keys.ToList();
+
+                foreach (var mandril in mandrilesDia)
+                {
+                    int totalDefectos = defectosPorMandril.ContainsKey(mandril)
+                        ? defectosPorMandril[mandril]
+                        : 0;
+
+                    int piezasBuenas = piezasPorMandril.ContainsKey(mandril)
+                        ? piezasPorMandril[mandril]
+                        : 0;
+
+                    int produccionTotal = piezasBuenas + totalDefectos;
+
+                    var info = mandrilInfo.ContainsKey(mandril)
+                        ? mandrilInfo[mandril]
+                        : new { Costo = 0d, Familia = "SIN FAMILIA" };
+
+                    double porcentaje = produccionTotal > 0
+                        ? (double)totalDefectos / produccionTotal
+                        : 0;
+
+                    double costoMandrilDia = totalDefectos * info.Costo;
+
+                    ws.Cell(row, 1).Value = fecha.ToString("yyyy-MM-dd");
+                    ws.Cell(row, 2).Value = mandril;
+                    ws.Cell(row, 3).Value = info.Familia;
+                    ws.Cell(row, 4).Value = totalDefectos;
+                    ws.Cell(row, 5).Value = produccionTotal;
+                    ws.Cell(row, 6).Value = porcentaje;
+                    ws.Cell(row, 6).Style.NumberFormat.Format = "0.00%";
+                    ws.Cell(row, 7).Value = costoMandrilDia;
+                    ws.Cell(row, 7).Style.NumberFormat.Format = "$#,##0.00";
+
+                    row++;
+                }
+
+                row++; // salto entre días
+            }
+
+            ws.Columns().AdjustToContents();
+
+            using var stream = new MemoryStream();
+            workbook.SaveAs(stream);
+            var content = stream.ToArray();
+
+            string fileName = $"ReporteIng_{inicio}_{fin}.xlsx";
+
+            return File(content,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                fileName);
+        }
+
 
 
 

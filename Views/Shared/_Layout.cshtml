@@ -135,7 +135,7 @@
                         @{
                             bool produccionOpen =
                             (currentController == "PiezasEscaneadas" && (currentAction == "Index" || currentAction == "ReporteProduccion" || currentAction == "DetalleProduccionMesa" || currentAction == "DetallePorUsuario"))
-                                || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios" || currentAction == "ReporteDeCostos")) || (currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
+                                || (currentController == "RegistrodeDefectos" && (currentAction == "Index" || currentAction == "DetalleDefectosPorUsuarios" || currentAction == "ReporteDeCostos" || currentAction == "ReporteIng")) || (currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM");
                         }
                             <a class="nav-link d-flex align-items-center w-100 @(produccionOpen ? "active fw-bold bg-primary text-white" : "fw-bold text-dark")"
                                 data-bs-toggle="collapse" href="#produccionSubmenu" role="button"
@@ -177,7 +177,7 @@
                             </li>
                                     @if (User.IsInRole("Admin") || User.IsInRole("Gerente")){
                             <li class="nav-item">
-                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeDefectos" && currentAction == "ReporteDeCostos" ? "active fw-bold bg-danger text-white" : "text-dark")"
+                                            <a class="nav-link d-flex align-items-center w-100 @(currentController == "RegistrodeDefectos" && currentAction == "ReporteDeCostos" || currentAction == "ReporteIng" ? "active fw-bold bg-danger text-white" : "text-dark")"
                                                asp-controller="RegistrodeDefectos" asp-action="ReporteDeCostos">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-coin"></i>

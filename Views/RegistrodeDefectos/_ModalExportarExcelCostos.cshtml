@@ -14,13 +14,13 @@
                     <!-- Fecha Inicio -->
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Fecha Inicio</label>
-                        <input type="date" id="fechaInicioExcel" class="form-control rounded-pill" />
+                        <input type="date" id="fechaInicioExcel" class="form-control rounded-pill" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                     <!-- Fecha Fin -->
                     <div class="col-md-6">
                         <label class="form-label fw-bold">Fecha Fin</label>
-                        <input type="date" id="fechaFinExcel" class="form-control rounded-pill" />
+                        <input type="date" id="fechaFinExcel" class="form-control rounded-pill" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                     </div>
 
                 </div>
