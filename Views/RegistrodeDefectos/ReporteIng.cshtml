@@ -88,4 +88,207 @@
     </div>
 </div>
 
+<!-- CHART -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">Defectos por Mandril</h5>
+        <canvas id="chartDefectosMandril" height="120"></canvas>
+    </div>
+</div>
+
 @await Html.PartialAsync("~/Views/RegistrodeDefectos/Partials/ModalExportarIng.cshtml")
+
+
+@section Scripts{
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+
+        /* ============================================
+           EVITAR QUE EL DROPDOWN SE CIERRE Y QUE LA VISTA SUBA
+        ============================================ */
+        $(document).on("click", "#mandrilDropdownIng, #codigoDropdownIng, #familiaDropdownIng", function (e) {
+            e.stopPropagation();
+        });
+
+        $(document).on("click", "#mandrilDropdownIng input, #codigoDropdownIng input, #familiaDropdownIng input", function (e) {
+            e.stopPropagation();
+        });
+
+        /* ============================================
+           CARGAR MANDRILES
+        ============================================ */
+        function cargarMandriles() {
+            const fechaInicio = $('#fechaInicioIngFiltro').val();
+            const fechaFin = $('#fechaFinIngFiltro').val();
+
+            $.post('/RegistrodeDefectos/GetMandriles', { fechaInicio, fechaFin }, function (data) {
+                let ul = $('#mandrilDropdownIng');
+                ul.empty();
+
+                data.forEach(m => {
+                    ul.append(`
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="form-check-input me-2 mandril-check-ing" value="${m}">
+                                ${m}
+                            </label>
+                        </li>
+                    `);
+                });
+            });
+        }
+
+        /* ============================================
+           CARGAR CÓDIGOS
+        ============================================ */
+        function cargarCodigos() {
+            const fechaInicio = $('#fechaInicioIngFiltro').val();
+            const fechaFin = $('#fechaFinIngFiltro').val();
+
+            $.post('/RegistrodeDefectos/GetCodigos', { fechaInicio, fechaFin }, function (data) {
+                let ul = $('#codigoDropdownIng');
+                ul.empty();
+
+                data.forEach(c => {
+                    ul.append(`
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="form-check-input me-2 codigo-check-ing" value="${c.value}">
+                                ${c.text}
+                            </label>
+                        </li>
+                    `);
+                });
+            });
+        }
+
+        /* ============================================
+           CARGAR FAMILIAS
+        ============================================ */
+        function cargarFamilias() {
+            const fechaInicio = $('#fechaInicioIngFiltro').val();
+            const fechaFin = $('#fechaFinIngFiltro').val();
+
+            $.post('/RegistrodeDefectos/GetFamiliasIng', { fechaInicio, fechaFin }, function (data) {
+                let ul = $('#familiaDropdownIng');
+                ul.empty();
+
+                data.forEach(f => {
+                    ul.append(`
+                        <li>
+                            <label class="dropdown-item">
+                                <input type="checkbox" class="form-check-input me-2 familia-check-ing" value="${f}">
+                                ${f}
+                            </label>
+                        </li>
+                    `);
+                });
+            });
+        }
+
+        /* ============================================
+           CHART DEFECTOS POR MANDRIL (CORREGIDO)
+        ============================================ */
+        let chartDefectos = null;
+
+        function cargarChartDefectos() {
+
+            const fechaInicio = $('#fechaInicioIngFiltro').val();
+            const fechaFin = $('#fechaFinIngFiltro').val();
+
+            const mandriles = [...document.querySelectorAll(".mandril-check-ing:checked")].map(x => x.value);
+            const codigos = [...document.querySelectorAll(".codigo-check-ing:checked")].map(x => x.value);
+            const familias = [...document.querySelectorAll(".familia-check-ing:checked")].map(x => x.value);
+
+            $.ajax({
+                url: '/RegistrodeDefectos/GetDefectosPorMandril',
+                type: 'POST',
+                data: {
+                    fechaInicio,
+                    fechaFin,
+                    mandriles,
+                    codigos,
+                    familias
+                },
+                success: function (data) {
+
+                    const labels = data.map(x => x.mandril);
+                    const valores = data.map(x => x.totalDefectos);
+
+                    const ctx = document.getElementById("chartDefectosMandril").getContext("2d");
+
+                    /* ============================
+                       SI EL CHART NO EXISTE → CREARLO
+                       SI YA EXISTE → SOLO ACTUALIZARLO
+                    ============================ */
+                    if (!chartDefectos) {
+
+                        chartDefectos = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: "Defectos",
+                                    data: valores,
+                                    backgroundColor: "#198754",
+                                    borderColor: "#145c3a",
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        title: { display: true, text: "Total de Defectos" }
+                                    },
+                                    x: {
+                                        title: { display: true, text: "Mandril" }
+                                    }
+                                }
+                            }
+                        });
+
+                    } else {
+
+                        // Actualizar datos sin destruir el chart
+                        chartDefectos.data.labels = labels;
+                        chartDefectos.data.datasets[0].data = valores;
+                        chartDefectos.update();
+                    }
+                }
+            });
+        }
+
+        /* ============================================
+           EVENTOS
+        ============================================ */
+
+        $("#fechaInicioIngFiltro, #fechaFinIngFiltro").on("change", function () {
+            cargarMandriles();
+            cargarCodigos();
+            cargarFamilias();
+            cargarChartDefectos();
+        });
+
+        $(document).on("change", ".mandril-check-ing, .codigo-check-ing, .familia-check-ing", function () {
+            cargarChartDefectos();
+        });
+
+        /* ============================================
+           INICIALIZAR
+        ============================================ */
+        $(document).ready(function () {
+            if ($('#fechaInicioIngFiltro').val() && $('#fechaFinIngFiltro').val()) {
+                cargarMandriles();
+                cargarCodigos();
+                cargarFamilias();
+                cargarChartDefectos();
+            }
+        });
+
+    </script>
+}
