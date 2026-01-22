@@ -1452,47 +1452,61 @@ public class PiezasEscaneadasController : Controller
     //DASHBOARD DINAMICO
     public IActionResult Dashboard(DateTime? fecha)
     {
-        // Zona horaria de Matamoros
+        // Zona horaria
         var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
         var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
 
-        // ✅ Si no se seleccionó fecha, usar la fecha laboral del momento actual
+        // Fecha laboral seleccionada
         var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
-
-        // ✅ Convertir fechaFiltro a DateTime para comparar
         var fechaFiltroDT = fechaFiltro.ToDateTime(TimeOnly.MinValue);
 
-        // ✅ PRODUCCIONES (solo del día laboral correcto)
-        var producciones = _context.RegistrodePiezasEscaneadas
-            .ToList() // EF no puede evaluar tu helper, así que cargamos y filtramos en memoria
+        // Rango SQL (solo 1 día antes y 1 día después)
+        var inicioSQL = fechaFiltro.AddDays(-1);
+        var finSQL = fechaFiltro.AddDays(1);
+
+        /* ============================================================
+           1) PRODUCCIONES (FILTRADAS EN SQL)
+        ============================================================ */
+        var produccionesRaw = _context.RegistrodePiezasEscaneadas
+            .Where(r => r.Fecha >= inicioSQL && r.Fecha <= finSQL)
+            .ToList();
+
+        var producciones = produccionesRaw
             .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
                         == fechaFiltroDT.Date)
             .ToList();
 
-        // ✅ DEFECTOS (solo del día laboral correcto)
-        var defectos = _context.RegistrodeDefectos
-            .ToList()
+        /* ============================================================
+           2) DEFECTOS (FILTRADOS EN SQL)
+        ============================================================ */
+        var defectosRaw = _context.RegistrodeDefectos
+            .Where(d => d.Fecha >= inicioSQL && d.Fecha <= finSQL)
+            .ToList();
+
+        var defectos = defectosRaw
             .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
                         == fechaFiltroDT.Date)
             .ToList();
 
-        // --- Totales ---
+        /* ============================================================
+           3) TOTALES
+        ============================================================ */
         var totalBuenas = producciones.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0);
         var totalDefectos = defectos.Count;
         var totalPiezas = totalBuenas + totalDefectos;
 
-        // --- FPY y Scrap ---
         double fpy = totalPiezas > 0 ? (double)totalBuenas / totalPiezas * 100 : 0;
         double scrap = totalPiezas > 0 ? (double)totalDefectos / totalPiezas * 100 : 0;
 
-        // --- Defectos por categoría ---
+        /* ============================================================
+           4) DEFECTOS POR CATEGORÍA
+        ============================================================ */
         int defectosPrintIllegible = defectos.Count(d => !new[] { "17a", "17b", "21" }.Contains(d.CodigodeDefecto));
         int defectosMaterialLub = defectos.Count(d => !new[] { "17a", "17b", "21", "54" }.Contains(d.CodigodeDefecto));
         int defectosVulcanization = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24" }.Contains(d.CodigodeDefecto));
         int defectosUncured = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24", "23" }.Contains(d.CodigodeDefecto));
 
-        // --- Porcentajes ---
         double porcPrintIllegible = totalPiezas > 0 ? (double)defectosPrintIllegible / totalPiezas * 100 : 0;
         double porcMaterialLub = totalPiezas > 0 ? (double)defectosMaterialLub / totalPiezas * 100 : 0;
         double porcVulcanization = totalPiezas > 0 ? (double)defectosVulcanization / totalPiezas * 100 : 0;
@@ -1510,26 +1524,27 @@ public class PiezasEscaneadasController : Controller
             PorcentajeUncured = porcUncured
         };
 
-        // ✅ Producción por turno
+        /* ============================================================
+           5) AGRUPACIONES (OPTIMIZADAS)
+        ============================================================ */
+
+        // Producción por turno
         var produccionPorTurno = producciones
-            .GroupBy(r => r.Turno?.Trim())
+            .Where(r => !string.IsNullOrWhiteSpace(r.Turno))
+            .GroupBy(r => r.Turno.Trim())
             .Select(g => new
             {
                 Turno = g.Key,
                 Total = g.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0)
             })
-            .OrderBy(g => int.TryParse(g.Turno, out var turnoNum) ? turnoNum : int.MaxValue)
+            .OrderBy(g => int.TryParse(g.Turno, out var t) ? t : int.MaxValue)
             .ToList();
 
-        // ✅ Producción por mesa y turno
+        // Producción por mesa y turno
         var produccionPorMesaYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.NuMesa) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.NuMesa.Trim())
-            .OrderBy(g =>
-            {
-                var digits = new string(g.Key.Where(char.IsDigit).ToArray());
-                return int.TryParse(digits, out int n) ? n : int.MaxValue;
-            })
+            .OrderBy(g => int.TryParse(new string(g.Key.Where(char.IsDigit).ToArray()), out var n) ? n : int.MaxValue)
             .ToDictionary(
                 g => g.Key,
                 g => g.GroupBy(r => r.Turno.Trim())
@@ -1539,7 +1554,7 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // ✅ Producción por TM y turno
+        // Producción por TM y turno
         var produccionPorTMYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.Tm) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.Tm.Trim())
@@ -1552,7 +1567,7 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // ✅ Producción por Mandrel y turno
+        // Producción por Mandrel y turno
         var produccionPorMandrelYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.Mandrel) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.Mandrel.Trim())
@@ -1566,7 +1581,10 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // ✅ Preparar datos para Chart.js
+        /* ============================================================
+           6) VIEWBAGS PARA CHART.JS
+        ============================================================ */
+
         ViewBag.MandrelLabels = produccionPorMandrelYTurno.Keys.ToList();
         ViewBag.Turno1PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("1") ? m["1"] : 0).ToList();
         ViewBag.Turno2PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("2") ? m["2"] : 0).ToList();

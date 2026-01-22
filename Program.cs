@@ -7,7 +7,7 @@ using ProducScan.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// DbContext de tu app (usa tu cadena de conexión)
+// DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
@@ -30,7 +30,6 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
                 if (user == null || user.SecurityStamp != securityStampClaim)
                 {
-                    // 👇 Si el usuario fue eliminado o su SecurityStamp cambió → logout inmediato
                     context.RejectPrincipal();
                     await context.HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
                 }
@@ -45,6 +44,13 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ILogService, LogService>();
 builder.Services.AddSignalR();
 
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromHours(8);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+});
+
 var app = builder.Build();
 
 if (!app.Environment.IsDevelopment())
@@ -56,13 +62,45 @@ if (!app.Environment.IsDevelopment())
 app.MapHub<LogsHub>("/logsHub");
 app.MapHub<ProduccionHub>("/produccionHub");
 
-
 app.UseHttpsRedirection();
 app.UseStaticFiles();
 app.UseRouting();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+// 🔥 USAR SESSION
+app.UseSession();
+
+app.Use(async (context, next) =>
+{
+    var path = context.Request.Path.Value;
+
+    if (context.Request.Method == "GET" &&
+        !string.IsNullOrWhiteSpace(path) &&
+        !path.StartsWith("/Auth") &&
+        !path.StartsWith("/css") &&
+        !path.StartsWith("/js") &&
+        !path.StartsWith("/lib") &&
+        !path.StartsWith("/images") &&
+        !path.StartsWith("/logsHub") &&
+        !path.StartsWith("/produccionHub") &&
+        !path.Contains("/Get") &&
+        !path.Contains("/Tabla") &&
+        !path.Contains("/Load") &&
+        !path.Contains("/Export") &&
+        !path.Contains("/Json") &&
+        !path.Contains("?") &&            // 👈 evita rutas con parámetros
+        !path.Contains("Detalle")         // 👈 evita vistas dependientes de parámetros
+        )
+    {
+        context.Session.SetString("UltimaVista", path);
+    }
+
+    await next();
+});
+
+// Middleware de logging de excepciones
 app.Use(async (context, next) =>
 {
     try
@@ -73,7 +111,7 @@ app.Use(async (context, next) =>
     {
         var logService = context.RequestServices.GetRequiredService<ILogService>();
         logService.Registrar("Excepción no controlada", ex.ToString(), "Critical");
-        throw; // vuelve a lanzar para que no se oculte
+        throw;
     }
 });
 
@@ -84,8 +122,7 @@ app.MapControllerRoute(
 
 app.Run();
 
-// Función de hashing simple (sin librerías externas)
-// Recomendado: PBKDF2/BCrypt, pero aquí usamos SHA256 por simplicidad.
+// Hash simple
 static string HashPassword(string password)
 {
     using var sha = System.Security.Cryptography.SHA256.Create();

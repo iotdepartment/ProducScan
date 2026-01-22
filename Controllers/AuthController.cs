@@ -56,17 +56,24 @@ namespace ProducScan.Controllers
 
             // Claims (Name y Role)
             var claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, user.NombreUsuario),
-                new Claim(ClaimTypes.Role, user.Rol),
-                new Claim("SecurityStamp", user.SecurityStamp) // 👈 agregado
-            };
+    {
+        new Claim(ClaimTypes.Name, user.NombreUsuario),
+        new Claim(ClaimTypes.Role, user.Rol),
+        new Claim("SecurityStamp", user.SecurityStamp)
+    };
 
             var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
             var principal = new ClaimsPrincipal(identity);
 
             await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal);
 
+            // 🔥 Recuperar la última vista visitada
+            var ultimaVista = HttpContext.Session.GetString("UltimaVista");
+
+            if (!string.IsNullOrWhiteSpace(ultimaVista))
+                return Redirect(ultimaVista);
+
+            // Si no hay última vista, ir al dashboard por defecto
             return RedirectToAction("Dashboard", "PiezasEscaneadas");
         }
 
@@ -81,7 +88,10 @@ namespace ProducScan.Controllers
 
 
         [AllowAnonymous]
-        public IActionResult Denegado() => View();
+        public IActionResult Denegado()
+        {
+            return View();
+        }
 
         // Hash local (igual a Program.cs)
         private static string HashPassword(string password)

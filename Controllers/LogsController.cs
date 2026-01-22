@@ -27,6 +27,7 @@ namespace ProducScan.Controllers
         }
 
         // Acción que devuelve el partial filtrado
+        [HttpGet]
         public IActionResult TablaLogs(string? nivel, string? categoria, DateTime? fecha)
         {
             var query = _context.Logs.AsQueryable();

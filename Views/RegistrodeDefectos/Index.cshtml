@@ -163,7 +163,7 @@
             });
         }
 
-                function cargarCodigos() {
+        function cargarCodigos() {
             $.post('/RegistrodeDefectos/GetCodigosPorDiaYTurno', {
                 fecha: $('#fechaDefectos').val(),
                 turno: $('#turnoFiltro').val()
@@ -199,9 +199,14 @@
         --------------------------------------------------------- */
 
         function cargarMandrilesExcel() {
+
+        const fechaInicio = $('#fechaInicioExcel').val();
+        const fechaFin = $('#fechaFinExcel').val();
+
+
             $.post('/RegistrodeDefectos/GetMandriles', {
-                fecha: $('#fechaInicioExcel').val(),
-                turno: $('#turnoExcel').val()
+                fechaInicio: fechaInicio,
+                fechaFin: fechaFin
             }, function (mandriles) {
 
                 let contenedor = $('#mandrilExcelDropdown');
@@ -219,11 +224,15 @@
                 });
             });
         }
-
         function cargarCodigosExcel() {
+
+            const fechaInicio = $('#fechaInicioExcel').val();
+            const fechaFin = $('#fechaFinExcel').val();
+
+
             $.post('/RegistrodeDefectos/GetCodigos', {
-                fecha: $('#fechaInicioExcel').val(),
-                turno: $('#turnoExcel').val()
+                fechaInicio: fechaInicio,
+                fechaFin: fechaFin
             }, function (codigos) {
 
                 let contenedor = $('#codigoExcelDropdown');
