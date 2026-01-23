@@ -88,13 +88,84 @@
     </div>
 </div>
 
+
 <!-- CHART -->
-<div class="card shadow-sm mb-4">
+@* <div class="card shadow-sm mb-4">
     <div class="card-body">
-        <h5 class="fw-bold mb-3">Defectos por Mandril</h5>
-        <canvas id="chartDefectosMandril" height="120"></canvas>
+        <div class="d-flex justify-content-between align-items-center mt-4">
+            <h3>Defectos vs Costo por Mandril</h3>
+            <button id="btnVerTodosMixed" class="btn btn-sm btn-outline-secondary">
+                Ver todos
+            </button>
+        </div>
+
+        <canvas id="chartMixedMandril" style="height: 380px;"></canvas>
+
+    </div>
+</div> *@
+
+
+
+
+<div class="row mt-4">
+
+    <!-- Chart 1 -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 rounded h-100">
+            <div class="card-body">
+                <h5 class="card-title text-center">Top 5 Defectos</h5>
+                <div style="height:260px;">
+                    <canvas id="chartTopDefectos"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2 -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 rounded h-100">
+            <div class="card-body">
+                <h5 class="card-title text-center">Top 5 Mandriles con Más Defectos</h5>
+                <div style="height:260px;">
+                    <canvas id="chartTopMandriles"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+
+<!-- CHART -->
+<div class="card shadow-sm mb-4 border-0">
+    <div class="card-body ">
+        <div class="d-flex justify-content-between   align-items-center mt-4">
+            <h3>Defectos por Mandril</h3>
+            <button id="btnVerTodosDefectos" class="btn btn-sm btn-outline-secondary">
+                Ver todos
+            </button>
+        </div>
+
+        <canvas id="chartDefectosMandril"></canvas>
     </div>
 </div>
+
+
+<!-- CHART -->
+<div class="card shadow-sm  border-0 mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between  align-items-center mt-4">
+            <h3>Costo por Mandril</h3>
+            <button id="btnVerTodosCosto" class="btn btn-sm btn-outline-secondary">
+                Ver todos
+            </button>
+        </div>
+
+        <canvas id="chartCostoMandril"></canvas>
+
+    </div>
+</div>
+
 
 @await Html.PartialAsync("~/Views/RegistrodeDefectos/Partials/ModalExportarIng.cshtml")
 
@@ -189,9 +260,11 @@
         }
 
         /* ============================================
-           CHART DEFECTOS POR MANDRIL (CORREGIDO)
+           CHART DEFECTOS POR MANDRIL
         ============================================ */
+
         let chartDefectos = null;
+        let mostrarTodosDefectos = false;
 
         function cargarChartDefectos() {
 
@@ -205,24 +278,17 @@
             $.ajax({
                 url: '/RegistrodeDefectos/GetDefectosPorMandril',
                 type: 'POST',
-                data: {
-                    fechaInicio,
-                    fechaFin,
-                    mandriles,
-                    codigos,
-                    familias
-                },
+                data: { fechaInicio, fechaFin, mandriles, codigos, familias },
                 success: function (data) {
 
-                    const labels = data.map(x => x.mandril);
-                    const valores = data.map(x => x.totalDefectos);
+                    // TOP 10 o TODOS
+                    const dataFiltrada = mostrarTodosDefectos ? data : data.slice(0, 20);
+
+                    const labels = dataFiltrada.map(x => x.mandril);
+                    const valores = dataFiltrada.map(x => x.totalDefectos);
 
                     const ctx = document.getElementById("chartDefectosMandril").getContext("2d");
 
-                    /* ============================
-                       SI EL CHART NO EXISTE → CREARLO
-                       SI YA EXISTE → SOLO ACTUALIZARLO
-                    ============================ */
                     if (!chartDefectos) {
 
                         chartDefectos = new Chart(ctx, {
@@ -241,20 +307,13 @@
                                 responsive: true,
                                 maintainAspectRatio: true,
                                 scales: {
-                                    y: {
-                                        beginAtZero: true,
-                                        title: { display: true, text: "Total de Defectos" }
-                                    },
-                                    x: {
-                                        title: { display: true, text: "Mandril" }
-                                    }
+                                    y: { beginAtZero: true },
+                                    x: { ticks: { autoSkip: true } }
                                 }
                             }
                         });
 
                     } else {
-
-                        // Actualizar datos sin destruir el chart
                         chartDefectos.data.labels = labels;
                         chartDefectos.data.datasets[0].data = valores;
                         chartDefectos.update();
@@ -263,30 +322,351 @@
             });
         }
 
+        $("#btnVerTodosDefectos").on("click", function () {
+            mostrarTodosDefectos = !mostrarTodosDefectos;
+            $(this).text(mostrarTodosDefectos ? "Ver Top 20" : "Ver todos");
+            cargarChartDefectos();
+        });
+
+        /* ============================================
+           CHART COSTOS POR MANDRIL
+        ============================================ */
+
+        let chartCosto = null;
+        let mostrarTodosCosto = false;
+
+        function cargarChartCosto() {
+
+            const fechaInicio = $('#fechaInicioIngFiltro').val();
+            const fechaFin = $('#fechaFinIngFiltro').val();
+
+            const mandriles = [...document.querySelectorAll(".mandril-check-ing:checked")].map(x => x.value);
+            const codigos = [...document.querySelectorAll(".codigo-check-ing:checked")].map(x => x.value);
+            const familias = [...document.querySelectorAll(".familia-check-ing:checked")].map(x => x.value);
+
+            $.ajax({
+                url: '/RegistrodeDefectos/GetCostoPorMandril',
+                type: 'POST',
+                data: { fechaInicio, fechaFin, mandriles, codigos, familias },
+                success: function (data) {
+
+                    const dataFiltrada = mostrarTodosCosto ? data : data.slice(0, 20);
+
+                    const labels = dataFiltrada.map(x => x.mandril);
+                    const valores = dataFiltrada.map(x => x.totalCosto);
+
+                    const ctx = document.getElementById("chartCostoMandril").getContext("2d");
+
+                    if (!chartCosto) {
+
+                        chartCosto = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    label: "Costo ($)",
+                                    data: valores,
+                                    backgroundColor: "#dc3545",
+                                    borderColor: "#a52834",
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: true,
+                                scales: {
+                                    y: { beginAtZero: true },
+                                    x: { ticks: { autoSkip: true} }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            label: ctx => " $" + ctx.raw.toFixed(2)
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                    } else {
+                        chartCosto.data.labels = labels;
+                        chartCosto.data.datasets[0].data = valores;
+                        chartCosto.update();
+                    }
+                }
+            });
+        }
+
+        $("#btnVerTodosCosto").on("click", function () {
+            mostrarTodosCosto = !mostrarTodosCosto;
+            $(this).text(mostrarTodosCosto ? "Ver Top 20" : "Ver todos");
+            cargarChartCosto();
+        });
+
+        let chartTopDefectos = null;
+
+        function cargarChartTopDefectos() {
+
+            const fechaInicio = $('#fechaInicioIngFiltro').val();
+            const fechaFin = $('#fechaFinIngFiltro').val();
+
+            $.ajax({
+                url: '/RegistrodeDefectos/GetTop5Defectos',
+                type: 'POST',
+                data: { fechaInicio, fechaFin },
+                success: function (data) {
+
+                    const labels = data.map(x => `${x.codigo} - ${x.nombre}`);
+                    const valores = data.map(x => x.total);
+
+                    // Colores profesionales
+                    const colores = [
+                        "#0d6efd", // azul
+                        "#198754", // verde
+                        "#dc3545", // rojo
+                        "#ffc107", // amarillo
+                        "#6f42c1"  // morado
+                    ];
+
+                    const ctx = document.getElementById("chartTopDefectos").getContext("2d");
+
+                    if (!chartTopDefectos) {
+
+                        chartTopDefectos = new Chart(ctx, {
+                            type: 'doughnut', // Cambia a 'pie' si lo prefieres
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: valores,
+                                    backgroundColor: colores,
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'right'
+                                    },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: ctx => `${ctx.label}: ${ctx.raw} defectos`
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                    } else {
+                        chartTopDefectos.data.labels = labels;
+                        chartTopDefectos.data.datasets[0].data = valores;
+                        chartTopDefectos.update();
+                    }
+                }
+            });
+        }
+        
+        let chartTopMandriles = null;
+
+        function cargarChartTopMandriles() {
+
+            const fechaInicio = $('#fechaInicioIngFiltro').val();
+            const fechaFin = $('#fechaFinIngFiltro').val();
+
+            $.ajax({
+                url: '/RegistrodeDefectos/GetTop5Mandriles',
+                type: 'POST',
+                data: { fechaInicio, fechaFin },
+                success: function (data) {
+
+                    const labels = data.map(x => x.mandril);
+                    const valores = data.map(x => x.total);
+
+                    const colores = [
+                        "#0d6efd",
+                        "#198754",
+                        "#dc3545",
+                        "#ffc107",
+                        "#6f42c1"
+                    ];
+
+                    const ctx = document.getElementById("chartTopMandriles").getContext("2d");
+
+                    if (!chartTopMandriles) {
+
+                        chartTopMandriles = new Chart(ctx, {
+                            type: 'pie', // o 'pie'
+                            data: {
+                                labels: labels,
+                                datasets: [{
+                                    data: valores,
+                                    backgroundColor: colores,
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: { position: 'right' },
+                                    tooltip: {
+                                        callbacks: {
+                                            label: ctx => `${ctx.label}: ${ctx.raw} defectos`
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                    } else {
+                        chartTopMandriles.data.labels = labels;
+                        chartTopMandriles.data.datasets[0].data = valores;
+                        chartTopMandriles.update();
+                    }
+                }
+            });
+        }
+
+        // let chartMixed = null;
+        // let mostrarTodosMixed = false;
+
+        // function cargarChartMixed() {
+
+        //     const fechaInicio = $('#fechaInicioIngFiltro').val();
+        //     const fechaFin = $('#fechaFinIngFiltro').val();
+
+        //     const mandriles = [...document.querySelectorAll(".mandril-check-ing:checked")].map(x => x.value);
+        //     const codigos = [...document.querySelectorAll(".codigo-check-ing:checked")].map(x => x.value);
+        //     const familias = [...document.querySelectorAll(".familia-check-ing:checked")].map(x => x.value);
+
+        //     $.ajax({
+        //         url: '/RegistrodeDefectos/GetDefectosYCostoPorMandril',
+        //         type: 'POST',
+        //         data: { fechaInicio, fechaFin, mandriles, codigos, familias },
+        //         success: function (data) {
+
+        //             // TOP 10 o TODOS
+        //             const dataFiltrada = mostrarTodosMixed ? data : data.slice(0, 20);
+
+        //             const labels = dataFiltrada.map(x => x.mandril);
+        //             const defectos = dataFiltrada.map(x => x.totalDefectos);
+        //             const costos = dataFiltrada.map(x => x.totalCosto);
+
+        //             const ctx = document.getElementById("chartMixedMandril").getContext("2d");
+
+        //             if (!chartMixed) {
+
+        //                 chartMixed = new Chart(ctx, {
+        //                     data: {
+        //                         labels: labels,
+        //                         datasets: [
+        //                             {
+        //                                 type: 'bar',
+        //                                 label: 'Defectos',
+        //                                 data: defectos,
+        //                                 backgroundColor: '#198754',
+        //                                 borderColor: '#145c3a',
+        //                                 borderWidth: 1,
+        //                                 yAxisID: 'yDefectos'
+        //                             },
+        //                             {
+        //                                 type: 'line',
+        //                                 label: 'Costo ($)',
+        //                                 data: costos,
+        //                                 borderColor: '#dc3545',
+        //                                 backgroundColor: '#dc3545',
+        //                                 borderWidth: 2,
+        //                                 pointRadius: 5,
+        //                                 pointBackgroundColor: '#dc3545',
+        //                                 tension: 0.3,
+        //                                 yAxisID: 'yCosto'
+        //                             }
+        //                         ]
+        //                     },
+        //                     options: {
+        //                         responsive: true,
+        //                         maintainAspectRatio: true,
+        //                         scales: {
+        //                             yDefectos: {
+        //                                 type: 'linear',
+        //                                 position: 'left',
+        //                                 beginAtZero: true,
+        //                                 title: { display: true, text: 'Defectos' }
+        //                             },
+        //                             yCosto: {
+        //                                 type: 'linear',
+        //                                 position: 'right',
+        //                                 beginAtZero: true,
+        //                                 title: { display: true, text: 'Costo ($)' },
+        //                                 grid: { drawOnChartArea: false }
+        //                             }
+        //                         }
+        //                     }
+        //                 });
+
+        //             } else {
+        //                 chartMixed.data.labels = labels;
+        //                 chartMixed.data.datasets[0].data = defectos;
+        //                 chartMixed.data.datasets[1].data = costos;
+        //                 chartMixed.update();
+        //             }
+        //         }
+        //     });
+        // }
+
+        // $("#btnVerTodosMixed").on("click", function () {
+        //     mostrarTodosMixed = !mostrarTodosMixed;
+        //     $(this).text(mostrarTodosMixed ? "Ver Top 10" : "Ver todos");
+        //     cargarChartMixed();
+        // });
+
         /* ============================================
            EVENTOS
         ============================================ */
+               $("#fechaInicioIngFiltro, #fechaFinIngFiltro").on("change", function () {
 
-        $("#fechaInicioIngFiltro, #fechaFinIngFiltro").on("change", function () {
             cargarMandriles();
             cargarCodigos();
             cargarFamilias();
+
             cargarChartDefectos();
+            cargarChartCosto();
+            cargarChartTopDefectos();
+             cargarChartTopMandriles(); // 👈 NUEVO
+
+            // cargarChartMixed();
         });
 
+
         $(document).on("change", ".mandril-check-ing, .codigo-check-ing, .familia-check-ing", function () {
+
             cargarChartDefectos();
+            cargarChartCosto();
+            cargarChartTopDefectos();
+            cargarChartTopMandriles(); // 👈 NUEVO
+
+            // cargarChartMixed();
         });
+
 
         /* ============================================
            INICIALIZAR
         ============================================ */
         $(document).ready(function () {
+
             if ($('#fechaInicioIngFiltro').val() && $('#fechaFinIngFiltro').val()) {
+
                 cargarMandriles();
                 cargarCodigos();
                 cargarFamilias();
+
                 cargarChartDefectos();
+                cargarChartCosto();
+                cargarChartTopDefectos();
+                cargarChartTopMandriles(); // 👈 NUEVO
+
+                // cargarChartMixed();
             }
         });
 

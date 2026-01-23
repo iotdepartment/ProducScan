@@ -449,8 +449,6 @@ namespace ProducScan.Controllers
 
         // METODOS PARA LA VISTA REGISTRO DE DEFECTOS
 
-
-
         private string ObtenerDescripcionDefecto(string codigo)
         {
             var defecto = _context.RegistrodeDefectos
@@ -638,7 +636,6 @@ namespace ProducScan.Controllers
             return Json(lista);
         }
 
-        
         //[HttpPost]
         //public IActionResult GetDefectosPorDiaYTurno(DateTime fecha, string turno, List<string> mandriles, List<string> codigos)
         //{
@@ -1471,6 +1468,91 @@ namespace ProducScan.Controllers
             return View();
         }
 
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpPost]
+        public IActionResult GetTop5Defectos(DateTime fechaInicio, DateTime fechaFin)
+        {
+            var inicio = DateOnly.FromDateTime(fechaInicio);
+            var fin = DateOnly.FromDateTime(fechaFin);
+
+            var defectosRaw = _context.RegistrodeDefectos
+                .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
+                .ToList();
+
+            var defectos = defectosRaw
+                .Select(d =>
+                {
+                    var fechaEvento = d.Fecha.ToDateTime(d.Hora);
+                    var fechaLaboral = ProduccionHelper.GetFechaProduccion(fechaEvento).Date;
+
+                    return new
+                    {
+                        FechaLaboral = fechaLaboral,
+                        d.CodigodeDefecto,
+                        d.Defecto
+                    };
+                })
+                .Where(x => x.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                            x.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+                .ToList();
+
+            var resultado = defectos
+                .GroupBy(x => new { x.CodigodeDefecto, x.Defecto })
+                .Select(g => new
+                {
+                    Codigo = g.Key.CodigodeDefecto,
+                    Nombre = g.Key.Defecto,
+                    Total = g.Count()
+                })
+                .OrderByDescending(x => x.Total)
+                .Take(5)
+                .ToList();
+
+            return Json(resultado);
+        }
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpPost]
+        public IActionResult GetTop5Mandriles(DateTime fechaInicio, DateTime fechaFin)
+        {
+            var inicio = DateOnly.FromDateTime(fechaInicio);
+            var fin = DateOnly.FromDateTime(fechaFin);
+
+            var defectosRaw = _context.RegistrodeDefectos
+                .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
+                .ToList();
+
+            var defectos = defectosRaw
+                .Select(d =>
+                {
+                    var fechaEvento = d.Fecha.ToDateTime(d.Hora);
+                    var fechaLaboral = ProduccionHelper.GetFechaProduccion(fechaEvento).Date;
+
+                    return new
+                    {
+                        FechaLaboral = fechaLaboral,
+                        d.Mandrel
+                    };
+                })
+                .Where(x => x.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                            x.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+                .ToList();
+
+            var resultado = defectos
+                .GroupBy(x => x.Mandrel)
+                .Select(g => new
+                {
+                    Mandril = g.Key,
+                    Total = g.Count()
+                })
+                .OrderByDescending(x => x.Total)
+                .Take(5)
+                .ToList();
+
+            return Json(resultado);
+        }
+
         //Metodo para la chart de defectos por mandril
         [Authorize(Roles = "Admin,Gerente")]
         [HttpPost]
@@ -1548,6 +1630,92 @@ namespace ProducScan.Controllers
 
             return Json(resultado);
         }
+
+        [Authorize(Roles = "Admin,Gerente")]
+        [HttpPost]
+        public IActionResult GetCostoPorMandril(DateTime fechaInicio, DateTime fechaFin, List<string> mandriles, List<string> codigos, List<string> familias)
+        {
+            var inicio = DateOnly.FromDateTime(fechaInicio);
+            var fin = DateOnly.FromDateTime(fechaFin);
+
+            // Catálogo de mandriles con costo y familia
+            var mandrilInfo = _context.Mandriles
+                .Where(m => m.Area == "INSPECCION")
+                .ToDictionary(
+                    m => m.MandrilNombre,
+                    m => new
+                    {
+                        Costo = m.Costo ?? 0,
+                        Familia = string.IsNullOrWhiteSpace(m.Familia) ? "SIN FAMILIA" : m.Familia
+                    }
+                );
+
+            // Defectos crudos
+            var defectosRaw = _context.RegistrodeDefectos
+                .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
+                .ToList();
+
+            // Convertir a fecha laboral
+            var defectos = defectosRaw
+                .Select(d =>
+                {
+                    var fechaEvento = d.Fecha.ToDateTime(d.Hora);
+                    var fechaLaboral = ProduccionHelper.GetFechaProduccion(fechaEvento).Date;
+
+                    return new
+                    {
+                        FechaLaboral = fechaLaboral,
+                        d.Mandrel,
+                        d.CodigodeDefecto
+                    };
+                })
+                .Where(x => x.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
+                            x.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+                .ToList();
+
+            // FILTROS
+            if (mandriles?.Any() == true)
+                defectos = defectos.Where(x => mandriles.Contains(x.Mandrel)).ToList();
+
+            if (codigos?.Any() == true)
+                defectos = defectos.Where(x => codigos.Contains(x.CodigodeDefecto)).ToList();
+
+            if (familias?.Any() == true)
+            {
+                defectos = defectos
+                    .Where(x =>
+                    {
+                        if (!mandrilInfo.TryGetValue(x.Mandrel, out var info))
+                            return false;
+
+                        return familias.Contains(info.Familia);
+                    })
+                    .ToList();
+            }
+
+            // AGRUPACIÓN POR MANDRIL → SUMA DE COSTO
+            var resultado = defectos
+                .GroupBy(x => x.Mandrel)
+                .Select(g =>
+                {
+                    double costoMandril = mandrilInfo.TryGetValue(g.Key, out var info)
+                        ? info.Costo
+                        : 0;
+
+                    return new
+                    {
+                        Mandril = g.Key,
+                        TotalCosto = g.Count() * costoMandril
+                    };
+                })
+                .OrderByDescending(x => x.TotalCosto)
+                .ToList();
+
+            return Json(resultado);
+        }
+
+
+
 
         // Metodo para generar el reporte de 3 hojas y los 3 metodos para cada hoja :)     //REPORTE
         [Authorize(Roles = "Admin,Gerente")]
