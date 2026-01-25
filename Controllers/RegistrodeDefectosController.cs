@@ -446,7 +446,6 @@ namespace ProducScan.Controllers
             return query;
         }
 
-
         // METODOS PARA LA VISTA REGISTRO DE DEFECTOS
 
         private string ObtenerDescripcionDefecto(string codigo)
@@ -1447,7 +1446,6 @@ namespace ProducScan.Controllers
                 fileName);
         }
 
-
         // METODOS PARA LA VISTA DE REPORTES DE INGENIERIA ----------
 
         // Metodo Get para cargar la vista de Ing
@@ -1715,8 +1713,6 @@ namespace ProducScan.Controllers
         }
 
 
-
-
         // Metodo para generar el reporte de 3 hojas y los 3 metodos para cada hoja :)     //REPORTE
         [Authorize(Roles = "Admin,Gerente")]
         [HttpGet]
@@ -1836,7 +1832,19 @@ namespace ProducScan.Controllers
             );
 
             // ============================
-            // 7. Crear hoja
+            // 7. Costo total por día (NUEVO)
+            // ============================
+            var costoPorDia = dias.ToDictionary(
+                g => g.Key,
+                g => g.Sum(x =>
+                    mandrilInfo.ContainsKey(x.Mandrel)
+                        ? mandrilInfo[x.Mandrel].Costo
+                        : 0
+                )
+            );
+
+            // ============================
+            // 8. Crear hoja
             // ============================
             var ws = workbook.Worksheets.Add("Reporte Ingeniería");
 
@@ -1850,25 +1858,46 @@ namespace ProducScan.Controllers
             ws.Cell(4, 2).Value = fin.ToString();
             ws.Range("A3:A4").Style.Font.Bold = true;
 
-            ws.Cell(6, 1).Value = "Costo Total del Rango:";
+            ws.Cell(6, 1).Value = "Costo Total del Rango (USD):";
             ws.Cell(6, 2).Value = costoTotalRango;
             ws.Cell(6, 2).Style.NumberFormat.Format = "$#,##0.00";
             ws.Range("A6").Style.Font.Bold = true;
 
-            // Encabezados
-            ws.Cell(8, 1).Value = "Fecha";
-            ws.Cell(8, 2).Value = "Mandril";
-            ws.Cell(8, 3).Value = "Familia";
-            ws.Cell(8, 4).Value = "Total Defectos";
-            ws.Cell(8, 5).Value = "Producción Total";
-            ws.Cell(8, 6).Value = "% Defectos";
-            ws.Cell(8, 7).Value = "Costo Mandril Día (USD)";
-            ws.Range("A8:G8").Style.Font.Bold = true;
+            // ============================
+            // 9. Mostrar costo por día (NUEVO)
+            // ============================
+            int filaCostos = 8;
 
-            int row = 9;
+            ws.Cell(filaCostos, 1).Value = "Costo por Día (USD):";
+            ws.Cell(filaCostos, 1).Style.Font.Bold = true;
+            filaCostos++;
+
+            foreach (var kv in costoPorDia.OrderBy(x => x.Key))
+            {
+                ws.Cell(filaCostos, 1).Value = kv.Key.ToString("yyyy-MM-dd");
+                ws.Cell(filaCostos, 2).Value = kv.Value;
+                ws.Cell(filaCostos, 2).Style.NumberFormat.Format = "$#,##0.00";
+                filaCostos++;
+            }
 
             // ============================
-            // 8. Procesar cada día (ordenado por mandril)
+            // 10. Encabezados de la tabla principal
+            // ============================
+            int row = filaCostos + 2;
+
+            ws.Cell(row, 1).Value = "Fecha";
+            ws.Cell(row, 2).Value = "Mandril";
+            ws.Cell(row, 3).Value = "Familia";
+            ws.Cell(row, 4).Value = "Total Defectos";
+            ws.Cell(row, 5).Value = "Producción Total";
+            ws.Cell(row, 6).Value = "% Defectos";
+            ws.Cell(row, 7).Value = "Costo Mandril Día (USD)";
+            ws.Range(row, 1, row, 7).Style.Font.Bold = true;
+
+            row++;
+
+            // ============================
+            // 11. Procesar cada día (ordenado por mandril)
             // ============================
             foreach (var dia in dias)
             {
@@ -1884,7 +1913,7 @@ namespace ProducScan.Controllers
                     .ToDictionary(g => g.Key, g => g.Sum(x => x.Ndpiezas));
 
                 var mandrilesDia = defectosPorMandril.Keys
-                    .OrderBy(m => m) // 🔥 SOLO ORDENADO, SIN AGRUPAR
+                    .OrderBy(m => m)
                     .ToList();
 
                 foreach (var mandril in mandrilesDia)

@@ -18,9 +18,12 @@
             <th>Barcode</th>
             <th>Kanban</th>
             <th>Estación</th>
-            <th>Familia</th>     <!-- NUEVO -->
-            <th>Proceso</th>     <!-- NUEVO -->
+            <th>Familia</th>     
+            <th>Proceso</th>     
+            <th>Peso Min</th>
+            <th>Peso Max</th>
             <th>Acciones</th>
+
         </tr>
     </thead>
 </table>
@@ -68,46 +71,57 @@
         var table;
 
         $(document).ready(function () {
+
+            /* ============================
+               DATATABLE
+            ============================ */
             table = $('#mandrilesTable').DataTable({
                 ajax: {
                     url: "/Mandriles/GetMandriles",
                     type: "GET",
                     datatype: "json"
                 },
-                       columns: [
-            { data: "mandrilNombre" },
-            { data: "centrodeCostos" },
-            { data: "cantidaddeEmpaque" },
-            { data: "barcode" },
-            { data: "kanban" },
-            { data: "estacion" },
-            { data: "familia" },
-            { data: "proceso" },   
-            {
-                data: "id",
-                render: function (data, type, row) {
-                    return `
-                        <button class="btn btn-sm btn-warning rounded-pill"
-                            onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}', '${row.estacion ?? ""}', '${row.familia ?? ""}', '${row.proceso ?? ""}')">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger rounded-pill"
-                            onclick="openDeleteModal(${data})">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>`;
-                }
-            }
-        ],
+                columns: [
+                    { data: "mandrilNombre" },
+                    { data: "centrodeCostos" },
+                    { data: "cantidaddeEmpaque" },
+                    { data: "barcode" },
+                    { data: "kanban" },
+                    { data: "estacion" },
+                    { data: "familia" },
+                    { data: "proceso" },
+                    { data: "pesomin" },
+                    { data: "pesomax" },
+                    {
+                        data: "id",
+                        render: function (data, type, row) {
+                            return `
+                                <button class="btn btn-sm btn-warning rounded-pill"
+                                    onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}', '${row.estacion ?? ""}', '${row.familia ?? ""}', '${row.proceso ?? ""}', '${row.pesomin ?? ""}', '${row.pesomax ?? ""}')">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </button>
+
+                                <button class="btn btn-sm btn-danger rounded-pill"
+                                    onclick="openDeleteModal(${data})">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            `;
+                        }
+                    }
+                ],
                 pageLength: 10,
                 lengthMenu: [10, 20, 50, 100],
                 ordering: false,
                 language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" }
             });
 
-            // Submit Create/Edit
+            /* ============================
+               SUBMIT CREATE / EDIT
+            ============================ */
             $("#createEditForm").submit(function (e) {
                 e.preventDefault();
                 var form = $(this);
+
                 $.ajax({
                     type: "POST",
                     url: form.attr("action"),
@@ -115,54 +129,96 @@
                     success: function (res) {
                         if (res.success) {
                             $('#createEditModal').modal('hide');
-                            $('#deleteModal').modal('hide');
                             showToast(res.message, true);
                             table.ajax.reload(null, false);
                         } else {
-                            if (res.errors && res.errors.length > 0) {
-                                showToast(res.errors.join("\n"), false);
-                            } else {
-                                showToast(res.message, false);
-                            }
+                            showToast(res.message, false);
                         }
                     }
                 });
             });
 
-            // Submit Delete
+            /* ============================
+               SUBMIT DELETE
+            ============================ */
             $("#deleteForm").submit(function (e) {
                 e.preventDefault();
                 var form = $(this);
+
                 $.ajax({
                     type: "POST",
                     url: form.attr("action"),
                     data: form.serialize(),
                     success: function (res) {
                         if (res.success) {
-                            $('#createEditModal').modal('hide');
                             $('#deleteModal').modal('hide');
                             showToast(res.message, true);
                             table.ajax.reload(null, false);
                         } else {
-                            if (res.errors && res.errors.length > 0) {
-                                showToast(res.errors.join("\n"), false);
-                            } else {
-                                showToast(res.message, false);
-                            }
+                            showToast(res.message, false);
                         }
                     }
                 });
             });
+
         });
 
+        /* ============================
+           RESET AUTOMÁTICO DEL MODAL
+        ============================ */
         $('#createEditModal').on('hidden.bs.modal', function () {
             $(this).find('form')[0].reset();
             $(this).find('form').removeClass('was-validated');
         });
 
-        function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban, estacion, familia, proceso) {
+        /* ============================
+           MODO CREAR
+        ============================ */
+        function openCreateModal() {
+
+            document.getElementById("modalTitle").innerText = "Nuevo Mandril";
+
+            const header = document.querySelector("#createEditModal .modal-header");
+            header.classList.remove("bg-warning", "text-dark");
+            header.classList.add("bg-success", "text-white");
+
+            const saveBtn = document.getElementById("saveBtn");
+            saveBtn.innerText = "Guardar";
+            saveBtn.classList.remove("btn-warning");
+            saveBtn.classList.add("btn-success");
+
+            document.getElementById("createEditForm").action = "/Mandriles/Create";
+
+            // Limpiar campos
+            document.getElementById("mandrilId").value = "";
+            document.getElementById("mandrilNombre").value = "";
+            document.getElementById("centrodeCostos").value = "";
+            document.getElementById("cantidaddeEmpaque").value = "";
+            document.getElementById("barcode").value = "";
+            document.getElementById("kanban").value = "";
+            document.getElementById("estacion").value = "";
+            document.getElementById("familia").value = "";
+            document.getElementById("proceso").value = "";
+            document.getElementById("pesomin").value = "";
+            document.getElementById("pesomax").value = "";
+        }
+
+        /* ============================
+           MODO EDITAR
+        ============================ */
+        function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban, estacion, familia, proceso, pesomin, pesomax) {
 
             document.getElementById("modalTitle").innerText = "Editar Mandril";
+
+            const header = document.querySelector("#createEditModal .modal-header");
+            header.classList.remove("bg-success", "text-white");
+            header.classList.add("bg-warning", "text-dark");
+
+            const saveBtn = document.getElementById("saveBtn");
+            saveBtn.innerText = "Actualizar";
+            saveBtn.classList.remove("btn-success");
+            saveBtn.classList.add("btn-warning");
+
             document.getElementById("createEditForm").action = "/Mandriles/Edit";
 
             document.getElementById("mandrilId").value = id;
@@ -172,27 +228,37 @@
             document.getElementById("barcode").value = barcode;
             document.getElementById("kanban").value = kanban;
             document.getElementById("estacion").value = estacion || "";
-
-            // 👇 Selects nuevos
             document.getElementById("familia").value = familia || "";
             document.getElementById("proceso").value = proceso || "";
+            document.getElementById("pesomin").value = pesomin || "";
+            document.getElementById("pesomax").value = pesomax || "";
 
             $('#createEditModal').modal('show');
         }
 
+        /* ============================
+           MODAL ELIMINAR
+        ============================ */
         function openDeleteModal(id) {
             document.getElementById("deleteId").value = id;
             $('#deleteModal').modal('show');
         }
 
+        /* ============================
+           TOAST
+        ============================ */
         function showToast(message, isSuccess = true) {
             const toastEl = document.getElementById("mainToast");
             const toastBody = document.getElementById("toastMessage");
+
             toastEl.classList.remove("text-bg-success", "text-bg-danger");
             toastEl.classList.add(isSuccess ? "text-bg-success" : "text-bg-danger");
+
             toastBody.innerText = message;
+
             var toast = new bootstrap.Toast(toastEl);
             toast.show();
         }
+
     </script>
 }

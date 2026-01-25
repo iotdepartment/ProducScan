@@ -11,9 +11,10 @@
         public string? Kanban { get; set; }
         public string? Estacion { get; set; }
         public double? Costo { get; set; }
-
-        // ✅ Nuevas columnas
         public string? Familia { get; set; }
         public string? Proceso { get; set; }
+        public double? PesoMax { get; set; }
+        public double? PesoMin { get; set; }
+
     }
 }

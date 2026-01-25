@@ -14,75 +14,85 @@
                 <div class="modal-body">
                     <input type="hidden" id="mandrilId" name="Id" />
 
-                    <div class="mb-3">
-                        <label class="form-label">Mandril</label>
-                        <input type="text" class="form-control" id="mandrilNombre" name="MandrilNombre" required />
-                        <div class="invalid-feedback">El campo Mandril es obligatorio.</div>
-                    </div>
+                    <div class="row g-3">
 
-                    <div class="mb-3">
-                        <label class="form-label">Centro de Costos</label>
-                        <input type="text" class="form-control" id="centrodeCostos" name="CentrodeCostos"
-                               required pattern="^[0-9]+$" />
-                        <div class="invalid-feedback">El centro de costos debe contener solo números.</div>
-                    </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Mandril</label>
+                            <input type="text" class="form-control rounded-pill" id="mandrilNombre" name="MandrilNombre" required />
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Cantidad de Empaque</label>
-                        <input type="text" class="form-control" id="cantidaddeEmpaque" name="CantidaddeEmpaque"
-                               required pattern="^[0-9]+$" />
-                        <div class="invalid-feedback">La cantidad de empaque debe contener solo números.</div>
-                    </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Centro de Costos</label>
+                            <input type="text" class="form-control rounded-pill" id="centrodeCostos" name="CentrodeCostos" required pattern="^[0-9]+$" />
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Barcode</label>
-                        <input type="text" class="form-control" id="barcode" name="Barcode" />
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Familia</label>
-                        <select class="form-select" id="familia" name="Familia">
-                            <option value="">Seleccione una familia</option>
-                            <option>33x39.4</option>
-                            <option>33x42</option>
-                            <option>7x12</option>
-                            <option>7.5X14.5</option>
-                            <option>37X44</option>
-                            <option>37X47</option>
-                            <option>11x18</option>
-                            <option>13x20</option>
-                            <option>13X21</option>
-                            <option>24x30</option>
-                            <option>16x24</option>
-                            <option>7X14</option>
-                            <option>11X17</option>
-                            <option>9.7X17.6 (AEM)</option>
-                            <option>9.7X17.6 (ACM)</option>
-                            <option>9.3X17.2</option>
-                            <option>8.9X17.2</option>
-                        </select>
-                    </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Cantidad de Empaque</label>
+                            <input type="text" class="form-control rounded-pill" id="cantidaddeEmpaque" name="CantidaddeEmpaque" required pattern="^[0-9]+$" />
+                        </div>
 
-                    <div class="mb-3">
-                        <label class="form-label">Proceso</label>
-                        <select class="form-select" id="proceso" name="Proceso">
-                            <option value="">Seleccione un proceso</option>
-                            <option>Coex</option>
-                            <option>CHS</option>
-                            <option>ACM</option>
-                            <option>AEM</option>
-                        </select>
-                    </div>
-                  
-                    <div class="mb-3">
-                        <label class="form-label">Kanban</label>
-                        <input type="text" class="form-control" id="kanban" name="Kanban" />
-                    </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Barcode</label>
+                            <input type="text" class="form-control rounded-pill" id="barcode" name="Barcode" />
+                        </div>
 
-                    <div class="mb-3">
-                        <label for="estacion" class="form-label">Estación</label>
-                        <input type="text" class="form-control" id="estacion" name="Estacion" />
-                    </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Familia</label>
+                            <select class="form-select rounded-pill" id="familia" name="Familia">
+                                <option value="">Seleccione una familia</option>
+                                <option>33x39.4</option>
+                                <option>33x42</option>
+                                <option>7x12</option>
+                                <option>7.5X14.5</option>
+                                <option>37X44</option>
+                                <option>37X47</option>
+                                <option>11x18</option>
+                                <option>13x20</option>
+                                <option>13X21</option>
+                                <option>24x30</option>
+                                <option>16x24</option>
+                                <option>7X14</option>
+                                <option>11X17</option>
+                                <option>9.7X17.6 (AEM)</option>
+                                <option>9.7X17.6 (ACM)</option>
+                                <option>9.3X17.2</option>
+                                <option>8.9X17.2</option>
+                            </select>
+                        </div>
 
+                        <div class="col-md-6">
+                            <label class="form-label">Proceso</label>
+                            <select class="form-select rounded-pill" id="proceso" name="Proceso">
+
+                                <option value="">Seleccione un proceso</option>
+                                <option>Coex</option>
+                                <option>CHS</option>
+                                <option>ACM</option>
+                                <option>AEM</option>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Kanban</label>
+                            <input type="text" class="form-control rounded-pill" id="kanban" name="Kanban" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Estación</label>
+                            <input type="text" class="form-control rounded-pill" id="estacion" name="Estacion" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Peso Mínimo</label>
+                            <input type="number" step="0.01" class="form-control rounded-pill" id="pesomin" name="PesoMin" />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Peso Máximo</label>
+                            <input type="number" step="0.01" class="form-control rounded-pill" id="pesomax" name="PesoMax" />
+                        </div>
+
+                    </div>
                 </div>
 
                

@@ -2,6 +2,21 @@
     ViewData["Title"] = "Reporte de Costos Ingeniería";
 }
 
+<style>
+    #filtrosCard {
+        position: sticky;
+        top: 0;
+        z-index: 200;
+        transition: transform .25s ease, opacity .25s ease;
+        background: white;
+    }
+
+        #filtrosCard.hide {
+            transform: translateY(-100%);
+            opacity: 0;
+        }
+</style>
+
 <!-- BOTÓN ARRIBA -->
 <div class="row mb-4">
     <div class="col-md-3">
@@ -14,9 +29,11 @@
 </div>
 
 <!-- FILTROS -->
-<div class="card shadow-sm mb-4">
+<div id="filtrosCard" class="card shadow-sm border-0 mb-4">
     <div class="card-body">
         <h5 class="fw-bold mb-3">Filtros</h5>
+
+
 
         <!-- FILA 1: FECHAS -->
         <div class="row g-3 mb-3">
@@ -40,6 +57,42 @@
             </div>
 
         </div>
+
+    </div>
+</div>
+
+<!-- CHART -->
+<div class="row mt-4">
+
+    <!-- Chart 1 -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 rounded h-100">
+            <div class="card-body">
+                <h5 class="card-title text-center">Top 5 Defectos</h5>
+                <div style="height:260px;">
+                    <canvas id="chartTopDefectos"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 2 -->
+    <div class="col-md-6 mb-4">
+        <div class="card shadow-sm border-0 rounded h-100">
+            <div class="card-body">
+                <h5 class="card-title text-center">Top 5 Mandriles con Más Defectos</h5>
+                <div style="height:260px;">
+                    <canvas id="chartTopMandriles"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <h5 class="fw-bold mb-3">Filtros</h5>
 
         <!-- FILA 2: MANDRIL, CÓDIGO, FAMILIA -->
         <div class="row g-3">
@@ -88,54 +141,6 @@
     </div>
 </div>
 
-
-<!-- CHART -->
-@* <div class="card shadow-sm mb-4">
-    <div class="card-body">
-        <div class="d-flex justify-content-between align-items-center mt-4">
-            <h3>Defectos vs Costo por Mandril</h3>
-            <button id="btnVerTodosMixed" class="btn btn-sm btn-outline-secondary">
-                Ver todos
-            </button>
-        </div>
-
-        <canvas id="chartMixedMandril" style="height: 380px;"></canvas>
-
-    </div>
-</div> *@
-
-
-
-
-<div class="row mt-4">
-
-    <!-- Chart 1 -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm border-0 rounded h-100">
-            <div class="card-body">
-                <h5 class="card-title text-center">Top 5 Defectos</h5>
-                <div style="height:260px;">
-                    <canvas id="chartTopDefectos"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Chart 2 -->
-    <div class="col-md-6 mb-4">
-        <div class="card shadow-sm border-0 rounded h-100">
-            <div class="card-body">
-                <h5 class="card-title text-center">Top 5 Mandriles con Más Defectos</h5>
-                <div style="height:260px;">
-                    <canvas id="chartTopMandriles"></canvas>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
-
 <!-- CHART -->
 <div class="card shadow-sm mb-4 border-0">
     <div class="card-body ">
@@ -173,8 +178,28 @@
 @section Scripts{
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/scroll-out/dist/scroll-out.min.js"></script>
 
     <script>
+            
+        let lastY = window.scrollY;
+
+        ScrollOut({
+            onScrolled: function () {
+                const currentY = window.scrollY;
+                const card = document.getElementById("filtrosCard");
+
+                if (currentY > lastY) {
+                    // Bajando → ocultar
+                    card.classList.add("hide");
+                } else {
+                    // Subiendo → mostrar
+                    card.classList.remove("hide");
+                }
+
+                lastY = currentY;
+            }
+        });
 
         /* ============================================
            EVITAR QUE EL DROPDOWN SE CIERRE Y QUE LA VISTA SUBA
@@ -403,6 +428,10 @@
             cargarChartCosto();
         });
 
+        /* ============================================
+           CHART TOP 5 DEFECTOS
+        ============================================ */
+
         let chartTopDefectos = null;
 
         function cargarChartTopDefectos() {
@@ -466,6 +495,10 @@
                 }
             });
         }
+
+        /* ============================================
+           CHART TOP 5 MANDRILES CON MAS DEFECTOS
+        ============================================ */
         
         let chartTopMandriles = null;
 
@@ -528,103 +561,10 @@
             });
         }
 
-        // let chartMixed = null;
-        // let mostrarTodosMixed = false;
-
-        // function cargarChartMixed() {
-
-        //     const fechaInicio = $('#fechaInicioIngFiltro').val();
-        //     const fechaFin = $('#fechaFinIngFiltro').val();
-
-        //     const mandriles = [...document.querySelectorAll(".mandril-check-ing:checked")].map(x => x.value);
-        //     const codigos = [...document.querySelectorAll(".codigo-check-ing:checked")].map(x => x.value);
-        //     const familias = [...document.querySelectorAll(".familia-check-ing:checked")].map(x => x.value);
-
-        //     $.ajax({
-        //         url: '/RegistrodeDefectos/GetDefectosYCostoPorMandril',
-        //         type: 'POST',
-        //         data: { fechaInicio, fechaFin, mandriles, codigos, familias },
-        //         success: function (data) {
-
-        //             // TOP 10 o TODOS
-        //             const dataFiltrada = mostrarTodosMixed ? data : data.slice(0, 20);
-
-        //             const labels = dataFiltrada.map(x => x.mandril);
-        //             const defectos = dataFiltrada.map(x => x.totalDefectos);
-        //             const costos = dataFiltrada.map(x => x.totalCosto);
-
-        //             const ctx = document.getElementById("chartMixedMandril").getContext("2d");
-
-        //             if (!chartMixed) {
-
-        //                 chartMixed = new Chart(ctx, {
-        //                     data: {
-        //                         labels: labels,
-        //                         datasets: [
-        //                             {
-        //                                 type: 'bar',
-        //                                 label: 'Defectos',
-        //                                 data: defectos,
-        //                                 backgroundColor: '#198754',
-        //                                 borderColor: '#145c3a',
-        //                                 borderWidth: 1,
-        //                                 yAxisID: 'yDefectos'
-        //                             },
-        //                             {
-        //                                 type: 'line',
-        //                                 label: 'Costo ($)',
-        //                                 data: costos,
-        //                                 borderColor: '#dc3545',
-        //                                 backgroundColor: '#dc3545',
-        //                                 borderWidth: 2,
-        //                                 pointRadius: 5,
-        //                                 pointBackgroundColor: '#dc3545',
-        //                                 tension: 0.3,
-        //                                 yAxisID: 'yCosto'
-        //                             }
-        //                         ]
-        //                     },
-        //                     options: {
-        //                         responsive: true,
-        //                         maintainAspectRatio: true,
-        //                         scales: {
-        //                             yDefectos: {
-        //                                 type: 'linear',
-        //                                 position: 'left',
-        //                                 beginAtZero: true,
-        //                                 title: { display: true, text: 'Defectos' }
-        //                             },
-        //                             yCosto: {
-        //                                 type: 'linear',
-        //                                 position: 'right',
-        //                                 beginAtZero: true,
-        //                                 title: { display: true, text: 'Costo ($)' },
-        //                                 grid: { drawOnChartArea: false }
-        //                             }
-        //                         }
-        //                     }
-        //                 });
-
-        //             } else {
-        //                 chartMixed.data.labels = labels;
-        //                 chartMixed.data.datasets[0].data = defectos;
-        //                 chartMixed.data.datasets[1].data = costos;
-        //                 chartMixed.update();
-        //             }
-        //         }
-        //     });
-        // }
-
-        // $("#btnVerTodosMixed").on("click", function () {
-        //     mostrarTodosMixed = !mostrarTodosMixed;
-        //     $(this).text(mostrarTodosMixed ? "Ver Top 10" : "Ver todos");
-        //     cargarChartMixed();
-        // });
-
         /* ============================================
            EVENTOS
         ============================================ */
-               $("#fechaInicioIngFiltro, #fechaFinIngFiltro").on("change", function () {
+        $("#fechaInicioIngFiltro, #fechaFinIngFiltro").on("change", function () {
 
             cargarMandriles();
             cargarCodigos();
@@ -633,9 +573,7 @@
             cargarChartDefectos();
             cargarChartCosto();
             cargarChartTopDefectos();
-             cargarChartTopMandriles(); // 👈 NUEVO
-
-            // cargarChartMixed();
+            cargarChartTopMandriles();
         });
 
 
@@ -644,9 +582,7 @@
             cargarChartDefectos();
             cargarChartCosto();
             cargarChartTopDefectos();
-            cargarChartTopMandriles(); // 👈 NUEVO
-
-            // cargarChartMixed();
+            cargarChartTopMandriles(); 
         });
 
 
@@ -664,9 +600,7 @@
                 cargarChartDefectos();
                 cargarChartCosto();
                 cargarChartTopDefectos();
-                cargarChartTopMandriles(); // 👈 NUEVO
-
-                // cargarChartMixed();
+                cargarChartTopMandriles(); 
             }
         });
 

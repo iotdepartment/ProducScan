@@ -35,10 +35,10 @@ namespace ProducScan.Controllers
                     barcode = m.Barcode,
                     kanban = m.Kanban,
                     estacion = m.Estacion,
-
-                    // 👇 NUEVOS CAMPOS
                     familia = m.Familia,
-                    proceso = m.Proceso
+                    proceso = m.Proceso,
+                      pesomin = m.PesoMin,
+                    pesomax = m.PesoMax
                 })
                 .ToListAsync();
 
@@ -104,6 +104,8 @@ namespace ProducScan.Controllers
                 existing.Estacion = mandril.Estacion;
                 existing.Familia = mandril.Familia;
                 existing.Proceso = mandril.Proceso;
+                existing.PesoMin = mandril.PesoMin;
+                existing.PesoMax = mandril.PesoMax;
                 existing.Area = "INSPECCION";
 
                 await _context.SaveChangesAsync();
