@@ -45,8 +45,8 @@
         <form method="get">
             <div class="row mb-3 d-flex justify-content-start">
                 <div class="col-md-6 col-lg-3">
-                    <h6 for="fecha" class="fw-bold">Seleccionar fecha:</h6>
-                    <input type="date" id="fecha" name="fecha" class="form-control w-100 rounded-pill shadow-sm"
+                    <h6 for="fecha" class="fw-bold">Fecha:</h6>
+                    <input type="date" id="fecha" name="fecha" class="form-control w-100 rounded-pill"
                            value="@ViewBag.FechaSeleccionada"
                            max="@TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)")).ToString("yyyy-MM-dd")" />
                 </div>

@@ -3,11 +3,20 @@
     ViewData["Subtitle"] = "Mandriles registrados en el Sistema de escaneo de Inspección.";
 }
 
-<button class="btn btn-success mb-3 rounded rounded-pill" data-bs-toggle="modal" data-bs-target="#createEditModal"
-        onclick="openCreateModal()">
-    <i class="bi bi-plus-circle"></i>
-    Nuevo Mandril
-</button>
+
+
+<div class="row">
+    <div class="col-3">
+
+        <button class="btn btn-success mb-3 rounded rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#createEditModal"
+                onclick="openCreateModal()">
+            <i class="bi bi-plus-circle"></i>
+            Nuevo Mandril
+        </button>
+
+
+    </div>
+</div>
 
 <table id="mandrilesTable" class="table table-striped table-bordered">
     <thead class="table-dark">
@@ -22,7 +31,7 @@
             <th>Proceso</th>     
             <th>Peso Min</th>
             <th>Peso Max</th>
-            <th>Acciones</th>
+            <th class="text-center">Acciones</th>
 
         </tr>
     </thead>
@@ -75,45 +84,58 @@
             /* ============================
                DATATABLE
             ============================ */
-            table = $('#mandrilesTable').DataTable({
-                ajax: {
-                    url: "/Mandriles/GetMandriles",
-                    type: "GET",
-                    datatype: "json"
-                },
-                columns: [
-                    { data: "mandrilNombre" },
-                    { data: "centrodeCostos" },
-                    { data: "cantidaddeEmpaque" },
-                    { data: "barcode" },
-                    { data: "kanban" },
-                    { data: "estacion" },
-                    { data: "familia" },
-                    { data: "proceso" },
-                    { data: "pesomin" },
-                    { data: "pesomax" },
-                    {
-                        data: "id",
-                        render: function (data, type, row) {
-                            return `
-                                <button class="btn btn-sm btn-warning rounded-pill"
-                                    onclick="openEditModal(${data}, '${row.mandrilNombre}', '${row.centrodeCostos}', '${row.cantidaddeEmpaque}', '${row.barcode}', '${row.kanban}', '${row.estacion ?? ""}', '${row.familia ?? ""}', '${row.proceso ?? ""}', '${row.pesomin ?? ""}', '${row.pesomax ?? ""}')">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </button>
+                    table = $('#mandrilesTable').DataTable({
+            ajax: {
+                url: "/Mandriles/GetMandriles",
+                type: "GET",
+                datatype: "json"
+            },
+            columns: [
+                { data: "mandrilNombre" },
+                { data: "centrodeCostos" },
+                { data: "cantidaddeEmpaque" },
+                { data: "barcode" },
+                { data: "kanban" },
+                { data: "estacion" },
+                { data: "familia" },
+                { data: "proceso" },
+                { data: "pesomin" },
+                { data: "pesomax" },
+                {
+                    data: "id",
+                    render: function (data, type, row) {
+                        return `
+                            <button class="btn btn-sm btn-warning rounded-pill"
+                                onclick="openEditModal(${data},
+                                                      '${row.mandrilNombre}',
+                                                      '${row.centrodeCostos}',
+                                                      '${row.cantidaddeEmpaque}',
+                                                      '${row.barcode}',
+                                                      '${row.kanban}',
+                                                      '${row.estacion ?? ""}',
+                                                      '${row.familia ?? ""}',
+                                                      '${row.proceso ?? ""}',
+                                                      '${row.pesomin ?? ""}',
+                                                      '${row.pesomax ?? ""}')">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
 
-                                <button class="btn btn-sm btn-danger rounded-pill"
-                                    onclick="openDeleteModal(${data})">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
-                            `;
-                        }
+                            <button class="btn btn-sm btn-danger rounded-pill"
+                                onclick="openDeleteModal(${data})">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        `;
                     }
-                ],
-                pageLength: 10,
-                lengthMenu: [10, 20, 50, 100],
-                ordering: false,
-                language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" }
-            });
+                }
+            ],
+            columnDefs: [
+                { className: "text-center", targets: 10 }
+            ],
+            pageLength: 10,
+            lengthMenu: [10, 20, 50, 100],
+            ordering: false,
+            language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" }
+        });
 
             /* ============================
                SUBMIT CREATE / EDIT

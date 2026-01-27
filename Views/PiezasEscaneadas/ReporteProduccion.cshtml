@@ -17,29 +17,33 @@
 
 @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
 {
-    <div class="row">
+    <div class="row g-3 align-items-center">
+
         @if (User.IsInRole("Admin"))
         {
-            <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-2 mb-3">
-                <button class="btn btn-danger rounded-pill" id="btnNuevoDefecto">
+            <div class="col-12 col-md-6 col-lg-4 col-xxl-2">
+                <button class="btn btn-danger rounded-pill w-100" id="btnNuevoDefecto">
                     + Nuevo Defecto
                 </button>
             </div>
         }
 
-        <div class="col-12 col-sm-4 col-md-4 col-lg-4 col-xxl-2 mb-3">
-            <button class="btn btn-success rounded-pill" id="btnNuevo">+ Nuevo Registro</button>
+        <div class="col-12 col-md-6 col-lg-4 col-xxl-2">
+            <button class="btn btn-success rounded-pill w-100" id="btnNuevo">
+                + Nuevo Registro
+            </button>
         </div>
 
-        <!-- 👇 aquí el cambio -->
-        <div class="col mb-3 d-flex">
+        <!-- Botón Excel alineado a la derecha en pantallas grandes -->
+        <div class="col-12 col-md-6 col-lg-4 col-xxl-8 d-flex">
             <a asp-action="ExportProduccionDiaLaboral"
                asp-route-fecha="@ViewBag.FechaSeleccionada"
                asp-route-turno="@ViewBag.TurnoSeleccionado"
-               class="btn btn-outline-success rounded-pill ms-auto">
+               class="btn btn-outline-success rounded-pill ms-auto px-xxl-5">
                 <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
             </a>
         </div>
+
     </div>
 
     <!-- Modal de Producción -->
@@ -63,13 +67,13 @@
 }
 <form method="get" class="mb-4">
     <div class="row">
-        <div class="col-md-3">
+        <div class="col-md-4 col-xl-2  mb-3">
             <strong>Fecha</strong>
             <input type="date" name="fecha" class="form-control rounded-pill"
                    value="@ViewBag.FechaSeleccionada"
                    max="@TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)")).ToString("yyyy-MM-dd")" />
         </div>
-        <div class="col-md-2">
+        <div class="col-md-4 col-xl-2 mb-3">
             <strong>Turno</strong>
             <select name="turno" class="form-control rounded-pill">
                 <option value="Todos" selected="@(string.IsNullOrEmpty(Model.Turno) || Model.Turno == "Todos")">Todos</option>
@@ -78,7 +82,7 @@
                 <option value="3" selected="@(Model.Turno == "3")">3</option>
             </select>
         </div>
-        <div class="col-md-2">
+        <div class="col-md-4 col-xl-2 mb-3">
             <strong>Mesa</strong>
             <select name="mesa" class="form-control rounded-pill">
                 <option value="">Todas</option>
@@ -96,12 +100,11 @@
             </select>
         </div>
 
-        <div class="col-md-2 d-flex align-items-end">
-            <button type="submit" class="btn btn-primary w-100 rounded-pill">Filtrar <i class="bi bi-search"></i></button>
+        <div class="col-md-12 col-xl-2 d-flex align-items-end mb-3">
+            <button type="submit" class="btn btn-primary w-100 rounded-pill"><i class="bi bi-search"></i> Filtrar</button>
         </div>
 
-        <div class="col-md-3">
-            
+        <div class="col-12 col-md-6 col-lg-3 col-xl-4 mb-3">
             <strong>Buscar:</strong>
             <input type="text" id="busqueda" class="rounded-pill form-control" placeholder="Buscar por TM o mesa">
         </div>

@@ -8,24 +8,25 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
 
 <!-- BOTÓN EXCEL -->
-<div class="row mb-4">
-    <div class="d-flex justify-content-between">
+<div class="row mb-4 justify-content-between">
+    <div class="col-3">
 
         <!-- Izquierda -->
-        <button class="btn btn-success rounded-pill"
+        <button class="btn btn-success rounded-pill w-100"
                 data-bs-toggle="modal"
                 data-bs-target="#modalExportarExcel">
             <i class="bi bi-file-earmark-excel"></i> Generar Reporte Excel
         </button>
-
+    </div>
+    <div class="col-3 justify-content-end d-flex">
         <!-- Derecha -->
         <a asp-controller="RegistrodeDefectos"
            asp-action="ReporteIng"
            class="btn btn-warning rounded-pill">
             <i class="bi bi-cone"></i> Reporte de Ingeniería
         </a>
-
-    </div>
+            </div>
+   
 </div>
 
 <!-- FILTROS -->

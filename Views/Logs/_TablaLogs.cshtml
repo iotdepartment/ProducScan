@@ -7,8 +7,8 @@
             <th>Fecha</th>
             <th>Usuario</th>
             <th>Acción</th>
-            <th>Nivel</th>
-            <th>Categoría</th>
+            <th class="text-center">Nivel</th>
+            <th class="text-center">Categoría</th>
         </tr>
     </thead>
     <tbody>
@@ -23,27 +23,27 @@
                 <td>@log.Fecha.ToString("dd/MM/yyyy HH:mm:ss")</td>
                 <td>@log.Usuario</td>
                 <td>@log.Accion</td>
-                <td>
+                <td class="text-center">
                     @switch (log.Nivel)
                     {
                         case "Info":
-                            @:<span class="badge bg-primary">Info</span>
+                            @:<span class="badge bg-primary rounded-pill">Info</span>
                             break;
                         case "Warning":
-                            @:<span class="badge bg-warning">Warning</span>
+                            @:<span class="badge bg-warning rounded-pill">Warning</span>
                             break;
                         case "Error":
-                            @:<span class="badge bg-danger">Error</span>
+                            @:<span class="badge bg-danger rounded-pill">Error</span>
                             break;
                         case "Critical":
-                            @:<span class="badge bg-dark">Critical</span>
+                            @:<span class="badge bg-dark rounded-pill">Critical</span>
                             break;
                         default:
-                            @:<span class="badge bg-success">@log.Nivel</span>
+                            @:<span class="badge bg-success rounded-pill">@log.Nivel</span>
                             break;
                     }
                 </td>
-                <td>@log.Categoria</td>
+                <td class="text-center">@log.Categoria</td>
             </tr>
         }
     </tbody>

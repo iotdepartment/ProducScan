@@ -4,11 +4,20 @@
      ViewData["Subtitle"] = "Team Members registrados en el Sistema de escaneo de Inspección.";
 }
 
-<div class="d-flex justify-content-between mb-3">
-    <button class="btn btn-primary rounded-pill" id="btnNuevo">
-        <i class="bi bi-person-plus"></i> Nuevo Usuario
-    </button>
+
+
+<div class="row">
+    <div class="col-3">
+
+            <button class="btn btn-success rounded-pill w-100 mb-3" id="btnNuevo">
+                <i class="bi bi-person-plus"></i> Nuevo Usuario
+            </button>
+
+
+
+    </div>
 </div>
+
 
 <div id="tablaUsuariosContainer">
     @await Html.PartialAsync("_TablaUsuarios", Model)
