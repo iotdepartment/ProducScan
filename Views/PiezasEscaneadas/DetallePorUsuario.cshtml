@@ -44,6 +44,7 @@
                 <th>Turno</th>
                 <th>Mandrel</th>
                 <th>Piezas</th>
+      @*           <th>Piezas/min</th> <!-- 👈 Nueva columna --> *@
                 @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                 {
                     <th>Acciones</th>
@@ -61,22 +62,20 @@
                     <td>@item.Turno</td>
                     <td>@item.Mandrel</td>
                     <td>@item.NumeroDePiezas</td>
-
+                   @*  <td>@item.PiezasPorMinuto</td> <!-- 👈 Mostrar el cálculo --> *@
                     @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                     {
                         <td>
+                            <button class="btn btn-warning btn-sm btnEditar rounded-circle"
+                                    data-id="@item.Id">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
 
-                        <button class="btn btn-warning btn-sm btnEditar rounded-circle"
-                                data-id="@item.Id">
-                            <i class="bi bi-pencil-fill"></i>
-                        </button>
-
-                        <button class="btn btn-danger btn-sm btnEliminar rounded-circle"
-                                data-id="@item.Id">
-                            <i class="bi bi-trash-fill"></i>
-                        </button>
-
-                    </td>
+                            <button class="btn btn-danger btn-sm btnEliminar rounded-circle"
+                                    data-id="@item.Id">
+                                <i class="bi bi-trash-fill"></i>
+                            </button>
+                        </td>
                     }
                 </tr>
             }

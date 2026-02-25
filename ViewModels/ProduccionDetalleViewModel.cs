@@ -5,7 +5,6 @@ namespace ProducScan.ViewModels
 {
     public class ProduccionDetalleViewModel
     {
-        
         public int Id { get; set; }
         public DateOnly Fecha { get; set; }
         public TimeOnly Hora { get; set; }
@@ -18,6 +17,7 @@ namespace ProducScan.ViewModels
         public DateTime FechaLaboral { get; set; } // calculada con ProduccionHelper
         public DateOnly FechaReal { get; set; }    // la que viene de la BD
 
+        // 👇 Nueva propiedad para mostrar la velocidad de producción
+        public double PiezasPorMinuto { get; set; }
     }
-
 }

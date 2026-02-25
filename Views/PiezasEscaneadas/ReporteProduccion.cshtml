@@ -17,25 +17,33 @@
 
 @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
 {
-    <div class="row g-3 align-items-center">
+    <div class="row g-3 align-items-stretch">
 
-        @if (User.IsInRole("Admin"))
-        {
-            <div class="col-12 col-md-6 col-lg-4 col-xxl-2">
-                <button class="btn btn-danger rounded-pill w-100" id="btnNuevoDefecto">
-                    + Nuevo Defecto
-                </button>
+        <!-- Grupo de botones de creación -->
+        <div class="col-12 col-md-6 col-lg-4 col-xxl-4">
+            <div class="btn-group w-100">
+
+                @if (User.IsInRole("Admin"))
+                {
+                    <button class="btn btn-danger rounded-start-pill" id="btnNuevoDefecto">
+                        + Nuevo Defecto
+                    </button>
+                    <button class="btn btn-success rounded-end-pill" id="btnNuevo">
+                        + Nuevo Registro
+                    </button>
+                }
+                else if (User.IsInRole("Editor"))
+                {
+                    <button class="btn btn-success rounded-pill w-100" id="btnNuevo">
+                        + Nuevo Registro
+                    </button>
+                }
+
             </div>
-        }
-
-        <div class="col-12 col-md-6 col-lg-4 col-xxl-2">
-            <button class="btn btn-success rounded-pill w-100" id="btnNuevo">
-                + Nuevo Registro
-            </button>
         </div>
 
-        <!-- Botón Excel alineado a la derecha en pantallas grandes -->
-        <div class="col-12 col-md-6 col-lg-4 col-xxl-8 d-flex">
+        <!-- Botón Excel alineado a la derecha -->
+        <div class="col-12 col-md-6 col-lg-8 col-xxl-8 d-flex">
             <a asp-action="ExportProduccionDiaLaboral"
                asp-route-fecha="@ViewBag.FechaSeleccionada"
                asp-route-turno="@ViewBag.TurnoSeleccionado"

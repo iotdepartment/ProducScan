@@ -203,8 +203,16 @@ public class PiezasEscaneadasController : Controller
 
             int metaMesa = mesaInfo?.Meta ?? 1800;
 
-            // --- Calcular meta proporcional ---
-            int duracionTurnoMin = 8 * 60;
+            // --- Duración del turno en minutos (ajustado) ---
+            int duracionTurnoMin = turnoSeleccionado switch
+            {
+                "1" => (int)(7.2 * 60), // 432 min
+                "2" => (int)(7.0 * 60), // 420 min
+                "3" => (int)(6.2 * 60), // 372 min
+                _ => 480 // fallback: 8 horas
+            };
+
+            // --- Inicio del turno ---
             TimeSpan inicioTurno = turnoSeleccionado == "1" ? new TimeSpan(7, 0, 0) :
                                    turnoSeleccionado == "2" ? new TimeSpan(15, 45, 0) :
                                    new TimeSpan(23, 50, 0);
@@ -216,7 +224,6 @@ public class PiezasEscaneadasController : Controller
                 // ✅ Turno 3 cruza medianoche → ajustar cálculo
                 if (ahora.TimeOfDay < inicioTurno)
                 {
-                    // Ejemplo: 00:16 → 24:16
                     minutosTranscurridos = (ahora.TimeOfDay + TimeSpan.FromHours(24) - inicioTurno).TotalMinutes;
                 }
                 else
@@ -235,20 +242,23 @@ public class PiezasEscaneadasController : Controller
 
             int metaEsperada = (int)((metaMesa / (double)duracionTurnoMin) * minutosTranscurridos);
 
+
+
             // --- Estado y color ---
             string estado;
             string colorClass;
-            if (total >= metaEsperada + 200)
+
+            if (total >= metaEsperada + 500)
             {
                 estado = "Sobreproducción";
                 colorClass = "bg-danger text-white";
             }
-            else if (total >= metaEsperada + 100)
+            else if (total >= metaEsperada - 200 && total <= metaEsperada + 200)
             {
                 estado = "En meta";
                 colorClass = "bg-green-500 text-white";
             }
-            else if (total >= metaEsperada - 150)
+            else if (total >= metaEsperada - 400)
             {
                 estado = "Cerca de la meta";
                 colorClass = "bg-yellow-400 text-black";
@@ -258,7 +268,6 @@ public class PiezasEscaneadasController : Controller
                 estado = "Fuera de meta";
                 colorClass = "bg-red-300 text-black";
             }
-
             var usuario = usuarios.FirstOrDefault(x => x.Nombre == u.TM);
             string numeroEmpleadoBD = usuario?.NumerodeEmpleado ?? "0000";
             string numeroEmpleadoFoto = int.Parse(numeroEmpleadoBD).ToString();
@@ -278,7 +287,7 @@ public class PiezasEscaneadasController : Controller
             var ultimoMandril = produccionesRaw
                 .Where(r => r.NuMesa == u.Mesa && r.Tm == u.TM)
                 .OrderByDescending(r => r.Fecha.ToDateTime(r.Hora))
-                .Select(r => r.Mandrel) // asegúrate que tu entidad tiene este campo
+                .Select(r => r.Mandrel)
                 .FirstOrDefault() ?? "N/A";
 
             return new InspeccionTMViewModel
@@ -401,13 +410,19 @@ public class PiezasEscaneadasController : Controller
 
             int metaMesa = mesaInfo?.Meta ?? 1800;
 
-            // --- Calcular meta proporcional ---
-            int duracionTurnoMin = 8 * 60;
+            // --- Duración del turno en minutos (ajustado) ---
+            int duracionTurnoMin = turnoSeleccionado switch
+            {
+                "1" => (int)(7.2 * 60), // 432 min
+                "2" => (int)(7.0 * 60), // 420 min
+                "3" => (int)(6.2 * 60), // 372 min
+                _ => 480 // fallback: 8 horas
+            };
+
+            // --- Inicio del turno ---
             TimeSpan inicioTurno = turnoSeleccionado == "1" ? new TimeSpan(7, 0, 0) :
                                    turnoSeleccionado == "2" ? new TimeSpan(15, 45, 0) :
                                    new TimeSpan(23, 50, 0);
-
-
 
             double minutosTranscurridos;
 
@@ -416,7 +431,6 @@ public class PiezasEscaneadasController : Controller
                 // ✅ Turno 3 cruza medianoche → ajustar cálculo
                 if (ahora.TimeOfDay < inicioTurno)
                 {
-                    // Ejemplo: 00:16 → 24:16
                     minutosTranscurridos = (ahora.TimeOfDay + TimeSpan.FromHours(24) - inicioTurno).TotalMinutes;
                 }
                 else
@@ -433,23 +447,25 @@ public class PiezasEscaneadasController : Controller
             if (minutosTranscurridos < 0) minutosTranscurridos = 0;
             if (minutosTranscurridos > duracionTurnoMin) minutosTranscurridos = duracionTurnoMin;
 
-
             int metaEsperada = (int)((metaMesa / (double)duracionTurnoMin) * minutosTranscurridos);
+
+
 
             // --- Estado y color ---
             string estado;
             string colorClass;
-            if (total >= metaEsperada + 200)
+
+            if (total >= metaEsperada + 500)
             {
                 estado = "Sobreproducción";
                 colorClass = "bg-danger text-white";
             }
-            else if (total >= metaEsperada + 100)
+            else if (total >= metaEsperada - 200 && total <= metaEsperada + 200)
             {
                 estado = "En meta";
                 colorClass = "bg-green-500 text-white";
             }
-            else if (total >= metaEsperada - 150)
+            else if (total >= metaEsperada - 400)
             {
                 estado = "Cerca de la meta";
                 colorClass = "bg-yellow-400 text-black";
@@ -1354,6 +1370,53 @@ public class PiezasEscaneadasController : Controller
             })
             .ToList();
 
+        // --- Calcular piezas/minuto entre registros ---
+        ProduccionDetalleViewModel anterior = null;
+
+        // Definir inicio del turno según el turno del primer registro
+        string turnoSeleccionado = registros.FirstOrDefault()?.Turno ?? "1";
+        TimeSpan inicioTurno = turnoSeleccionado switch
+        {
+            "1" => new TimeSpan(7, 0, 0),
+            "2" => new TimeSpan(15, 45, 0),
+            "3" => new TimeSpan(23, 50, 0),
+            _ => new TimeSpan(7, 0, 0)
+        };
+
+        foreach (var r in registros)
+        {
+            int piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0;
+            double piezasPorMinuto = 0;
+
+            if (anterior != null)
+            {
+                // Tiempo entre registros
+                var tiempoAnterior = anterior.FechaReal.ToDateTime(anterior.Hora);
+                var tiempoActual = r.FechaReal.ToDateTime(r.Hora);
+
+                var minutos = (tiempoActual - tiempoAnterior).TotalMinutes;
+
+                if (minutos > 0)
+                    piezasPorMinuto = Math.Round(piezas / minutos, 2);
+            }
+            else
+            {
+                // Primer registro → calcular desde inicio del turno
+                var tiempoActual = r.FechaReal.ToDateTime(r.Hora);
+                var minutos = (tiempoActual.TimeOfDay - inicioTurno).TotalMinutes;
+
+                // Ajustar turno 3 que cruza medianoche
+                if (turnoSeleccionado == "3" && minutos < 0)
+                    minutos += 24 * 60;
+
+                if (minutos > 0)
+                    piezasPorMinuto = Math.Round(piezas / minutos, 2);
+            }
+
+            r.PiezasPorMinuto = piezasPorMinuto;
+            anterior = r;
+        }
+
         ViewBag.FechaLaboral = fechaFiltro.ToString("yyyy-MM-dd");
         ViewBag.TotalPiezas = registros.Sum(d => int.TryParse(d.NumeroDePiezas, out int cantidad) ? cantidad : 0);
         ViewBag.Usuario = usuario;
@@ -1391,11 +1454,13 @@ public class PiezasEscaneadasController : Controller
             Hora = r.Hora.ToString(@"hh\:mm"),
             Mandrel = r.Mandrel,
             Turno = r.Turno,
-            Piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0
+            Piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0,
+            PiezasPorMinuto = r.PiezasPorMinuto
         }).ToList();
 
         return View("DetallePorUsuario", registros);
     }
+
     //PRODUCCION POR MESA - TURNO - FECHA
     public IActionResult DetalleProduccionMesa(string fecha, string mesa, string? turno)
     {
