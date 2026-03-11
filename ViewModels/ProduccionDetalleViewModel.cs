@@ -18,6 +18,6 @@ namespace ProducScan.ViewModels
         public DateOnly FechaReal { get; set; }    // la que viene de la BD
 
         // 👇 Nueva propiedad para mostrar la velocidad de producción
-        public double PiezasPorMinuto { get; set; }
+        public double SegundosPorPieza { get; set; }
     }
 }

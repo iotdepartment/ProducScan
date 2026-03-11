@@ -1370,7 +1370,7 @@ public class PiezasEscaneadasController : Controller
             })
             .ToList();
 
-        // --- Calcular piezas/minuto entre registros ---
+        // --- Calcular segundos por pieza entre registros ---
         ProduccionDetalleViewModel anterior = null;
 
         // Definir inicio del turno según el turno del primer registro
@@ -1386,34 +1386,37 @@ public class PiezasEscaneadasController : Controller
         foreach (var r in registros)
         {
             int piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0;
-            double piezasPorMinuto = 0;
+            double segundosPorPieza = 0;
 
-            if (anterior != null)
+            if (piezas > 0)
             {
-                // Tiempo entre registros
-                var tiempoAnterior = anterior.FechaReal.ToDateTime(anterior.Hora);
-                var tiempoActual = r.FechaReal.ToDateTime(r.Hora);
+                if (anterior != null)
+                {
+                    // Tiempo entre registros
+                    var tiempoAnterior = anterior.FechaReal.ToDateTime(anterior.Hora);
+                    var tiempoActual = r.FechaReal.ToDateTime(r.Hora);
 
-                var minutos = (tiempoActual - tiempoAnterior).TotalMinutes;
+                    var segundos = (tiempoActual - tiempoAnterior).TotalSeconds;
 
-                if (minutos > 0)
-                    piezasPorMinuto = Math.Round(piezas / minutos, 2);
+                    if (segundos > 0)
+                        segundosPorPieza = Math.Round(segundos / piezas, 2);
+                }
+                else
+                {
+                    // Primer registro → calcular desde inicio del turno
+                    var tiempoActual = r.FechaReal.ToDateTime(r.Hora);
+                    var segundos = (tiempoActual.TimeOfDay - inicioTurno).TotalSeconds;
+
+                    // Ajustar turno 3 que cruza medianoche
+                    if (turnoSeleccionado == "3" && segundos < 0)
+                        segundos += 24 * 3600;
+
+                    if (segundos > 0)
+                        segundosPorPieza = Math.Round(segundos / piezas, 2);
+                }
             }
-            else
-            {
-                // Primer registro → calcular desde inicio del turno
-                var tiempoActual = r.FechaReal.ToDateTime(r.Hora);
-                var minutos = (tiempoActual.TimeOfDay - inicioTurno).TotalMinutes;
 
-                // Ajustar turno 3 que cruza medianoche
-                if (turnoSeleccionado == "3" && minutos < 0)
-                    minutos += 24 * 60;
-
-                if (minutos > 0)
-                    piezasPorMinuto = Math.Round(piezas / minutos, 2);
-            }
-
-            r.PiezasPorMinuto = piezasPorMinuto;
+            r.SegundosPorPieza = segundosPorPieza; // 👈 Nueva propiedad en tu ViewModel
             anterior = r;
         }
 
@@ -1455,7 +1458,7 @@ public class PiezasEscaneadasController : Controller
             Mandrel = r.Mandrel,
             Turno = r.Turno,
             Piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0,
-            PiezasPorMinuto = r.PiezasPorMinuto
+            SegundosPorPieza = r.SegundosPorPieza // 👈 incluir en la vista
         }).ToList();
 
         return View("DetallePorUsuario", registros);

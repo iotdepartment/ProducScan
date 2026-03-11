@@ -58,11 +58,6 @@
     <div class="modal-content" id="modalContent">
 
     </div>
-    
-    
-    <div class="mb-3">
-      
-    </div>
 
 
     @if (User.IsInRole("Admin"))
@@ -136,31 +131,22 @@
 </div>
 @section Scripts {
 
-
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
-    <!-- Asegúrate de tener Bootstrap JS bundle cargado en tu layout:-->
-
 
     <script>
 
 
-                $(document).ready(function () {
+        $(document).ready(function () {
             $("#busqueda").on("keyup", function () {
                 var value = $(this).val().toLowerCase();
 
-                // Recorre cada item del acordeón
                 $("#reporteAccordion .accordion-item").filter(function () {
-                    // Tomamos todo el texto del encabezado y del cuerpo
                     var text = $(this).text().toLowerCase();
-
-                    // Mostrar/ocultar según si contiene el texto buscado
                     $(this).toggle(text.indexOf(value) > -1);
                 });
             });
         });
-
-        // Se dispara cuando cualquiera de los dos modales se muestra
         $(document).on("shown.bs.modal", "#createProduccModal, #createDefectoModal", function () {
             const $modal = $(this);
 
@@ -172,7 +158,7 @@
                         $.getJSON("/PiezasEscaneadas/BuscarTM", { term: request.term }, response);
                     },
                     minLength: 2,
-                    appendTo: $modal, // asegura que el menú quede dentro del modal
+                    appendTo: $modal, 
                 });
             }
 
@@ -223,7 +209,7 @@
             });
         });
 
-         function showToast(type, message) {
+        function showToast(type, message) {
             var toastEl = document.getElementById('liveToast');
             var toastBody = document.getElementById('toastMessage');
 
@@ -239,7 +225,7 @@
         }
 
         // Manejo genérico de formularios AJAX
-                function handleAjaxForm(formSelector) {
+        function handleAjaxForm(formSelector) {
           $(document).on("submit", formSelector, function (e) {
             e.preventDefault();
             const $form = $(this);
@@ -285,6 +271,7 @@
         // Inicializar para ambos formularios
         handleAjaxForm("#formProduccion");
         handleAjaxForm("#formDefecto");
+
         document.addEventListener("DOMContentLoaded", function () {
         const rows = document.querySelectorAll("[data-bs-toggle='collapse']");
         rows.forEach(row => {

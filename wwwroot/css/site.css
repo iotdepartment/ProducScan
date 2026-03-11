@@ -1,4 +1,4 @@
-html {
+﻿html {
   font-size: 14px;
 }
 
@@ -28,4 +28,39 @@ body {
 
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
   text-align: start;
+}
+
+
+/* Degradado azul → verde */
+.bg-gradient-blue-green {
+    background: linear-gradient(to right, #0d6efd, #20c997);
+    color: white;
+}
+
+/* Degradado negro → gris */
+.bg-gradient-dark {
+    background: linear-gradient(to right, #000000, #444444);
+    color: white;
+}
+
+/* Degradado rojo → naranja */
+.bg-gradient-red-orange {
+    background: linear-gradient(to right, #dc3545, #fd7e14);
+    color: white;
+}
+
+/* Botón degradado corporativo */
+.btn-gradient {
+    background: linear-gradient(to right, #0d6efd, #6610f2);
+    border: none;
+    color: white;
+}
+
+.btn-gradient:hover {
+    background: linear-gradient(to right, #6610f2, #0d6efd);
+}
+
+.bg.bg-gradient-black-white {
+    background: linear-gradient(178deg, rgba(130, 130, 130, 1) 0%, rgba(255, 255, 255, 1) 75%);
+    color: white;
 }

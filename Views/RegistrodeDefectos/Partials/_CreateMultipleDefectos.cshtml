@@ -1,0 +1,75 @@
+﻿@model ProducScan.Models.RegistrodeDefecto
+
+<div class="modal fade" id="createMultipleDefectosModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form asp-action="CreateMultiple" asp-controller="RegistrodeDefectos" method="post" id="formMultipleDefectos">
+                @Html.AntiForgeryToken()
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">CREAR VARIOS DEFECTOS</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Campos comunes -->
+                    <div class="mb-3">
+                        <label asp-for="Fecha" class="form-label"></label>
+                        <input asp-for="Fecha" type="date" class="form-control" max="@DateTime.Now.ToString("yyyy-MM-dd")" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Hora" class="form-label"></label>
+                        <input asp-for="Hora" type="time" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mesa</label>
+                        <select asp-for="NuMesa" class="form-control" required>
+                            <option value="">Seleccione una mesa</option>
+                            @foreach (var m in (IEnumerable<string>)ViewBag.Mesas)
+                            {
+                                <option value="@m">@m</option>
+                            }
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Team Member</label>
+                        <input asp-for="Tm" type="text" class="form-control tm-input" placeholder="Buscar TM..." required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Mandril</label>
+                        <input asp-for="Mandrel" type="text" class="form-control mandrel-input" placeholder="Buscar Mandril..." required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label>Código de Defecto</label>
+                        <select id="ddlDefecto" name="CodigodeDefecto" class="form-select" required>
+                            <option value="">-- Selecciona un defecto --</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Turno" class="form-label"></label>
+                        <select asp-for="Turno" class="form-control" required>
+                            @foreach (var t in (IEnumerable<string>)ViewBag.Turnos)
+                            {
+                                <option value="@t">@t</option>
+                            }
+                        </select>
+                    </div>
+
+                    <!-- Cantidad de registros -->
+                    <div class="mb-3">
+                        <label class="form-label">Cantidad de piezas (registros)</label>
+                        <input name="Cantidad" type="number" class="form-control" min="1" required />
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-danger">Guardar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

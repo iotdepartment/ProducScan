@@ -44,7 +44,7 @@
                 <th>Turno</th>
                 <th>Mandrel</th>
                 <th>Piezas</th>
-                <th>Piezas/min</th> 
+                <th>Segundos/Pieza</th> 
                 @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                 {
                     <th>Acciones</th>
@@ -62,7 +62,7 @@
                     <td>@item.Turno</td>
                     <td>@item.Mandrel</td>
                     <td>@item.NumeroDePiezas</td>
-                    <td>@item.PiezasPorMinuto</td>
+                    <td>@item.SegundosPorPieza</td>
                     @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                     {
                         <td>

@@ -6,21 +6,14 @@
 }
 @using ProducScan.Helpers
 @{
-    // Usa la zona horaria de Matamoros
-    var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-    var fechaActual = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+    var fechaLocal = TimeZoneHelper.GetLocalTime();
 
-    var horaActual = fechaActual.TimeOfDay;
+    Console.WriteLine($"Hora local del sistema: {fechaLocal}");
+    Console.WriteLine($"Offset actual: {fechaLocal.Offset}");
 
-    string turnoActual;
-    if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-        turnoActual = "Turno 1";
-    else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-        turnoActual = "Turno 2";
-    else
-        turnoActual = "Turno 3";
+    string turnoActual = TimeZoneHelper.GetTurno(fechaLocal);
+    Console.WriteLine($"Turno actual: {turnoActual}");
 }
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -43,9 +36,9 @@
             transition: width 0.3s;
         }
 
-            #sidebarMenu.collapsed {
-                width: 70px;
-            }
+        #sidebarMenu.collapsed {
+            width: 70px;
+        }
 
         #mainContent {
             margin-left: 240px;
@@ -89,12 +82,12 @@
             transition: all 0.3s ease;
         }
 
-            /* Desactiva transiciones cuando tenga la clase no-transition */
-            #sidebarMenu.no-transition {
-                transition: none !important;
-            }
+        /* Desactiva transiciones cuando tenga la clase no-transition */
+        #sidebarMenu.no-transition {
+            transition: none !important;
+        }
 
-        /* 🔥 FIX: Centrar contenido cuando NO hay sidebar (móvil) */
+        /* Centrar contenido cuando NO hay sidebar (móvil) */
         @@media (max-width: 768px) {
             #mainContent
 
@@ -180,15 +173,15 @@
             <!-- Sidebar fijo solo en escritorio -->
             <nav id="sidebarMenu" class="d-none d-md-flex flex-column bg-light border-end vh-100 position-fixed">
                 <!-- Botón hamburguesa dentro del sidebar (escritorio) -->
-            <button id="toggleSidebar" class="btn mb-3 d-flex justify-content-sm-end justify-content-center">
-                <i class="bi bi-list"></i>
-            </button>
+                <button id="toggleSidebar" class="btn mb-3 d-flex justify-content-sm-end justify-content-center">
+                    <i class="bi bi-list"></i>
+                </button>
 
-            <!-- Marca con dos logos (escritorio) -->
-            <a class="navbar-brand mb-3 p-2 d-flex justify-content-center align-items-center" asp-controller="PiezasEscaneadas" asp-action="Dashboard">
-                <img src="~/images/toyoda-gosei-logo.png" alt="Logo Completo" class="logo-completo img-fluid" style="max-height:60px;" />
-                <img src="~/images/icono-tg.png" alt="Logo Icono" class="logo-icono img-fluid d-none" style="max-height:40px;" />
-            </a>
+                <!-- Marca con dos logos (escritorio) -->
+                <a class="navbar-brand mb-3 p-2 d-flex justify-content-center align-items-center" asp-controller="PiezasEscaneadas" asp-action="Dashboard">
+                    <img src="~/images/toyoda-gosei-logo.png" alt="Logo Completo" class="logo-completo img-fluid" style="max-height:60px;" />
+                    <img src="~/images/icono-tg.png" alt="Logo Icono" class="logo-icono img-fluid d-none" style="max-height:40px;" />
+                </a>
 
             <hr />
                 <ul class="navbar-nav">
@@ -375,7 +368,7 @@
                     }
                 </ul>
 
-                <hr />
+            <hr />
                 <div class="mt-auto">
                     <ul class="nav flex-column">
                         @if (User.Identity?.IsAuthenticated ?? false)
@@ -402,10 +395,11 @@
                         }
                     </ul>
                 </div>
+
             </nav>
 
             <!-- Navbar fijo arriba solo en móviles -->
-                <nav class="navbar bg-light fixed-top d-md-none shadow-sm mobile-navbar">
+            <nav class="navbar bg-light fixed-top d-md-none shadow-sm mobile-navbar">
                     <div class="container-fluid">
                         <a class="navbar-brand d-flex align-items-center"
                            asp-controller="PiezasEscaneadas" asp-action="Dashboard">
@@ -563,7 +557,6 @@
                     </div>
                 </nav>
     }
-
             <!-- Contenido principal -->
             <div id="mainContent" class="flex-grow-1 p-4">
 
@@ -579,7 +572,7 @@
                             </div>
                             <div class="text-end">
                                 <span class="fw-semibold text-primary">
-                                    <i class="bi bi-calendar-date me-1"></i> @fechaActual.ToString("dd MMMM yyyy HH:mm")
+                                    <i class="bi bi-calendar-date me-1"></i> @fechaLocal.ToString("dd MMMM yyyy HH:mm")
                                 </span><br />
                                 <span class="fw-semibold text-success">
                                     <i class="bi bi-clock-history me-1"></i> @turnoActual
@@ -605,13 +598,7 @@
                         </div>
                     </div>
                 }
-
-
-
             </div>
-
-
-
         </div>
     }
     else
@@ -631,32 +618,32 @@
     @await RenderSectionAsync("Scripts", required: false)
 
     <script>
-                document.addEventListener("DOMContentLoaded", function () {
-    const toggleBtn = document.getElementById("toggleSidebar");
-    const sidebar = document.getElementById("sidebarMenu");
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggleBtn = document.getElementById("toggleSidebar");
+        const sidebar = document.getElementById("sidebarMenu");
 
-    if (toggleBtn && sidebar) {
-        // Al cargar, revisa estado guardado
-        const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
-        if (isCollapsed) {
-            // Aplica colapso sin animación
-            sidebar.classList.add("no-transition");
-            sidebar.classList.add("collapsed");
+        if (toggleBtn && sidebar) {
+            // Al cargar, revisa estado guardado
+            const isCollapsed = localStorage.getItem("sidebarCollapsed") === "true";
+            if (isCollapsed) {
+                // Aplica colapso sin animación
+                sidebar.classList.add("no-transition");
+                sidebar.classList.add("collapsed");
 
-            // Quita la clase no-transition después de un pequeño delay
-            requestAnimationFrame(() => {
-                sidebar.classList.remove("no-transition");
+                // Quita la clase no-transition después de un pequeño delay
+                requestAnimationFrame(() => {
+                    sidebar.classList.remove("no-transition");
+                });
+            }
+
+            // Al hacer clic, alterna con animación normal
+            toggleBtn.addEventListener("click", function () {
+                sidebar.classList.toggle("collapsed");
+                const collapsed = sidebar.classList.contains("collapsed");
+                localStorage.setItem("sidebarCollapsed", collapsed);
             });
         }
-
-        // Al hacer clic, alterna con animación normal
-        toggleBtn.addEventListener("click", function () {
-            sidebar.classList.toggle("collapsed");
-            const collapsed = sidebar.classList.contains("collapsed");
-            localStorage.setItem("sidebarCollapsed", collapsed);
-        });
-    }
-});
+    });
 
         $(document).ready(function () {
             $('#busqueda').on('keyup', function () {
@@ -667,5 +654,32 @@
             });
         });
     </script>
+
+    <div aria-live="polite" aria-atomic="true" class="position-relative">
+        <div class="toast-container position-fixed bottom-0 end-0 p-3">
+            @if (TempData["Success"] != null)
+            {
+                <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            @TempData["Success"]
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+                <div class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            @TempData["Error"]
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
 </body>
 </html>

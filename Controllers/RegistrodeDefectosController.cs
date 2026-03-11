@@ -31,11 +31,9 @@ namespace ProducScan.Controllers
             var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
             var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
 
-            // ✅ Fecha laboral actual
             var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
             var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
-            // ✅ Turno actual
             string turnoSeleccionado = turno;
             var horaActual = ahora.TimeOfDay;
 
@@ -47,7 +45,6 @@ namespace ProducScan.Controllers
                     "3";
             }
 
-            // ✅ 1. Reducir dataset desde SQL (solo columnas necesarias)
             var defectosQuery = _context.RegistrodeDefectos
                 .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
                 .Select(d => new
@@ -59,9 +56,8 @@ namespace ProducScan.Controllers
                     d.Defecto,
                     d.Turno
                 })
-                .ToList(); // ✅ Solo 1 ToList()
+                .ToList();
 
-            // ✅ 2. Filtrar por día laboral real (en memoria)
             var defectosRaw = defectosQuery
                 .Where(d =>
                     ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
@@ -69,7 +65,6 @@ namespace ProducScan.Controllers
                 )
                 .ToList();
 
-            // ✅ Mandriles únicos
             ViewBag.Mandriles = defectosRaw
                 .Select(d => d.Mandrel?.Trim())
                 .Where(m => !string.IsNullOrWhiteSpace(m))
@@ -77,13 +72,20 @@ namespace ProducScan.Controllers
                 .OrderBy(m => m)
                 .ToList();
 
-            // ✅ Códigos de defecto únicos
             ViewBag.CodigosDefecto = defectosRaw
                 .Select(d => d.CodigodeDefecto?.Trim())
                 .Where(c => !string.IsNullOrWhiteSpace(c))
                 .Distinct()
                 .OrderBy(c => c)
                 .ToList();
+
+            // 👇 Aquí cargas solo las mesas que tienen "Mesa#"
+            ViewBag.Mesas = _context.Mesas
+                .Where(m => m.Mesas != null && m.Mesas.Contains("Mesa#"))
+                .Select(m => m.Mesas)
+                .ToList();
+
+            ViewBag.Turnos = new List<string> { "1", "2", "3" };
 
             ViewBag.FechaSeleccionada = fechaFiltro.ToString("yyyy-MM-dd");
             ViewBag.TurnoSeleccionado = turnoSeleccionado;
@@ -97,7 +99,7 @@ namespace ProducScan.Controllers
             var defectos = _context.Defectos
            .Select(d => new
            {
-               value = d.CodigodeDefecto,   // 👈 este será el value del <option>
+               value = d.CodigodeDefecto, 
                text = d.CodigodeDefecto + " - " + d.Defecto1
            })
            .ToList();
@@ -417,7 +419,6 @@ namespace ProducScan.Controllers
         [HttpGet]
         private List<RegistrodeDefecto> ObtenerDefectosFiltrados(DateOnly fechaFiltro, string turno)
         {
-            // ✅ 1. Reducir dataset desde SQL (solo columnas necesarias)
             var query = _context.RegistrodeDefectos
                 .Where(d => d.Fecha >= fechaFiltro.AddDays(-1) && d.Fecha <= fechaFiltro.AddDays(1))
                 .Select(d => new RegistrodeDefecto
@@ -429,9 +430,8 @@ namespace ProducScan.Controllers
                     Defecto = d.Defecto,
                     Turno = d.Turno
                 })
-                .ToList(); // ✅ Solo 1 ToList()
+                .ToList(); 
 
-            // ✅ 2. Filtrar por día laboral real (en memoria)
             query = query
                 .Where(d =>
                     ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
@@ -439,7 +439,6 @@ namespace ProducScan.Controllers
                 )
                 .ToList();
 
-            // ✅ 3. Filtrar por turno
             if (!string.IsNullOrEmpty(turno))
                 query = query.Where(d => d.Turno == turno).ToList();
 
@@ -2256,6 +2255,54 @@ namespace ProducScan.Controllers
 
             ws.Columns().AdjustToContents();
         }
+
+
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public IActionResult CreateMultiple(DateOnly Fecha, TimeOnly Hora, string NuMesa, string Tm, string Mandrel, string CodigodeDefecto, string Turno, int Cantidad)
+        {
+            // 👇 Solo permitir a Angelito
+            if (User.Identity?.Name != "Angelito")
+            {
+                return Forbid(); // Devuelve 403 Forbidden
+            }
+
+            if (Cantidad <= 0)
+            {
+                TempData["Error"] = "La cantidad debe ser mayor a 0.";
+                return RedirectToAction("Index");
+            }
+
+            var defectoNombre = _context.Defectos
+                .Where(d => d.CodigodeDefecto == CodigodeDefecto)
+                .Select(d => d.Defecto1)
+                .FirstOrDefault();
+
+            var defectos = new List<RegistrodeDefecto>();
+
+            for (int i = 0; i < Cantidad; i++)
+            {
+                defectos.Add(new RegistrodeDefecto
+                {
+                    Fecha = Fecha,
+                    Hora = Hora,
+                    NuMesa = NuMesa?.ToUpper(),
+                    Tm = Tm,
+                    Mandrel = Mandrel,
+                    CodigodeDefecto = CodigodeDefecto,
+                    Defecto = defectoNombre,
+                    Turno = Turno
+                });
+            }
+
+            _context.RegistrodeDefectos.AddRange(defectos);
+            _context.SaveChanges();
+
+            TempData["Success"] = $"{Cantidad} defectos registrados correctamente.";
+            return RedirectToAction("Index");
+        }
+
 
     }
 

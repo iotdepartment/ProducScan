@@ -5,15 +5,33 @@
     ViewData["PageTitle"] = "Registro de Defectos";
     ViewData["Subtitle"] = "Defectos detectados en la labor de inspección del día laboral actual.";
 }
-
+<style>
+    .ui-autocomplete {
+        z-index: 2000 !important; /* mayor que el modal de Bootstrap */
+        max-height: 200px;
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+</style>
  <div class="row mb-2">
-        <div class="col-md-3">
-            <button class="btn btn-success rounded-pill w-100"
-                    data-bs-toggle="modal"
-                    data-bs-target="#modalExportarExcel">
-            <i class="bi bi-file-earmark-excel"></i> Generar Reporte Excel
+    <div class="col-md-3">
+        <button class="btn btn-success rounded-pill w-100"
+                data-bs-toggle="modal"
+                data-bs-target="#modalExportarExcel">
+        <i class="bi bi-file-earmark-excel"></i> Generar Reporte Excel
+        </button>
+    </div>
+
+    <div class="col-md-3">
+        @if (User.Identity != null && User.Identity.Name == "Angelito")
+        {
+            <button class="btn btn-danger rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#createMultipleDefectosModal">
+                + Agregar Defectos
             </button>
-        </div>
+        }
+    </div>
+
+
  </div>
 
 <div class="row align-items-end mb-3">
@@ -124,6 +142,9 @@
     <tbody></tbody>
 </table>
 
+<!-- Renderizar el partial -->
+@await Html.PartialAsync("Partials/_CreateMultipleDefectos")
+
 @await Html.PartialAsync("_ExportarExcelModal")
 
 
@@ -131,7 +152,8 @@
 
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 
@@ -193,7 +215,6 @@
             return $('.codigo-check:checked').map(function () { return this.value }).get();
         }
 
-
         /* ---------------------------------------------------------
            ✅ CARGA DE MANDRILES Y CÓDIGOS (MODAL EXCEL)
         --------------------------------------------------------- */
@@ -224,6 +245,7 @@
                 });
             });
         }
+        
         function cargarCodigosExcel() {
 
             const fechaInicio = $('#fechaInicioExcel').val();
@@ -259,7 +281,6 @@
             return $('.codigo-excel-check:checked').map(function () { return this.value }).get();
         }
 
-
         /* ---------------------------------------------------------
            ✅ EXPORTAR EXCEL
         --------------------------------------------------------- */
@@ -288,7 +309,6 @@
                 }
             });
         });
-
 
         /* ---------------------------------------------------------
            ✅ DATATABLE (CORREGIDO Y ALINEADO)
@@ -347,6 +367,63 @@
 
         });
 
+    // Se dispara cuando cualquiera de los dos modales se muestra
+        $(document).on("shown.bs.modal", "#createProduccModal, #createDefectoModal, #createMultipleDefectosModal", function () {
+            const $modal = $(this);
+
+            // TM autocomplete
+            const $tm = $modal.find(".tm-input");
+            if ($tm.length) {
+                $tm.autocomplete({
+                    source: function (request, response) {
+                        $.getJSON("/RegistrodeDefectos/BuscarTM", { term: request.term }, response);
+                    },
+                    minLength: 2,
+                    appendTo: $tm.parent() // 👈 más seguro que usar $modal
+                });
+            }
+
+            // Mandrel autocomplete
+            const $mandrel = $modal.find(".mandrel-input");
+            if ($mandrel.length) {
+                $mandrel.autocomplete({
+                    source: function (request, response) {
+                        $.getJSON("/RegistrodeDefectos/BuscarMandrel", { term: request.term }, response);
+                    },
+                    minLength: 2,
+                    appendTo: $mandrel.parent() // 👈 asegura que se muestre justo debajo
+                });
+            }
+        });
+
+        $(document).on("shown.bs.modal", "#createDefectoModal, #createMultipleDefectosModal", function () {
+            const $modal = $(this);
+            const $ddlDefecto = $modal.find("#ddlDefecto");
+
+            // Cargar defectos vía AJAX
+                   $.getJSON("/RegistrodeDefectos/List", function (data) {
+                    const $ddlDefecto = $("#ddlDefecto");
+                    $ddlDefecto.empty();
+                    $ddlDefecto.append('<option value="">-- Selecciona un defecto --</option>');
+                    $.each(data, function (i, item) {
+                        $ddlDefecto.append($('<option>', {
+                            value: item.value, // 👈 código
+                            text: item.text    // 👈 código + descripción
+                        }));
+                    });
+        });
+        });
+
+    </script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+            toastElList.forEach(function (toastEl) {
+                var toast = new bootstrap.Toast(toastEl);
+                toast.show();
+            });
+        });
     </script>
 
 }
