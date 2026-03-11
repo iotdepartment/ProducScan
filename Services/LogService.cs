@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using ProducScan.Helpers;
 using ProducScan.Hubs;
 using ProducScan.Models;
 
@@ -19,9 +20,8 @@ namespace ProducScan.Services
 
         public void Registrar(string accion, string detalles, string nivel = "Info", string usuario = null, string ip = null, string categoria = "Sistema")
         {
-            // 👇 Convertir siempre a hora local de Matamoros
-            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-            var ahoraLocal = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+            // ✅ Convertir siempre a hora local de Matamoros con reglas personalizadas
+            var ahoraLocal = ProduccionHelper.GetMatamorosTime();
 
             var log = new Log
             {
@@ -37,7 +37,7 @@ namespace ProducScan.Services
             _context.Logs.Add(log);
             _context.SaveChanges();
 
-            // Notificar en tiempo real
+            // ✅ Notificar en tiempo real
             _hub.Clients.All.SendAsync("NuevoLog", new
             {
                 log.Id,

@@ -13,8 +13,6 @@ namespace ProducScan.Models
         public string PasswordHash { get; set; } = string.Empty;
         public string Rol { get; set; } = "Visual";
         public DateTime FechaAlta { get; set; } = DateTime.Now;
-
-        // 👇 Nuevo campo
         public string SecurityStamp { get; set; } = Guid.NewGuid().ToString();
     }
 }

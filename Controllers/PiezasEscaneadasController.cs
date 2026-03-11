@@ -56,28 +56,24 @@ public class PiezasEscaneadasController : Controller
     {
         int pageSize = 10;
 
-        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        // Hora local de Matamoros con reglas personalizadas
+        var ahora = ProduccionHelper.GetMatamorosTime();
         var hora = ahora.TimeOfDay;
 
-        // ✅ Turno actual según tu horario laboral real
-        string turnoActual =
-            hora >= new TimeSpan(7, 10, 0) && hora <= new TimeSpan(15, 44, 59) ? "1" :
-            hora >= new TimeSpan(15, 45, 0) && hora <= new TimeSpan(23, 49, 59) ? "2" :
-            "3";
-
+        // Turno actual según tu horario laboral real
+        string turnoActual = ProduccionHelper.GetTurno(ahora);
         ViewBag.TurnoSeleccionado = turnoActual;
 
-        // ✅ Fecha laboral actual usando tu helper
+        // Fecha laboral actual usando tu helper
         var fechaSeleccionada = ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
-        // ✅ 1. Traer registros del rango calendario amplio
+        // 1. Traer registros del rango calendario amplio
         var registros = _context.RegistrodePiezasEscaneadas
             .Where(r => r.Fecha >= fechaFiltro.AddDays(-1) && r.Fecha <= fechaFiltro.AddDays(1))
             .ToList();
 
-        // ✅ 2. Filtrar por fecha laboral real usando tu helper
+        // 2. Filtrar por fecha laboral real usando tu helper
         var registrosFecha = registros
             .Where(r =>
                 ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
@@ -85,7 +81,7 @@ public class PiezasEscaneadasController : Controller
             )
             .ToList();
 
-        // ✅ 3. Mandriles reales
+        // 3. Mandriles reales
         ViewBag.Mandrels = registrosFecha
             .Select(r => r.Mandrel?.Trim())
             .Where(m => !string.IsNullOrWhiteSpace(m))
@@ -108,9 +104,7 @@ public class PiezasEscaneadasController : Controller
     [HttpGet]
     public IActionResult InspeccionTM(DateTime? fecha, string turno)
     {
-        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-
+        var ahora = ProduccionHelper.GetMatamorosTime();
 
         var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
@@ -118,16 +112,10 @@ public class PiezasEscaneadasController : Controller
         string turnoSeleccionado = turno;
         if (string.IsNullOrEmpty(turnoSeleccionado))
         {
-            var horaActual = ahora.TimeOfDay;
-            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-                turnoSeleccionado = "1";
-            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-                turnoSeleccionado = "2";
-            else
-                turnoSeleccionado = "3";
+            turnoSeleccionado = ProduccionHelper.GetTurno(ahora);
         }
 
-        // ✅ Si la fecha consultada NO es hoy → usar hora final del turno
+        // Si la fecha consultada NO es hoy → usar hora final del turno
         if (fechaFiltro != DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora)))
         {
             ahora = turnoSeleccionado switch
@@ -327,8 +315,7 @@ public class PiezasEscaneadasController : Controller
     [HttpGet]
     public IActionResult InspeccionTMTV(DateTime? fecha, string turno)
     {
-        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        var ahora = ProduccionHelper.GetMatamorosTime();
 
         var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
@@ -336,13 +323,7 @@ public class PiezasEscaneadasController : Controller
         string turnoSeleccionado = turno;
         if (string.IsNullOrEmpty(turnoSeleccionado))
         {
-            var horaActual = ahora.TimeOfDay;
-            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-                turnoSeleccionado = "1";
-            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-                turnoSeleccionado = "2";
-            else
-                turnoSeleccionado = "3";
+            turnoSeleccionado = ProduccionHelper.GetTurno(ahora);
         }
 
         var usuarios = _context.Users.ToList();
@@ -534,14 +515,13 @@ public class PiezasEscaneadasController : Controller
 
     public IActionResult ExportProduccionDiaLaboral(DateTime? fecha)
     {
-        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+        var ahora = ProduccionHelper.GetMatamorosTime();
 
-        var fechaSeleccionada = fecha ?? ahora;
+        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
 
         var estacionesMandriles = _context.Mandriles
-     .Where(m => m.Area == "INSPECCION")   // ✅ SOLO INSPECCION
+     .Where(m => m.Area == "INSPECCION") 
      .ToDictionary(m => m.MandrilNombre, m => m.Estacion);
 
         // ✅ 2. Producciones agrupadas por MesaReal + Mandril + Turno
@@ -867,26 +847,25 @@ public class PiezasEscaneadasController : Controller
 
     }
 
-    //METODOS PARA CREAR PIEZAS BUENAS
+    // MÉTODOS PARA CREAR PIEZAS BUENAS
     [Authorize(Roles = "Admin,Editor")]
     [HttpGet]
     public IActionResult Create()
     {
-        // Obtener la zona horaria de Matamoros (Central Standard Time con DST local)
-        var tz = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time");
-        var nowInMatamoros = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, tz);
+        var ahora = ProduccionHelper.GetMatamorosTime();
 
         var model = new RegistrodePiezasEscaneada
         {
-            Fecha = DateOnly.FromDateTime(nowInMatamoros),
-            Hora = TimeOnly.FromDateTime(nowInMatamoros)
+            Fecha = DateOnly.FromDateTime(ahora),
+            Hora = TimeOnly.FromDateTime(ahora)
         };
 
+        // ✅ Mesas filtradas y ordenadas
         var mesas = _context.Mesas
-     .Where(m => m.IdMesa >= 3 && m.IdMesa <= 24)   // 👈 ahora usamos IdMesa directamente
-     .OrderBy(m => m.IdMesa)                        // 👈 ordenamos por IdMesa
-     .Select(m => m.Mesas.ToUpper())                // 👈 convertimos el nombre a mayúsculas
-     .ToList();
+            .Where(m => m.IdMesa >= 3 && m.IdMesa <= 24)   
+            .OrderBy(m => m.IdMesa)                        
+            .Select(m => m.Mesas.ToUpper())                
+            .ToList();
 
         ViewBag.Mesas = mesas;
         ViewBag.Turnos = new List<string> { "1", "2", "3" };
@@ -1086,8 +1065,7 @@ public class PiezasEscaneadasController : Controller
         // --- Fecha laboral ---
         if (!fecha.HasValue)
         {
-            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
+            var ahora = ProduccionHelper.GetMatamorosTime();
             fecha = DateOnly.FromDateTime(ProduccionHelper.GetFechaProduccion(ahora));
         }
 
@@ -1099,16 +1077,8 @@ public class PiezasEscaneadasController : Controller
         // Si es null => calcular turno actual
         if (turnoSeleccionado == null)
         {
-            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-            var horaActual = ahora.TimeOfDay;
-
-            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-                turnoSeleccionado = "1";
-            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-                turnoSeleccionado = "2";
-            else
-                turnoSeleccionado = "3";
+            var ahora = ProduccionHelper.GetMatamorosTime();
+            turnoSeleccionado = ProduccionHelper.GetTurno(ahora);
         }
 
         // --- Producciones ---
@@ -1520,12 +1490,10 @@ public class PiezasEscaneadasController : Controller
     //DASHBOARD DINAMICO
     public IActionResult Dashboard(DateTime? fecha)
     {
-        // Zona horaria
-        var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-        var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-
-        // Fecha laboral seleccionada
+        // --- Fecha laboral seleccionada ---
+        var ahora = ProduccionHelper.GetMatamorosTime();
         var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
+
         var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
         var fechaFiltroDT = fechaFiltro.ToDateTime(TimeOnly.MinValue);
 
@@ -1707,16 +1675,8 @@ public class PiezasEscaneadasController : Controller
 
         if (string.IsNullOrWhiteSpace(turnoSeleccionado))
         {
-            var zona = TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)");
-            var ahora = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zona);
-            var horaActual = ahora.TimeOfDay;
-
-            if (horaActual >= new TimeSpan(7, 0, 0) && horaActual <= new TimeSpan(15, 44, 59))
-                turnoSeleccionado = "1";
-            else if (horaActual >= new TimeSpan(15, 45, 0) && horaActual <= new TimeSpan(23, 49, 59))
-                turnoSeleccionado = "2";
-            else
-                turnoSeleccionado = "3";
+            var ahora = ProduccionHelper.GetMatamorosTime();
+            turnoSeleccionado = ProduccionHelper.GetTurno(ahora);
         }
 
         var query = registros.AsQueryable();
@@ -2003,7 +1963,7 @@ public class PiezasEscaneadasController : Controller
         ws.Columns().AdjustToContents();
 
         /* ---------------------------------------------------------
-           ✅ HOJA 2: RESUMEN
+           HOJA 2: RESUMEN
         --------------------------------------------------------- */
         var resumen = workbook.Worksheets.Add("Resumen");
 
@@ -2053,7 +2013,7 @@ public class PiezasEscaneadasController : Controller
             resumen.Cell(r, 3).Value = t2;
             resumen.Cell(r, 4).Value = t3;
 
-            totalDia = (int)(t1 + t2 + t3);   // ✅ CORREGIDO
+            totalDia = (int)(t1 + t2 + t3);
 
             resumen.Cell(r, 5).Value = totalDia;
 
