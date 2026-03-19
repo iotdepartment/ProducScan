@@ -1,0 +1,62 @@
+﻿<div class="modal fade" id="editMultipleModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editMultipleForm">
+                <div class="modal-header bg-warning">
+                    <h5 class="modal-title text-dark">Editar registros seleccionados</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <div class="modal-body">
+                    <input type="hidden" id="editIds" />
+                    <p>Se editarán <span id="editCount"></span> registros seleccionados.</p>
+
+                    <div class="row g-3">
+
+                        <!-- MESA -->
+                        <div class="col-md-6">
+                            <label class="form-label">Mesa</label>
+                            <select id="editMesa" class="form-select rounded-pill">
+                                <option value="">Selecciona mesa</option>
+                                @for (int i = 1; i <= 25; i++)
+                                {
+                                    <option value="@i">Mesa @i</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- TURNO -->
+                        <div class="col-md-6">
+                            <label class="form-label">Turno</label>
+                            <select id="editTurno" class="form-select rounded-pill">
+                                <option value="">Selecciona turno</option>
+                                <option value="1">Turno 1</option>
+                                <option value="2">Turno 2</option>
+                                <option value="3">Turno 3</option>
+                            </select>
+                        </div>
+
+                        <!-- MANDRIL -->
+                        <div class="col-md-6 position-relative">
+                            <label class="form-label">Mandril</label>
+                            <input type="text" id="editMandril" class="form-control rounded-pill" autocomplete="off" />
+                            <div id="mandrilSuggestions" class="list-group position-absolute w-100"></div>
+                        </div>
+
+                        <!-- PIEZAS -->
+                        <div class="col-md-6">
+                            <label class="form-label">Piezas</label>
+                            <input type="number" id="editPiezas" class="form-control rounded-pill" min="0" />
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="submit" class="btn btn-warning rounded-pill">Guardar cambios</button>
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

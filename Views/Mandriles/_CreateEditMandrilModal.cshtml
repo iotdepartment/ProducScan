@@ -104,3 +104,70 @@
         </div>
     </div>
 </div>
+
+<script>
+    /* ============================
+          MODO CREAR
+       ============================ */
+       function openCreateModal() {
+
+           document.getElementById("modalTitle").innerText = "Nuevo Mandril";
+
+           const header = document.querySelector("#createEditModal .modal-header");
+           header.classList.remove("bg-warning", "text-dark");
+           header.classList.add("bg-success", "text-white");
+
+           const saveBtn = document.getElementById("saveBtn");
+           saveBtn.innerText = "Guardar";
+           saveBtn.classList.remove("btn-warning");
+           saveBtn.classList.add("btn-success");
+
+           document.getElementById("createEditForm").action = "/Mandriles/Create";
+
+           // Limpiar campos
+           document.getElementById("mandrilId").value = "";
+           document.getElementById("mandrilNombre").value = "";
+           document.getElementById("centrodeCostos").value = "";
+           document.getElementById("cantidaddeEmpaque").value = "";
+           document.getElementById("barcode").value = "";
+           document.getElementById("kanban").value = "";
+           document.getElementById("estacion").value = "";
+           document.getElementById("familia").value = "";
+           document.getElementById("proceso").value = "";
+           document.getElementById("pesomin").value = "";
+           document.getElementById("pesomax").value = "";
+       }
+
+       /* ============================
+          MODO EDITAR
+       ============================ */
+       function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban, estacion, familia, proceso, pesomin, pesomax) {
+
+           document.getElementById("modalTitle").innerText = "Editar Mandril";
+
+           const header = document.querySelector("#createEditModal .modal-header");
+           header.classList.remove("bg-success", "text-white");
+           header.classList.add("bg-warning", "text-dark");
+
+           const saveBtn = document.getElementById("saveBtn");
+           saveBtn.innerText = "Actualizar";
+           saveBtn.classList.remove("btn-success");
+           saveBtn.classList.add("btn-warning");
+
+           document.getElementById("createEditForm").action = "/Mandriles/Edit";
+
+           document.getElementById("mandrilId").value = id;
+           document.getElementById("mandrilNombre").value = mandrilNombre;
+           document.getElementById("centrodeCostos").value = centrodeCostos;
+           document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
+           document.getElementById("barcode").value = barcode;
+           document.getElementById("kanban").value = kanban;
+           document.getElementById("estacion").value = estacion || "";
+           document.getElementById("familia").value = familia || "";
+           document.getElementById("proceso").value = proceso || "";
+           document.getElementById("pesomin").value = pesomin || "";
+           document.getElementById("pesomax").value = pesomax || "";
+
+           $('#createEditModal').modal('show');
+       }
+</script>                

@@ -603,17 +603,25 @@
     {
         <main role="main">@RenderBody()</main>
     }
-
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.2/dist/cosmo/bootstrap.min.css">
+
+    <!-- SI necesitas jQuery UI, debe ir DESPUÉS de jQuery -->
     <link rel="stylesheet" href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- jQuery SOLO UNA VEZ -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+
+    <!-- jQuery UI (si la necesitas) -->
     <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
 
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <!-- Bootstrap -->
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+
+    <!-- Scripts de la vista (DataTables, Select, tu lógica) -->
     @await RenderSectionAsync("Scripts", required: false)
+
+    <!-- site.js SIEMPRE AL FINAL -->
+    <script src="~/js/site.js" asp-append-version="true"></script>
 
     <script>
         function actualizarFechaHora() {

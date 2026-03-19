@@ -14,10 +14,9 @@ namespace ProducScan.ViewModels
         public string NuMesa { get; set; }
         public string? Turno { get; set; }
 
-        public DateTime FechaLaboral { get; set; } // calculada con ProduccionHelper
-        public DateOnly FechaReal { get; set; }    // la que viene de la BD
+        public DateTime FechaLaboral { get; set; }
+        public DateOnly FechaReal { get; set; }
 
-        // 👇 Nueva propiedad para mostrar la velocidad de producción
         public double SegundosPorPieza { get; set; }
     }
 }

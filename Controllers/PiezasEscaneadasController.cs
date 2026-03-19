@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using ProducScan.DTOs;
 using ProducScan.Helpers;
 using ProducScan.Models;
 using ProducScan.Services;
@@ -2033,5 +2034,77 @@ public class PiezasEscaneadasController : Controller
         );
     }
 
+    [HttpGet]
+    public IActionResult GetProduccionAjax(string usuario, string fechaLaboral)
+    {
+        // Convertimos la fecha laboral recibida
+        var fechaFiltro = DateOnly.Parse(fechaLaboral);
+
+        var data = _context.RegistrodePiezasEscaneadas
+            .Where(x => x.Tm == usuario && x.Fecha == fechaFiltro)
+            .Select(x => new ProduccionDetalleViewModel
+            {
+                Id = x.Id,
+                Fecha = x.Fecha,
+                Hora = x.Hora,
+                Mandrel = x.Mandrel,
+                NumeroDePiezas = x.Ndpiezas,
+                TM = x.Tm,
+                NuMesa = x.NuMesa,
+                Turno = x.Turno,
+
+                // Convertimos Fecha + Hora a DateTime
+                FechaLaboral = ProduccionHelper.GetFechaProduccion(
+                    x.Fecha.ToDateTime(x.Hora)
+                ),
+
+                FechaReal = x.Fecha,
+
+                // Si no tienes este cálculo, lo dejamos en 0
+                SegundosPorPieza = 0
+            })
+            .ToList();
+
+        return Json(new { data });
+    }
+
+    [HttpPost]
+    public IActionResult EditMultiple([FromBody] EditProduccionMultipleDto dto)
+    {
+        var registros = _context.RegistrodePiezasEscaneadas
+            .Where(x => dto.Ids.Contains(x.Id))
+            .ToList();
+
+        foreach (var r in registros)
+        {
+            if (dto.NuMesa != null) r.NuMesa = dto.NuMesa;
+            if (dto.Turno != null) r.Turno = dto.Turno;
+            if (dto.Mandrel != null) r.Mandrel = dto.Mandrel;
+            if (dto.NDPiezas != null) r.Ndpiezas = dto.NDPiezas;
+        }
+
+        _context.SaveChanges();
+
+        return Ok(new { message = "Registros actualizados correctamente" });
+    }
+
+    [HttpPost]
+    public IActionResult DeleteMultiple([FromBody] List<int> ids)
+    {
+        if (ids == null || ids.Count == 0)
+            return Json(new { success = false, message = "No se recibieron IDs." });
+
+        var registros = _context.RegistrodePiezasEscaneadas
+            .Where(x => ids.Contains(x.Id))
+            .ToList();
+
+        if (!registros.Any())
+            return Json(new { success = false, message = "No se encontraron registros." });
+
+        _context.RegistrodePiezasEscaneadas.RemoveRange(registros);
+        _context.SaveChanges();
+
+        return Json(new { success = true, message = "Registros eliminados correctamente." });
+    }
 }
 

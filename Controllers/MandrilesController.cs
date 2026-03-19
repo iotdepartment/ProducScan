@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using ProducScan.DTOs;
 using ProducScan.Models;
 
 namespace ProducScan.Controllers
@@ -136,6 +137,79 @@ namespace ProducScan.Controllers
             catch (Exception ex)
             {
                 return Json(new { success = false, message = $"Error al eliminar: {ex.Message}" });
+            }
+        }
+
+        [HttpPost]
+        public IActionResult DeleteMultiple([FromBody] List<int> ids)
+        {
+            if (ids == null || !ids.Any())
+            {
+                return BadRequest("No se recibieron IDs para eliminar.");
+            }
+
+            try
+            {
+                var registros = _context.Mandriles
+                    .Where(m => ids.Contains(m.Id))
+                    .ToList();
+
+                if (!registros.Any())
+                {
+                    return NotFound("No se encontraron registros con los IDs proporcionados.");
+                }
+
+                _context.Mandriles.RemoveRange(registros);
+                _context.SaveChanges();
+
+                return Ok(new { message = $"{registros.Count} registros eliminados correctamente." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error al eliminar registros: {ex.Message}");
+            }
+        }
+        [HttpPost]
+        public IActionResult EditMultiple([FromBody] EditMandrilDto dto)
+        {
+            if (dto == null || dto.Ids == null || !dto.Ids.Any())
+                return BadRequest("No se recibieron IDs para editar.");
+
+            try
+            {
+                var registros = _context.Mandriles
+                    .Where(m => dto.Ids.Contains(m.Id))
+                    .ToList();
+
+                if (!registros.Any())
+                    return NotFound("No se encontraron registros con los IDs proporcionados.");
+
+                foreach (var registro in registros)
+                {
+                    // Inputs tipo texto
+                    if (dto.MandrilNombre != null) registro.MandrilNombre = dto.MandrilNombre;
+                    if (dto.CentrodeCostos != null) registro.CentrodeCostos = dto.CentrodeCostos;
+                    if (dto.CantidaddeEmpaque != null) registro.CantidaddeEmpaque = dto.CantidaddeEmpaque;
+                    if (dto.Barcode != null) registro.Barcode = dto.Barcode;
+                    if (dto.Kanban != null) registro.Kanban = dto.Kanban;
+                    if (dto.Estacion != null) registro.Estacion = dto.Estacion;
+
+                    // Selects
+                    if (dto.Familia != null) registro.Familia = dto.Familia;
+                    if (dto.Proceso != null) registro.Proceso = dto.Proceso;
+
+                    // Inputs numéricos
+                    if (dto.PesoMax.HasValue) registro.PesoMax = dto.PesoMax;
+                    if (dto.PesoMin.HasValue) registro.PesoMin = dto.PesoMin;
+                }
+
+                _context.SaveChanges();
+
+                return Ok(new { message = $"{registros.Count} registros editados correctamente." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error al editar registros: {ex.Message}");
             }
         }
     }
