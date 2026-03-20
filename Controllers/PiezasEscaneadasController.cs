@@ -2034,6 +2034,7 @@ public class PiezasEscaneadasController : Controller
         );
     }
 
+    [Authorize(Roles = "Admin,Editor")]
     [HttpGet]
     public IActionResult GetProduccionAjax(string usuario, string fechaLaboral)
     {
@@ -2067,7 +2068,8 @@ public class PiezasEscaneadasController : Controller
 
         return Json(new { data });
     }
-
+    
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPost]
     public IActionResult EditMultiple([FromBody] EditProduccionMultipleDto dto)
     {
@@ -2077,17 +2079,28 @@ public class PiezasEscaneadasController : Controller
 
         foreach (var r in registros)
         {
-            if (dto.NuMesa != null) r.NuMesa = dto.NuMesa;
-            if (dto.Turno != null) r.Turno = dto.Turno;
-            if (dto.Mandrel != null) r.Mandrel = dto.Mandrel;
-            if (dto.NDPiezas != null) r.Ndpiezas = dto.NDPiezas;
+            if (dto.Tm != null)
+                r.Tm = dto.Tm;
+
+            if (dto.NuMesa != null)
+                r.NuMesa = dto.NuMesa;
+
+            if (dto.Turno != null)
+                r.Turno = dto.Turno;
+
+            if (dto.Mandrel != null)
+                r.Mandrel = dto.Mandrel;
+
+            if (dto.NDPiezas != null)
+                r.Ndpiezas = dto.NDPiezas;
         }
 
         _context.SaveChanges();
 
         return Ok(new { message = "Registros actualizados correctamente" });
     }
-
+    
+    [Authorize(Roles = "Admin,Editor")]
     [HttpPost]
     public IActionResult DeleteMultiple([FromBody] List<int> ids)
     {

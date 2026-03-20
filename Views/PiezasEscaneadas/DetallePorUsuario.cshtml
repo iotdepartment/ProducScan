@@ -60,6 +60,12 @@
 
                     <div class="row g-3">
 
+                        <div class="col-md-6 position-relative">
+                            <label class="form-label">Team Member</label>
+                            <input type="text" class="form-control rounded-pill" id="editTM" autocomplete="off" />
+                            <div id="tmSuggestions" class="list-group position-absolute w-100"></div>
+                        </div>
+
                         <!-- MESA -->
                         <div class="col-md-6">
                             <label class="form-label">Mesa</label>
@@ -180,6 +186,35 @@
                         });
                     }
                 });
+            });
+
+            /* ============================
+                AUTOCOMPLETE TEAM MEMBER
+            ============================ */
+            $(document).on("keyup", "#editTM", function () {
+                let query = $(this).val();
+
+                if (query.length < 2) {
+                    $("#tmSuggestions").empty();
+                    return;
+                }
+
+                $.get("/PiezasEscaneadas/BuscarTM", { term: query }, function (data) {
+                    let s = $("#tmSuggestions").empty();
+
+                    if (data.length === 0) {
+                        s.append('<div class="list-group-item">Sin resultados</div>');
+                    } else {
+                        data.forEach(t => {
+                            s.append(`<button class="list-group-item list-group-item-action tm-option">${t}</button>`);
+                        });
+                    }
+                });
+            });
+
+            $(document).on("click", ".tm-option", function () {
+                $("#editTM").val($(this).text());
+                $("#tmSuggestions").empty();
             });
 
             $(document).on("click", ".mandril-option", function () {
@@ -325,6 +360,7 @@
                 $("#editIds").val(ids.join(","));
                 $("#editCount").text(rows.length);
 
+                setMultiValue("editTM", rows.pluck("tm").toArray());
                 setMultiValueMesa(rows.pluck("nuMesa").toArray());
                 setMultiValue("editTurno", rows.pluck("turno").toArray());
                 setMultiValue("editMandril", rows.pluck("mandrel").toArray());
@@ -332,6 +368,8 @@
 
                 $("#editMultipleModal").modal("show");
             }
+
+
 
             /* ============================
                SUBMIT EDICIÓN MÚLTIPLE
@@ -342,7 +380,7 @@
                 const payload = {
                     ids: $("#editIds").val().split(",")
                 };
-
+                payload["Tm"] = $("#editTM").val() || null;
                 payload["NuMesa"] = $("#editMesa").val() ? "MESA#" + $("#editMesa").val() : null;
                 payload["Turno"] = $("#editTurno").val() || null;
                 payload["Mandrel"] = $("#editMandril").val() || null;

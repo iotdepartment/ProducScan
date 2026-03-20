@@ -2317,7 +2317,7 @@ namespace ProducScan.Controllers
                         d.CodigodeDefecto
                     };
                 })
-                // ⛔ EXCLUIR DEFECTOS
+                // EXCLUIR DEFECTOS
                 .Where(x => !defectosExcluidos.Contains(x.CodigodeDefecto))
                 .Where(x => x.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
                             x.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
@@ -2797,6 +2797,8 @@ namespace ProducScan.Controllers
         }
 
 
+
+        //BOTON UNICO ----
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult CreateMultiple(DateOnly Fecha, TimeOnly Hora, string NuMesa, string Tm, string Mandrel, string CodigodeDefecto, string Turno, int Cantidad)
