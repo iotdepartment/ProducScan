@@ -156,7 +156,7 @@ else
                 var codigo = valor[0];
                 var defecto = valor[1];
                 var nuevoTm = $("#editTm").val();
-                var tmActualVista = "@ViewBag.Usuario"; // 👈 TM que se está filtrando en la vista
+                var tmActualVista = "@ViewBag.Usuario";
 
                 if (nuevoTm !== tmActualVista) {
                     // 👈 Si el TM cambió, el registro ya no pertenece a esta vista → eliminar fila
@@ -200,7 +200,7 @@ else
                 return;
             }
 
-            $.get("/RegistrodeDefectos/BuscarMandrel", { term: query }, function (data) { // 👈 adaptado
+            $.get("/RegistrodeDefectos/BuscarMandrel", { term: query }, function (data) { 
                 var suggestions = $("#mandrelSuggestions");
                 suggestions.empty();
 
@@ -229,7 +229,7 @@ else
                 return;
             }
 
-            $.get("/RegistrodeDefectos/BuscarTM", { term: query }, function (data) { // 👈 adaptado
+            $.get("/RegistrodeDefectos/BuscarTM", { term: query }, function (data) { 
                 var suggestions = $("#tmSuggestions");
                 suggestions.empty();
 
@@ -285,7 +285,7 @@ else
             e.preventDefault();
 
             $.ajax({
-                url: '/RegistrodeDefectos/BorrarDefecto', // 👈 adaptado
+                url: '/RegistrodeDefectos/BorrarDefecto', //
                 type: 'POST',
                 data: $(this).serialize(),
                 success: function (resp) {
@@ -295,7 +295,7 @@ else
                         mostrarToast('success', resp.message);
 
                         var id = $("#deleteId").val();
-                        $("#row-" + id).remove(); // 👈 elimina la fila de la tabla
+                        $("#row-" + id).remove(); 
                     } else {
                         mostrarToast('danger', resp.message);
                     }

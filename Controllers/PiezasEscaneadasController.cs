@@ -1429,7 +1429,7 @@ public class PiezasEscaneadasController : Controller
             Mandrel = r.Mandrel,
             Turno = r.Turno,
             Piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0,
-            SegundosPorPieza = r.SegundosPorPieza // 👈 incluir en la vista
+            SegundosPorPieza = r.SegundosPorPieza
         }).ToList();
 
         return View("DetallePorUsuario", registros);
@@ -1721,7 +1721,7 @@ public class PiezasEscaneadasController : Controller
             recordsTotal = totalRecords,
             recordsFiltered = filteredRecords,
             data = data,
-            turnoSeleccionado // ✅ lo devolvemos para que la vista pueda marcar el select
+            turnoSeleccionado
         });
     }
 
@@ -2038,11 +2038,15 @@ public class PiezasEscaneadasController : Controller
     [HttpGet]
     public IActionResult GetProduccionAjax(string usuario, string fechaLaboral)
     {
-        // Convertimos la fecha laboral recibida
         var fechaFiltro = DateOnly.Parse(fechaLaboral);
 
-        var data = _context.RegistrodePiezasEscaneadas
-            .Where(x => x.Tm == usuario && x.Fecha == fechaFiltro)
+        var registros = _context.RegistrodePiezasEscaneadas
+            .Where(x => x.Tm == usuario)
+            .ToList()
+            .Where(x => ProduccionHelper.GetFechaProduccion(x.Fecha.ToDateTime(x.Hora)).Date
+                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
+            .OrderBy(x => x.Fecha)
+            .ThenBy(x => x.Hora)
             .Select(x => new ProduccionDetalleViewModel
             {
                 Id = x.Id,
@@ -2053,22 +2057,61 @@ public class PiezasEscaneadasController : Controller
                 TM = x.Tm,
                 NuMesa = x.NuMesa,
                 Turno = x.Turno,
-
-                // Convertimos Fecha + Hora a DateTime
-                FechaLaboral = ProduccionHelper.GetFechaProduccion(
-                    x.Fecha.ToDateTime(x.Hora)
-                ),
-
+                FechaLaboral = ProduccionHelper.GetFechaProduccion(x.Fecha.ToDateTime(x.Hora)),
                 FechaReal = x.Fecha,
-
-                // Si no tienes este cálculo, lo dejamos en 0
                 SegundosPorPieza = 0
             })
             .ToList();
 
-        return Json(new { data });
+        ProduccionDetalleViewModel anterior = null;
+
+        foreach (var r in registros)
+        {
+            int piezas = int.TryParse(r.NumeroDePiezas, out var n) ? n : 0;
+            double segundosPorPieza = 0;
+
+            if (piezas > 0)
+            {
+                var tiempoActual = r.Fecha.ToDateTime(r.Hora);
+
+                if (anterior != null)
+                {
+                    // Diferencia contra el registro anterior
+                    var tiempoAnterior = anterior.Fecha.ToDateTime(anterior.Hora);
+                    var segundos = (tiempoActual - tiempoAnterior).TotalSeconds;
+
+                    if (segundos > 0)
+                        segundosPorPieza = Math.Round(segundos / piezas, 2);
+                }
+                else
+                {
+                    // Primer registro → calcular contra inicio del turno
+                    TimeSpan inicioTurno = r.Turno switch
+                    {
+                        "1" => new TimeSpan(7, 10, 0),
+                        "2" => new TimeSpan(15, 45, 0),
+                        "3" => new TimeSpan(23, 50, 0),
+                        _ => new TimeSpan(7, 10, 0)
+                    };
+
+                    var segundos = (tiempoActual.TimeOfDay - inicioTurno).TotalSeconds;
+
+                    // Ajuste turno 3 que cruza medianoche
+                    if (r.Turno == "3" && segundos < 0)
+                        segundos += 24 * 3600;
+
+                    if (segundos > 0)
+                        segundosPorPieza = Math.Round(segundos / piezas, 2);
+                }
+            }
+
+            r.SegundosPorPieza = segundosPorPieza;
+            anterior = r;
+        }
+
+        return Json(new { data = registros });
     }
-    
+
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost]
     public IActionResult EditMultiple([FromBody] EditProduccionMultipleDto dto)
