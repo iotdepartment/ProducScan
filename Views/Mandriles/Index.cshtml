@@ -4,6 +4,12 @@
 }
 
 
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.bootstrap5.min.css" />
+
+<!-- Partial con modal Create/Edit -->
+@await Html.PartialAsync("_CreateEditMandrilModal")
 
 <div class="row">
     <div class="col-3">
@@ -22,16 +28,20 @@
     <thead class="table-dark">
         <tr>
             <th>Mandril</th>
-            <th>Centro de Costos</th>
+            @* <th>Centro de Costos</th> *@
             <th>Cantidad de Empaque</th>
-            <th>Barcode</th>
-            <th>Kanban</th>
+            @* <th>Barcode</th> *@
+            @* <th>Kanban</th> *@
             <th>Estación</th>
             <th>Familia</th>     
             <th>Proceso</th>     
-            <th>Peso Min</th>
-            <th>Peso Max</th>
-            <th class="text-center">Acciones</th>
+            @* <th>Peso Min</th>
+            <th>Peso Max</th> *@
+            <!-- 🆕 NUEVAS COLUMNAS -->
+            <th>Imagen</th>
+            <th>LTester</th>
+
+            <th class="text-center"></th>
 
         </tr>
     </thead>
@@ -46,9 +56,6 @@
         </div>
     </div>
 </div>
-
-<!-- Partial con modal Create/Edit -->
-@await Html.PartialAsync("_CreateEditMandrilModal")
 
 <!-- Modal Delete -->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
@@ -75,121 +82,150 @@
 @await Html.PartialAsync("_EditMultiplePartial")
 
 @section Scripts {
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
-    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.1/css/buttons.dataTables.min.css">
+    <!-- jQuery (primero SIEMPRE) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    <!-- DataTables núcleo -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- Select -->
     <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+
+    <!-- Buttons núcleo -->
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/dataTables.buttons.min.js"></script>
 
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Buttons Bootstrap 5 (ESTE ES EL QUE TE FALTABA EN ORDEN) -->
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.bootstrap5.min.js"></script>
+
+    <!-- Buttons extras (opcional) -->
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
+
     <script>
-        var table;
+                var table;
 
         $(document).ready(function () {
+                    table = $('#mandrilesTable').DataTable({
+            select: {
+                style: 'multi',
+                items: 'row',
+                selector: 'td:not(:last-child)'
+            },
 
-            table = $('#mandrilesTable').DataTable({
-               select: {
-            style: 'multi',
-            items: 'row',
-            selector: 'td:not(:last-child)'
-        },
+            ajax: {
+                url: "/Mandriles/GetMandriles",
+                type: "GET",
+                datatype: "json"
+            },
 
-                ajax: {
-                    url: "/Mandriles/GetMandriles",
-                    type: "GET",
-                    datatype: "json"
-                },
-                columns: [
-                    { data: "mandrilNombre" },
-                    { data: "centrodeCostos" },
-                    { data: "cantidaddeEmpaque" },
-                    { data: "barcode" },
-                    { data: "kanban" },
-                    { data: "estacion" },
-                    { data: "familia" },
-                    { data: "proceso" },
-                    { data: "pesomin" },
-                    { data: "pesomax" },
-                    {
-                        data: "id",
-                        className: "text-center",
-                        render: function (data, type, row) {
-                            return `
-                                <button class="btn btn-sm btn-warning rounded-pill"
-                                    onclick="openEditModal(${data},
-                                                          '${row.mandrilNombre}',
-                                                          '${row.centrodeCostos}',
-                                                          '${row.cantidaddeEmpaque}',
-                                                          '${row.barcode}',
-                                                          '${row.kanban}',
-                                                          '${row.estacion ?? ""}',
-                                                          '${row.familia ?? ""}',
-                                                          '${row.proceso ?? ""}',
-                                                          '${row.pesomin ?? ""}',
-                                                          '${row.pesomax ?? ""}')">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </button>
+            // 🟩 Layout moderno: botones izquierda, buscador derecha
+            dom: "<'row mb-3'<'col-md-6 dt-buttons'B><'col-md-6'f>>" +
+                 "rt" +
+                 "<'row'<'col-md-6'i><'col-md-6'p>>",
 
-                                <button class="btn btn-sm btn-danger rounded-pill"
-                                    onclick="openDeleteModal(${data})">
-                                    <i class="bi bi-trash-fill"></i>
-                                </button>
-                            `;
+            columns: [
+                { data: "mandrilNombre" },
+                { data: "cantidaddeEmpaque" },
+                { data: "estacion" },
+                { data: "familia" },
+                { data: "proceso" },
+                { data: "imagen",
+                    render: function (data) {
+                        if (!data) {
+                            return `<div class="text-center text-muted">Sin imagen</div>`;
                         }
+
+                       return `
+                            <div style="display:flex; justify-content:center; width:100%;">
+                                <img src="/images/mandriles/${data}"
+                                     class="img-thumbnail shadow-sm"
+                                     style="width:55px; height:55px; object-fit:cover; border-radius:8px;">
+                            </div>
+                        `;
+                            }
+                },
+                {
+                    data: "lTester",
+                    render: function (data) {
+                        if (data === true) return "<span class='badge bg-success'>Sí</span>";
+                        if (data === false) return "<span class='badge bg-danger'>No</span>";
+                        return "<span class='badge bg-secondary'>N/A</span>";
                     }
-                ],
-                columnDefs: [
+                },
+
+                {
+                    data: "id",
+                    className: "text-center",
+                    render: function (data, type, row) {
+
+                        return `
+                            <button class="btn btn-sm btn-warning rounded-pill"
+                                onclick="openEditModal(
+                                    ${data},
+                                    '${row.mandrilNombre}',
+                                    '${row.centrodeCostos}',
+                                    '${row.cantidaddeEmpaque}',
+                                    '${row.barcode}',
+                                    '${row.kanban}',
+                                    '${row.estacion ?? ""}',
+                                    '${row.familia ?? ""}',
+                                    '${row.proceso ?? ""}',
+                                    '${row.pesomin ?? ""}',
+                                    '${row.pesomax ?? ""}',
+                                    '${row.imagen ?? ""}',
+                                    ${row.lTester === true ? "'true'" : row.lTester === false ? "'false'" : "''"}
+                                )">
+                                <i class="bi bi-pencil-fill"></i>
+                            </button>
+                        `;
+                    }
+                }
+            ],
+
+            columnDefs: [
                 { className: "text-center", targets: "_all" }
             ],
-                pageLength: 10,
-                lengthMenu: [10, 20, 50, 100],
-                ordering: false,
-                dom: 'Bfrtip',
-                buttons: [
 
-                    /* ============================
-                       BOTÓN: ELIMINAR SELECCIONADOS
-                    ============================ */
-                    {
-                        text: 'Eliminar seleccionados',
-                        className: 'btn btn-danger rounded-pill',
-                        action: function () {
+            pageLength: 10,
+            lengthMenu: [10, 20, 50, 100],
+            ordering: false,
 
-                            const rows = table.rows({ selected: true }).data();
-
-                            if (!rows.length) {
-                                alert("Selecciona al menos un registro");
-                                return;
-                            }
-
-                            const ids = rows.pluck("id").toArray();
-
-                            $("#deleteId").val(ids.join(","));
-                            $("#deleteModal .modal-body p").text(
-                                `¿Seguro que deseas eliminar ${rows.length} registros seleccionados?`
-                            );
-
-                            $("#deleteModal").modal("show");
+            buttons: [
+                {
+                    text: '<i class="bi bi-trash-fill me-1"></i> Eliminar seleccionados',
+                    className: 'btn btn-danger rounded-pill me-1',
+                    action: function () {
+                        const rows = table.rows({ selected: true }).data();
+                        if (!rows.length) {
+                            alert("Selecciona al menos un registro");
+                            return;
                         }
-                    },
 
-                    /* ============================
-                       BOTÓN: EDITAR SELECCIONADOS
-                    ============================ */
-                    {
-                        text: 'Editar seleccionados',
-                        className: 'btn btn-warning rounded-pill',
-                        action: function () {
-                            openEditMultipleModal();
-                        }
+                        const ids = rows.pluck("id").toArray();
+                        $("#deleteId").val(ids.join(","));
+                        $("#deleteModal .modal-body p").text(
+                            `¿Seguro que deseas eliminar ${rows.length} registros seleccionados?`
+                        );
+
+                        $("#deleteModal").modal("show");
                     }
-                ],
-                language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" }
-            });
+                },
 
+                {
+                    text: '<i class="bi bi-pencil-square me-1"></i> Editar seleccionados',
+                    className: 'btn btn-warning rounded-pill',
+                    action: function () {
+                        openEditMultipleModal();
+                    }
+                }
+            ],
 
+            language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" }
+        });
         const editFields = {
             editMandrilNombre: "mandrilNombre",
             editCentroCostos: "centrodeCostos",
@@ -280,14 +316,17 @@
         /* ============================
             SUBMIT CREATE / EDIT
         ============================ */
-        $("#createEditForm").submit(function (e) {
+               $("#createEditForm").submit(function (e) {
             e.preventDefault();
-            var form = $(this);
+
+            var formData = new FormData(this);
 
             $.ajax({
                 type: "POST",
-                url: form.attr("action"),
-                data: form.serialize(),
+                url: $(this).attr("action"),
+                data: formData,
+                processData: false,
+                contentType: false,
                 success: function (res) {
                     if (res.success) {
                         $('#createEditModal').modal('hide');

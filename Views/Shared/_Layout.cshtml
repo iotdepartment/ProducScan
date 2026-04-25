@@ -171,12 +171,12 @@
             <!-- Sidebar fijo solo en escritorio -->
             <nav id="sidebarMenu" class="d-none d-md-flex flex-column bg-light border-end vh-100 position-fixed">
                 <!-- Botón hamburguesa dentro del sidebar (escritorio) -->
-                <button id="toggleSidebar" class="btn mb-3 d-flex justify-content-sm-end justify-content-center">
+                <button id="toggleSidebar" class="btn d-flex justify-content-sm-end justify-content-center mb-3">
                     <i class="bi bi-list"></i>
                 </button>
 
                 <!-- Marca con dos logos (escritorio) -->
-                <a class="navbar-brand mb-3 p-2 d-flex justify-content-center align-items-center" asp-controller="PiezasEscaneadas" asp-action="Dashboard">
+                <a class="navbar-brand d-flex justify-content-center align-items-center mb-3 p-2" asp-controller="PiezasEscaneadas" asp-action="Dashboard">
                     <img src="~/images/toyoda-gosei-logo.png" alt="Logo Completo" class="logo-completo img-fluid" style="max-height:60px;" />
                     <img src="~/images/icono-tg.png" alt="Logo Icono" class="logo-icono img-fluid d-none" style="max-height:40px;" />
                 </a>
@@ -191,7 +191,7 @@
                             <span class="d-flex justify-content-center" style="width:40px;">
                             <i class="bi bi-house"></i>
                             </span>
-                            <span class="ms-2 sidebar-text">Dashboard</span>
+                            <span class="sidebar-text ms-2">Dashboard</span>
                         </a>
                     </li>
 
@@ -214,22 +214,22 @@
                                 </span>
 
                                 <!-- Texto + flecha pegada al texto -->
-                                <span class="ms-2 sidebar-text d-flex align-items-center">
+                                <span class="sidebar-text d-flex align-items-center ms-2">
                                     Producción
-                                    <i class="bi bi-chevron-down transition-arrow ms-1 normal-arrow"></i>
+                                    <i class="bi bi-chevron-down transition-arrow normal-arrow ms-1"></i>
                                 </span>
                             </a>
 
 
                     <div class="collapse @(produccionOpen ? "show" : "")" id="produccionSubmenu">
-                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal small pb-1">
                             <li class="nav-item">
                                 <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "Index" ? "active fw-bold bg-success text-white" : "text-dark")"
                                     asp-controller="PiezasEscaneadas" asp-action="Index">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-list-ul"></i>
                                     </span>
-                                    <span class="ms-2 sidebar-text">Registro de P. Buenas</span>
+                                    <span class="sidebar-text ms-2">Registro de P. Buenas</span>
                                 </a>
                             </li>
                             <li class="nav-item">
@@ -238,7 +238,7 @@
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-exclamation-triangle"></i>
                                     </span>
-                                    <span class="ms-2 sidebar-text">Registro de Defectos</span>
+                                    <span class="sidebar-text ms-2">Registro de Defectos</span>
                                 </a>
                             </li>
                                     @if (User.IsInRole("Admin") || User.IsInRole("Gerente")){
@@ -248,7 +248,7 @@
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-coin"></i>
                                     </span>
-                                        <span class="ms-2 sidebar-text">Reporte de Costos</span>
+                                        <span class="sidebar-text ms-2">Reporte de Costos</span>
                                 </a>
                             </li>
                             }
@@ -261,19 +261,19 @@
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-card-text"></i>
                                     </span>
-                                    <span class="ms-2 sidebar-text">Reporte de Inspección</span>
+                                    <span class="sidebar-text ms-2">Reporte de Inspección</span>
                                 </a>
                             </li>
-                            @if (User.IsInRole("Admin") || User.IsInRole("Editor") || User.IsInRole("Visual"))
+                            @if (User.IsInRole("Admin") || User.IsInRole("Editor") || User.IsInRole("Visual") || User.IsInRole("Gerente"))
                             // @if (User.IsInRole("Admin") && User.Identity.Name == "Angelito")
                             {
-                            <li class="nav-item ">
-                                <a class="nav-link d-flex align-items-center w-100  @(currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                            <li class="nav-item">
+                                <a class="nav-link d-flex align-items-center w-100 @(currentController == "PiezasEscaneadas" && currentAction == "InspeccionTM" ? "active fw-bold bg-secondary text-white" : "text-dark")"
                                    asp-controller="PiezasEscaneadas" asp-action="InspeccionTM">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-person-vcard"></i>
                                     </span>
-                                    <span class="ms-2 sidebar-text">Inspección por TM</span>
+                                    <span class="sidebar-text ms-2">Inspección por TM</span>
                                 </a>
                             </li>
                             }
@@ -301,25 +301,25 @@
                                 </span>
 
                                 <!-- Texto + flecha pegada al texto -->
-                                <span class="ms-2 sidebar-text d-flex align-items-center">
+                                <span class="sidebar-text d-flex align-items-center ms-2">
                                     Administración
-                                    <i class="bi bi-chevron-down transition-arrow ms-1 normal-arrow"></i>
+                                    <i class="bi bi-chevron-down transition-arrow normal-arrow ms-1"></i>
                                 </span>
                             </a>
 
 
                     <div class="collapse @(administracionOpen ? "show" : "")" id="administracionSubmenu">
-                        <ul class="btn-toggle-nav list-unstyled fw-normal pb-1 small">
+                        <ul class="btn-toggle-nav list-unstyled fw-normal small pb-1">
                             @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                             // @if (User.IsInRole("Admin") && User.Identity.Name == "Angelito")
                             {
-                            <li class="nav-item ">
-                                        <a class="nav-link d-flex align-items-center w-100  @(currentController == "Mandriles" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                            <li class="nav-item">
+                                        <a class="nav-link d-flex align-items-center w-100 @(currentController == "Mandriles" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
                                            asp-controller="Mandriles" asp-action="Index">
                                     <span class="d-flex justify-content-center" style="width:40px;">
                                                     <i class="bi bi-puzzle"></i>
                                     </span>
-                                    <span class="ms-2 sidebar-text">Mandriles</span>
+                                    <span class="sidebar-text ms-2">Mandriles</span>
                                 </a>
                             </li>
                             }
@@ -331,20 +331,20 @@
                                         <span class="d-flex justify-content-center" style="width:40px;">
                                             <i class="bi bi-person-badge"></i>
                                         </span>
-                                        <span class="ms-2 sidebar-text">Team Members</span>
+                                        <span class="sidebar-text ms-2">Team Members</span>
                                     </a>
                                 </li>
                             }
                             @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                             // @if (User.IsInRole("Admin") && User.Identity.Name == "Angelito")
                             {
-                                <li class="nav-item ">
-                                    <a class="nav-link d-flex align-items-center w-100  @(currentController == "Mesas" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
+                                <li class="nav-item">
+                                    <a class="nav-link d-flex align-items-center w-100 @(currentController == "Mesas" && currentAction == "Index" ? "active fw-bold bg-secondary text-white" : "text-dark")"
                                         asp-controller="Mesas" asp-action="Index">
                                         <span class="d-flex justify-content-center" style="width:40px;">
                                                 <i class="bi bi-person-workspace"></i>
                                         </span>
-                                        <span class="ms-2 sidebar-text">Mesas</span>
+                                        <span class="sidebar-text ms-2">Mesas</span>
                                     </a>
                                 </li>
                             }
@@ -363,7 +363,7 @@
                                 <span class="d-flex justify-content-center" style="width:40px;">
                                 <i class="bi bi-people"></i>
                                 </span>
-                                <span class="ms-2 sidebar-text">Usuarios</span>
+                                <span class="sidebar-text ms-2">Usuarios</span>
                             </a>
                         </li>
                     }
@@ -376,7 +376,7 @@
                                 <span class="d-flex justify-content-center" style="width:40px;">
                                     <i class="bi bi-clock-history"></i>
                                 </span>
-                                <span class="ms-2 sidebar-text">Logs</span>
+                                <span class="sidebar-text ms-2">Logs</span>
                             </a>
                         </li>
                     }
@@ -390,11 +390,11 @@
                             <li class="nav-item">
                                 <form asp-controller="Auth" asp-action="Logout" method="post" class="d-inline">
                                     @Html.AntiForgeryToken()
-                                    <button type="submit" class="btn btn-link nav-link text-start p-3 fw-bold d-flex align-items-center">
+                                    <button type="submit" class="btn btn-link nav-link fw-bold d-flex align-items-center p-3 text-start">
                                         <span class="d-flex justify-content-center" style="width:40px;">
                                         <i class="bi bi-box-arrow-right"></i>
                                         </span>
-                                        <span class="ms-2 sidebar-text">Cerrar sesión (@User.Identity.Name)</span>
+                                        <span class="sidebar-text ms-2">Cerrar sesión (@User.Identity.Name)</span>
                                     </button>
                                 </form>
                             </li>
@@ -403,7 +403,7 @@
                         {
                             <li class="nav-item">
                                 <a class="nav-link d-flex align-items-center" asp-controller="Auth" asp-action="Login">
-                                    <i class="bi bi-box-arrow-in-right"></i><span class="ms-2 sidebar-text">Iniciar sesión</span>
+                                    <i class="bi bi-box-arrow-in-right"></i><span class="sidebar-text ms-2">Iniciar sesión</span>
                                 </a>
                             </li>
                         }
@@ -413,7 +413,7 @@
             </nav>
 
             <!-- Navbar fijo arriba solo en móviles -->
-            <nav class="navbar bg-light fixed-top d-md-none shadow-sm mobile-navbar">
+            <nav class="navbar bg-light fixed-top d-md-none mobile-navbar shadow-sm">
                     <div class="container-fluid">
                         <a class="navbar-brand d-flex align-items-center"
                            asp-controller="PiezasEscaneadas" asp-action="Dashboard">
@@ -427,7 +427,7 @@
                         </button>
                     </div>
 
-                    <div class="collapse mobile-collapse" id="mobileMenu">
+                    <div class="mobile-collapse collapse" id="mobileMenu">
                         <ul class="navbar-nav p-2">
 
                             <!-- Dashboard -->
@@ -446,7 +446,7 @@
                                     <i class="bi bi-chevron-down arrow"></i>
                                 </a>
 
-                                <div class="collapse mobile-submenu" id="mobileProduccion">
+                                <div class="mobile-submenu collapse" id="mobileProduccion">
                                     <ul class="navbar-nav ps-3">
 
                                         <li>
@@ -504,7 +504,7 @@
                                         <i class="bi bi-chevron-down arrow"></i>
                                     </a>
 
-                                    <div class="collapse mobile-submenu" id="mobileAdmin">
+                                    <div class="mobile-submenu collapse" id="mobileAdmin">
                                         <ul class="navbar-nav ps-3">
 
                                             <li>
@@ -575,12 +575,12 @@
             <div id="mainContent" class="flex-grow-1 p-4">
 
                 <!-- Card de título de la vista -->
-                <div class="container mb-3 mt-5 mt-md-0">
-                    <div class="card shadow-sm border-0 rounded-pill">
+                <div class="mt-md-0 container mb-3 mt-5">
+                    <div class="card rounded-pill border-0 shadow-sm">
                         <div class="card-body d-flex align-items-center justify-content-between m-3">
                             <div>
-                                <h4 class="card-title mb-0 fw-bold">
-                                    <i class="bi bi-window me-2 text-primary"></i> @ViewData["Title"]
+                                <h4 class="card-title fw-bold mb-0">
+                                    <i class="bi bi-window text-primary me-2"></i> @ViewData["Title"]
                                 </h4>
                                 <small class="text-muted">@ViewData["Subtitle"]</small>
                             </div>
@@ -598,14 +598,14 @@
 
                 @if (ViewData["FullWidth"] as bool? == true)
                 {
-                    <main role="main" class="mx-auto w-100 p-0 m-0" style="">
+                    <main role="main" class="w-100 m-0 mx-auto p-0" style="">
                         @RenderBody()
                     </main>
                 }
                 else
                 {
                     <div class="container mb-3">
-                        <div class="card shadow-sm border-0 rounded-4">
+                        <div class="card rounded-4 border-0 shadow-sm">
                             <main role="main" class="p-5">
                                 @RenderBody()
                             </main>
@@ -717,7 +717,7 @@
                         <div class="toast-body">
                             @TempData["Success"]
                         </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white m-auto me-2" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
                 </div>
             }
@@ -728,7 +728,7 @@
                         <div class="toast-body">
                             @TempData["Error"]
                         </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        <button type="button" class="btn-close btn-close-white m-auto me-2" data-bs-dismiss="toast" aria-label="Close"></button>
                     </div>
                 </div>
             }

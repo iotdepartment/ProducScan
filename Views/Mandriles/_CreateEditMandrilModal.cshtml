@@ -1,173 +1,298 @@
 ﻿@model ProducScan.Models.Mandril
 
 <!-- Modal Create/Edit -->
+
 <div class="modal fade" id="createEditModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
-        <!-- modal-lg para que se vea más amplio -->
         <div class="modal-content">
-            <form id="createEditForm" method="post">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalTitle">Crear Mandril</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
 
-                <div class="modal-body">
-                    <input type="hidden" id="mandrilId" name="Id" />
+            <!-- HEADER -->
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Crear Mandril</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
 
-                    <div class="row g-3">
+            <form id="createEditForm" method="post" enctype="multipart/form-data">
 
-                        <div class="col-md-6">
-                            <label class="form-label">Mandril</label>
-                            <input type="text" class="form-control rounded-pill" id="mandrilNombre" name="MandrilNombre" required />
-                        </div>
+                <input type="hidden" id="mandrilId" name="Id" />
 
-                        <div class="col-md-6">
-                            <label class="form-label">Centro de Costos</label>
-                            <input type="text" class="form-control rounded-pill" id="centrodeCostos" name="CentrodeCostos" required pattern="^[0-9]+$" />
-                        </div>
+                <div class="row g-3 p-3">
 
-                        <div class="col-md-6">
-                            <label class="form-label">Cantidad de Empaque</label>
-                            <input type="text" class="form-control rounded-pill" id="cantidaddeEmpaque" name="CantidaddeEmpaque" required pattern="^[0-9]+$" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Barcode</label>
-                            <input type="text" class="form-control rounded-pill" id="barcode" name="Barcode" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Familia</label>
-                            <select class="form-select rounded-pill" id="familia" name="Familia">
-                                <option value="">Seleccione una familia</option>
-                                <option>33x39.4</option>
-                                <option>33x42</option>
-                                <option>7x12</option>
-                                <option>7.5X14.5</option>
-                                <option>37X44</option>
-                                <option>37X47</option>
-                                <option>11x18</option>
-                                <option>13x20</option>
-                                <option>13X21</option>
-                                <option>24x30</option>
-                                <option>16x24</option>
-                                <option>7X14</option>
-                                <option>11X17</option>
-                                <option>9.7X17.6 (AEM)</option>
-                                <option>9.7X17.6 (ACM)</option>
-                                <option>9.3X17.2</option>
-                                <option>8.9X17.2</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Proceso</label>
-                            <select class="form-select rounded-pill" id="proceso" name="Proceso">
-
-                                <option value="">Seleccione un proceso</option>
-                                <option>Coex</option>
-                                <option>CHS</option>
-                                <option>ACM</option>
-                                <option>AEM</option>
-                            </select>
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Kanban</label>
-                            <input type="text" class="form-control rounded-pill" id="kanban" name="Kanban" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Estación</label>
-                            <input type="text" class="form-control rounded-pill" id="estacion" name="Estacion" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Peso Mínimo</label>
-                            <input type="number" step="0.001" class="form-control rounded-pill" id="pesomin" name="PesoMin" />
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label">Peso Máximo</label>
-                            <input type="number" step="0.001" class="form-control rounded-pill" id="pesomax" name="PesoMax" />
-                        </div>
-
+                    <div class="col-md-6">
+                        <label class="form-label">Mandril</label>
+                        <input type="text" class="form-control rounded-pill" id="mandrilNombre" name="MandrilNombre" required />
                     </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Centro de Costos</label>
+                        <input type="text" class="form-control rounded-pill" id="centrodeCostos" name="CentrodeCostos" required />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Cantidad de Empaque</label>
+                        <input type="text" class="form-control rounded-pill" id="cantidaddeEmpaque" name="CantidaddeEmpaque" required />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Barcode</label>
+                        <input type="text" class="form-control rounded-pill" id="barcode" name="Barcode" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Familia</label>
+                        <select class="form-select rounded-pill" id="familia" name="Familia">
+                            <option value="">Seleccione una familia</option>
+                            <option>33x39.4</option>
+                            <option>33x42</option>
+                            <option>7x12</option>
+                            <option>7.5X14.5</option>
+                            <option>37X44</option>
+                            <option>37X47</option>
+                            <option>11x18</option>
+                            <option>13x20</option>
+                            <option>13X21</option>
+                            <option>24x30</option>
+                            <option>16x24</option>
+                            <option>7X14</option>
+                            <option>11X17</option>
+                            <option>9.7X17.6 (AEM)</option>
+                            <option>9.7X17.6 (ACM)</option>
+                            <option>9.3X17.2</option>
+                            <option>8.9X17.2</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Proceso</label>
+                        <select class="form-select rounded-pill" id="proceso" name="Proceso">
+                            <option value="">Seleccione un proceso</option>
+                            <option>Coex</option>
+                            <option>CHS</option>
+                            <option>ACM</option>
+                            <option>AEM</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Kanban</label>
+                        <input type="text" class="form-control rounded-pill" id="kanban" name="Kanban" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Estación</label>
+                        <input type="text" class="form-control rounded-pill" id="estacion" name="Estacion" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Peso Mínimo</label>
+                        <input type="number" step="0.001" class="form-control rounded-pill" id="pesomin" name="PesoMin" />
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Peso Máximo</label>
+                        <input type="number" step="0.001" class="form-control rounded-pill" id="pesomax" name="PesoMax" />
+                    </div>
+
+                    <!-- IMAGEN -->
+                    <div class="col-md-12">
+                        <label class="form-label">Imagen del Mandril</label>
+                        <input type="file" class="form-control rounded-pill" id="imagen" name="Imagen" accept="image/*" />
+                        <input type="hidden" id="removeImageFlag" name="RemoveImage" value="false">
+                    </div>
+
+                    <!-- PREVIEW + BOTÓN X -->
+                    <div class="col-md-12 d-flex justify-content-center mt-3">
+                        <div id="previewContainer" class="position-relative" style="display:none;">
+
+                            <!-- Imagen -->
+                            <img id="previewImagen"
+                                 class="img-thumbnail shadow-sm"
+                                 style="width:180px; height:180px; object-fit:cover; border-radius:12px;">
+
+                            <!-- Botón X -->
+                            <button type="button" id="btnRemoveImage"
+                                    class="btn btn-danger btn-sm rounded-circle d-flex align-items-center justify-content-center"
+                                    style="position:absolute; top:-10px; right:-10px; width:30px; height:30px;">
+                                <i class="bi bi-x-lg" style="font-size:14px;"></i>
+                            </button>
+
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Leak Tester?</label>
+                        <select class="form-select rounded-pill" id="ltester" name="LTester">
+                            <option value="">Seleccione</option>
+                            <option value="true">Sí</option>
+                            <option value="false">No</option>
+                        </select>
+                    </div>
+
                 </div>
 
-               
+                <!-- FOOTER -->
                 <div class="modal-footer">
-                    <button type="submit" class="btn btn-primary" id="saveBtn">Guardar</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill" id="saveBtn">Guardar</button>
+                    <button type="button" class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
                 </div>
+
             </form>
         </div>
     </div>
 </div>
 
+
 <script>
+    /* ============================
+       BOTÓN X PARA BORRAR IMAGEN
+       ============================ */
+    document.getElementById("btnRemoveImage").addEventListener("click", function () {
+
+        // Ocultar contenedor
+        document.getElementById("previewContainer").style.display = "none";
+
+        // Limpiar input file
+        document.getElementById("imagen").value = "";
+
+        // Marcar que se debe borrar la imagen
+        document.getElementById("removeImageFlag").value = "true";
+    });
+
+
     /* ============================
           MODO CREAR
        ============================ */
-       function openCreateModal() {
+    function openCreateModal() {
 
-           document.getElementById("modalTitle").innerText = "Nuevo Mandril";
+        document.getElementById("modalTitle").innerText = "Nuevo Mandril";
 
-           const header = document.querySelector("#createEditModal .modal-header");
-           header.classList.remove("bg-warning", "text-dark");
-           header.classList.add("bg-success", "text-white");
+        const header = document.querySelector("#createEditModal .modal-header");
+        header.classList.remove("bg-warning", "text-dark");
+        header.classList.add("bg-success", "text-white");
 
-           const saveBtn = document.getElementById("saveBtn");
-           saveBtn.innerText = "Guardar";
-           saveBtn.classList.remove("btn-warning");
-           saveBtn.classList.add("btn-success");
+        const saveBtn = document.getElementById("saveBtn");
+        saveBtn.innerText = "Guardar";
+        saveBtn.classList.remove("btn-warning");
+        saveBtn.classList.add("btn-success");
 
-           document.getElementById("createEditForm").action = "/Mandriles/Create";
+        document.getElementById("createEditForm").action = "/Mandriles/Create";
 
-           // Limpiar campos
-           document.getElementById("mandrilId").value = "";
-           document.getElementById("mandrilNombre").value = "";
-           document.getElementById("centrodeCostos").value = "";
-           document.getElementById("cantidaddeEmpaque").value = "";
-           document.getElementById("barcode").value = "";
-           document.getElementById("kanban").value = "";
-           document.getElementById("estacion").value = "";
-           document.getElementById("familia").value = "";
-           document.getElementById("proceso").value = "";
-           document.getElementById("pesomin").value = "";
-           document.getElementById("pesomax").value = "";
-       }
+        // Limpiar campos
+        document.getElementById("mandrilId").value = "";
+        document.getElementById("mandrilNombre").value = "";
+        document.getElementById("centrodeCostos").value = "";
+        document.getElementById("cantidaddeEmpaque").value = "";
+        document.getElementById("barcode").value = "";
+        document.getElementById("kanban").value = "";
+        document.getElementById("estacion").value = "";
+        document.getElementById("familia").value = "";
+        document.getElementById("proceso").value = "";
+        document.getElementById("pesomin").value = "";
+        document.getElementById("pesomax").value = "";
 
-       /* ============================
+        // Imagen
+        document.getElementById("imagen").value = "";
+        document.getElementById("previewContainer").style.display = "none";
+        document.getElementById("previewImagen").src = "";
+        document.getElementById("removeImageFlag").value = "false";
+
+        // LTester
+        document.getElementById("ltester").value = "";
+
+        $('#createEditModal').modal('show');
+    }
+
+
+    /* ============================
           MODO EDITAR
        ============================ */
-       function openEditModal(id, mandrilNombre, centrodeCostos, cantidaddeEmpaque, barcode, kanban, estacion, familia, proceso, pesomin, pesomax) {
+    function openEditModal(
+        id, mandrilNombre, centrodeCostos, cantidaddeEmpaque,
+        barcode, kanban, estacion, familia, proceso, pesomin, pesomax, imagen, ltester
+    ) {
 
-           document.getElementById("modalTitle").innerText = "Editar Mandril";
+        // Resetear flag
+        document.getElementById("removeImageFlag").value = "false";
 
-           const header = document.querySelector("#createEditModal .modal-header");
-           header.classList.remove("bg-success", "text-white");
-           header.classList.add("bg-warning", "text-dark");
+        // Mostrar u ocultar preview
+        if (imagen) {
+            document.getElementById("previewImagen").src = "/images/mandriles/" + imagen;
+            document.getElementById("previewContainer").style.display = "block";
+        } else {
+            document.getElementById("previewContainer").style.display = "none";
+            document.getElementById("previewImagen").src = "";
+        }
 
-           const saveBtn = document.getElementById("saveBtn");
-           saveBtn.innerText = "Actualizar";
-           saveBtn.classList.remove("btn-success");
-           saveBtn.classList.add("btn-warning");
+        document.getElementById("modalTitle").innerText = "Editar Mandril";
 
-           document.getElementById("createEditForm").action = "/Mandriles/Edit";
+        const header = document.querySelector("#createEditModal .modal-header");
+        header.classList.remove("bg-success", "text-white");
+        header.classList.add("bg-warning", "text-dark");
 
-           document.getElementById("mandrilId").value = id;
-           document.getElementById("mandrilNombre").value = mandrilNombre;
-           document.getElementById("centrodeCostos").value = centrodeCostos;
-           document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
-           document.getElementById("barcode").value = barcode;
-           document.getElementById("kanban").value = kanban;
-           document.getElementById("estacion").value = estacion || "";
-           document.getElementById("familia").value = familia || "";
-           document.getElementById("proceso").value = proceso || "";
-           document.getElementById("pesomin").value = pesomin || "";
-           document.getElementById("pesomax").value = pesomax || "";
+        const saveBtn = document.getElementById("saveBtn");
+        saveBtn.innerText = "Actualizar";
+        saveBtn.classList.remove("btn-success");
+        saveBtn.classList.add("btn-warning");
 
-           $('#createEditModal').modal('show');
-       }
-</script>                
+        document.getElementById("createEditForm").action = "/Mandriles/Edit";
+
+        // Campos normales
+        document.getElementById("mandrilId").value = id;
+        document.getElementById("mandrilNombre").value = mandrilNombre;
+        document.getElementById("centrodeCostos").value = centrodeCostos;
+        document.getElementById("cantidaddeEmpaque").value = cantidaddeEmpaque;
+        document.getElementById("barcode").value = barcode;
+        document.getElementById("kanban").value = kanban;
+        document.getElementById("estacion").value = estacion || "";
+        document.getElementById("familia").value = familia || "";
+        document.getElementById("proceso").value = proceso || "";
+        document.getElementById("pesomin").value = pesomin || "";
+        document.getElementById("pesomax").value = pesomax || "";
+
+        // Limpiar input file
+        document.getElementById("imagen").value = "";
+
+        // Normalizar LTester
+        let normalized = "";
+
+        if (ltester !== null && ltester !== undefined) {
+
+            if (ltester === 1 || ltester === "1") normalized = "true";
+            else if (ltester === 0 || ltester === "0") normalized = "false";
+
+            else if (ltester === true) normalized = "true";
+            else if (ltester === false) normalized = "false";
+
+            else {
+                let s = (ltester + "").trim().toLowerCase();
+                if (s === "true") normalized = "true";
+                else if (s === "false") normalized = "false";
+            }
+        }
+
+        document.getElementById("ltester").value = normalized;
+
+        $('#createEditModal').modal('show');
+    }
+
+
+    /* ============================
+       PREVIEW AL SUBIR IMAGEN
+       ============================ */
+    document.getElementById("imagen").addEventListener("change", function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const img = document.getElementById("previewImagen");
+            img.src = e.target.result;
+
+            // Mostrar contenedor completo
+            document.getElementById("previewContainer").style.display = "block";
+
+            // Resetear flag de borrado
+            document.getElementById("removeImageFlag").value = "false";
+        };
+        reader.readAsDataURL(file);
+    });
+</script>

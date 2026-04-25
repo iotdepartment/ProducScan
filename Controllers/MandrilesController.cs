@@ -38,7 +38,9 @@ namespace ProducScan.Controllers
                     estacion = m.Estacion,
                     familia = m.Familia,
                     proceso = m.Proceso,
-                      pesomin = m.PesoMin,
+                    Imagen = m.Imagen,
+                    LTester = m.LTester,
+                    pesomin = m.PesoMin,
                     pesomax = m.PesoMax
                 })
                 .ToListAsync();
@@ -48,7 +50,7 @@ namespace ProducScan.Controllers
 
         [Authorize(Roles = "Admin,Editor")]
         [HttpPost]
-        public async Task<IActionResult> Create(Mandril mandril)
+        public async Task<IActionResult> Create(Mandril mandril, IFormFile Imagen)
         {
             ModelState.Remove(nameof(Mandril.Id));
 
@@ -66,6 +68,23 @@ namespace ProducScan.Controllers
             {
                 mandril.Area = "INSPECCION";
 
+                // ============================
+                //   SUBIDA DE IMAGEN (CREATE)
+                // ============================
+                if (Imagen != null && Imagen.Length > 0)
+                {
+                    var extension = Path.GetExtension(Imagen.FileName);
+                    var fileName = $"{Guid.NewGuid()}{extension}";
+                    var savePath = Path.Combine("wwwroot/images/mandriles", fileName);
+
+                    using (var stream = new FileStream(savePath, FileMode.Create))
+                    {
+                        await Imagen.CopyToAsync(stream);
+                    }
+
+                    mandril.Imagen = fileName;
+                }
+
                 _context.Add(mandril);
                 await _context.SaveChangesAsync();
 
@@ -79,17 +98,22 @@ namespace ProducScan.Controllers
 
         [Authorize(Roles = "Admin,Editor")]
         [HttpPost]
-        public async Task<IActionResult> Edit(Mandril mandril)
+        public async Task<IActionResult> Edit(Mandril mandril, IFormFile Imagen, bool RemoveImage)
         {
-            if (!ModelState.IsValid)
-            {
-                var errors = ModelState.Values
-                    .SelectMany(v => v.Errors)
-                    .Select(e => e.ErrorMessage)
-                    .ToList();
+            // ============================
+            // VALIDACIONES BACKEND
+            // ============================
 
-                return Json(new { success = false, message = "Error de validación", errors });
-            }
+            if (string.IsNullOrWhiteSpace(mandril.MandrilNombre))
+                return Json(new { success = false, message = "El campo Mandril es obligatorio." });
+
+            if (!string.IsNullOrWhiteSpace(mandril.CentrodeCostos) &&
+                !int.TryParse(mandril.CentrodeCostos, out _))
+                return Json(new { success = false, message = "Centro de Costos debe ser numérico." });
+
+            if (!string.IsNullOrWhiteSpace(mandril.CantidaddeEmpaque) &&
+                !int.TryParse(mandril.CantidaddeEmpaque, out _))
+                return Json(new { success = false, message = "Cantidad de Empaque debe ser numérica." });
 
             try
             {
@@ -97,6 +121,9 @@ namespace ProducScan.Controllers
                 if (existing == null)
                     return Json(new { success = false, message = "Mandril no encontrado." });
 
+                // ============================
+                // ACTUALIZAR CAMPOS NORMALES
+                // ============================
                 existing.MandrilNombre = mandril.MandrilNombre;
                 existing.CentrodeCostos = mandril.CentrodeCostos;
                 existing.CantidaddeEmpaque = mandril.CantidaddeEmpaque;
@@ -107,7 +134,48 @@ namespace ProducScan.Controllers
                 existing.Proceso = mandril.Proceso;
                 existing.PesoMin = mandril.PesoMin;
                 existing.PesoMax = mandril.PesoMax;
+                existing.LTester = mandril.LTester;
                 existing.Area = "INSPECCION";
+
+                // ============================
+                // ELIMINAR IMAGEN (X)
+                // ============================
+                if (RemoveImage)
+                {
+                    if (!string.IsNullOrEmpty(existing.Imagen))
+                    {
+                        var oldPath = Path.Combine("wwwroot/images/mandriles", existing.Imagen);
+                        if (System.IO.File.Exists(oldPath))
+                            System.IO.File.Delete(oldPath);
+                    }
+
+                    existing.Imagen = null;
+                }
+
+                // ============================
+                // SUBIR NUEVA IMAGEN
+                // ============================
+                if (Imagen != null && Imagen.Length > 0)
+                {
+                    // Borrar imagen anterior si existe
+                    if (!string.IsNullOrEmpty(existing.Imagen))
+                    {
+                        var oldPath = Path.Combine("wwwroot/images/mandriles", existing.Imagen);
+                        if (System.IO.File.Exists(oldPath))
+                            System.IO.File.Delete(oldPath);
+                    }
+
+                    var extension = Path.GetExtension(Imagen.FileName);
+                    var fileName = $"{existing.Id}_{DateTime.Now.Ticks}{extension}";
+                    var savePath = Path.Combine("wwwroot/images/mandriles", fileName);
+
+                    using (var stream = new FileStream(savePath, FileMode.Create))
+                    {
+                        await Imagen.CopyToAsync(stream);
+                    }
+
+                    existing.Imagen = fileName;
+                }
 
                 await _context.SaveChangesAsync();
 
