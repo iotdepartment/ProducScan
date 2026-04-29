@@ -2,7 +2,6 @@
 {
     public class DashboardResumenViewModel
     {
-
         public int ProduccionAyer { get; set; }
         public double PromedioSemanal { get; set; }
 
@@ -25,7 +24,23 @@
         public double PorcentajeVulcanization { get; set; }
         public double PorcentajeUncured { get; set; }
 
-        // Opcional: si quieres mostrar también piezas buenas
+        // Piezas buenas
         public int TotalPiezasBuenas => TotalPiezas - TotalDefectos;
+
+        /* ============================================================
+           PROPIEDADES FORMATEADAS (LAS QUE FALTABAN)
+        ============================================================ */
+
+        public string TotalPiezasFmt { get; set; } = string.Empty;
+        public string TotalBuenasFmt { get; set; } = string.Empty;
+        public string TotalDefectosFmt { get; set; } = string.Empty;
+
+        public string FPYFmt { get; set; } = string.Empty;
+        public string ScrapFmt { get; set; } = string.Empty;
+
+        public string PrintIllegibleFmt { get; set; } = string.Empty;
+        public string MaterialLubFmt { get; set; } = string.Empty;
+        public string VulcanizationFmt { get; set; } = string.Empty;
+        public string UncuredFmt { get; set; } = string.Empty;
     }
 }

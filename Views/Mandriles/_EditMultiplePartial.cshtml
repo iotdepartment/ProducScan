@@ -83,12 +83,20 @@
 
                         <div class="col-md-6">
                             <label class="form-label">Peso Mínimo</label>
-                            <input type="number" step="0.01" class="form-control rounded-pill" id="editPesoMin" />
+                            <input type="text"
+                                   inputmode="decimal"
+                                   pattern="[0-9]+([.,][0-9]+)?"
+                                   class="form-control rounded-pill"
+                                   id="editPesoMin" />
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label">Peso Máximo</label>
-                            <input type="number" step="0.01" class="form-control rounded-pill" id="editPesoMax" />
+                            <input type="text"
+                                   inputmode="decimal"
+                                   pattern="[0-9]+([.,][0-9]+)?"
+                                   class="form-control rounded-pill"
+                                   id="editPesoMax" />
                         </div>
 
                     </div>

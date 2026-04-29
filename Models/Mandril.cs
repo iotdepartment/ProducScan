@@ -15,10 +15,7 @@
         public string? Proceso { get; set; }
         public double? PesoMax { get; set; }
         public double? PesoMin { get; set; }
-        // 🔥 DEBE SER NULLABLE
         public string? Imagen { get; set; }
-
-        // 🔥 DEBE SER NULLABLE
         public bool? LTester { get; set; }
 
 

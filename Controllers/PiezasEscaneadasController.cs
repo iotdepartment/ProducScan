@@ -101,7 +101,7 @@ public class PiezasEscaneadasController : Controller
         return View(paginated);
     }
 
-    [Authorize(Roles = "Admin,Editor,Visual")]
+    [Authorize(Roles = "Admin,Editor,Visual,Gerente")]
     [HttpGet]
     public IActionResult InspeccionTM(DateTime? fecha, string turno)
     {
@@ -313,6 +313,7 @@ public class PiezasEscaneadasController : Controller
         return View(lista);
     }
 
+    [Authorize(Roles = "Admin,Editor,Visual,Gerente")]
     [HttpGet]
     public IActionResult InspeccionTMTV(DateTime? fecha, string turno)
     {
@@ -1488,47 +1489,61 @@ public class PiezasEscaneadasController : Controller
         return View("DetallePorMesa", detalles);
     }
 
+
+
+
     //DASHBOARD DINAMICO
-    public IActionResult Dashboard(DateTime? fecha)
+    // DASHBOARD DINÁMICO POR RANGO DE FECHAS
+    public IActionResult Dashboard(DateTime? fechaInicio, DateTime? fechaFin)
     {
-        // --- Fecha laboral seleccionada ---
+        // Fecha actual en Matamoros
         var ahora = ProduccionHelper.GetMatamorosTime();
-        var fechaSeleccionada = fecha ?? ProduccionHelper.GetFechaProduccion(ahora);
 
-        var fechaFiltro = DateOnly.FromDateTime(fechaSeleccionada);
-        var fechaFiltroDT = fechaFiltro.ToDateTime(TimeOnly.MinValue);
+        // Si no envían fechas, usar hoy como rango
+        var inicio = fechaInicio ?? ProduccionHelper.GetFechaProduccion(ahora).Date;
+        var fin = fechaFin ?? ProduccionHelper.GetFechaProduccion(ahora).Date;
 
-        // Rango SQL (solo 1 día antes y 1 día después)
-        var inicioSQL = fechaFiltro.AddDays(-1);
-        var finSQL = fechaFiltro.AddDays(1);
+        // Convertir a DateOnly
+        var inicioSQL = DateOnly.FromDateTime(inicio);
+        var finSQL = DateOnly.FromDateTime(fin);
+
+        // Extender 1 día para capturar fechas laborales cruzadas
+        var inicioExtendido = inicioSQL.AddDays(-1);
+        var finExtendido = finSQL.AddDays(1);
 
         /* ============================================================
            1) PRODUCCIONES (FILTRADAS EN SQL)
-        ============================================================ */
+           ============================================================ */
         var produccionesRaw = _context.RegistrodePiezasEscaneadas
-            .Where(r => r.Fecha >= inicioSQL && r.Fecha <= finSQL)
+            .Where(r => r.Fecha >= inicioExtendido && r.Fecha <= finExtendido)
             .ToList();
 
         var producciones = produccionesRaw
-            .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
-                        == fechaFiltroDT.Date)
+            .Where(r =>
+            {
+                var fechaLaboral = ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date;
+                return fechaLaboral >= inicio && fechaLaboral <= fin;
+            })
             .ToList();
 
         /* ============================================================
            2) DEFECTOS (FILTRADOS EN SQL)
-        ============================================================ */
+           ============================================================ */
         var defectosRaw = _context.RegistrodeDefectos
-            .Where(d => d.Fecha >= inicioSQL && d.Fecha <= finSQL)
+            .Where(d => d.Fecha >= inicioExtendido && d.Fecha <= finExtendido)
             .ToList();
 
         var defectos = defectosRaw
-            .Where(d => ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date
-                        == fechaFiltroDT.Date)
+            .Where(d =>
+            {
+                var fechaLaboral = ProduccionHelper.GetFechaProduccion(d.Fecha.ToDateTime(d.Hora)).Date;
+                return fechaLaboral >= inicio && fechaLaboral <= fin;
+            })
             .ToList();
 
         /* ============================================================
            3) TOTALES
-        ============================================================ */
+           ============================================================ */
         var totalBuenas = producciones.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0);
         var totalDefectos = defectos.Count;
         var totalPiezas = totalBuenas + totalDefectos;
@@ -1538,7 +1553,7 @@ public class PiezasEscaneadasController : Controller
 
         /* ============================================================
            4) DEFECTOS POR CATEGORÍA
-        ============================================================ */
+           ============================================================ */
         int defectosPrintIllegible = defectos.Count(d => !new[] { "17a", "17b", "21" }.Contains(d.CodigodeDefecto));
         int defectosMaterialLub = defectos.Count(d => !new[] { "17a", "17b", "21", "54" }.Contains(d.CodigodeDefecto));
         int defectosVulcanization = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24" }.Contains(d.CodigodeDefecto));
@@ -1549,6 +1564,9 @@ public class PiezasEscaneadasController : Controller
         double porcVulcanization = totalPiezas > 0 ? (double)defectosVulcanization / totalPiezas * 100 : 0;
         double porcUncured = totalPiezas > 0 ? (double)defectosUncured / totalPiezas * 100 : 0;
 
+        /* ============================================================
+           5) VIEWMODEL CON FORMATO (N0, N2, pz)
+           ============================================================ */
         var viewModel = new DashboardResumenViewModel
         {
             TotalPiezas = totalPiezas,
@@ -1558,14 +1576,25 @@ public class PiezasEscaneadasController : Controller
             PorcentajePrintIllegible = porcPrintIllegible,
             PorcentajeMaterialLub = porcMaterialLub,
             PorcentajeVulcanization = porcVulcanization,
-            PorcentajeUncured = porcUncured
+            PorcentajeUncured = porcUncured,
+
+            // FORMATO CON COMAS Y SUFIJO "pz"
+            TotalPiezasFmt = string.Format("{0:N0} pz", totalPiezas),
+            TotalBuenasFmt = string.Format("{0:N0} pz", totalBuenas),
+            TotalDefectosFmt = string.Format("{0:N0} pz", totalDefectos),
+            FPYFmt = string.Format("{0:N2} %", fpy),
+            ScrapFmt = string.Format("{0:N2} %", scrap),
+
+            PrintIllegibleFmt = string.Format("{0:N2} %", porcPrintIllegible),
+            MaterialLubFmt = string.Format("{0:N2} %", porcMaterialLub),
+            VulcanizationFmt = string.Format("{0:N2} %", porcVulcanization),
+            UncuredFmt = string.Format("{0:N2} %", porcUncured),
         };
 
         /* ============================================================
-           5) AGRUPACIONES (OPTIMIZADAS)
-        ============================================================ */
+           6) AGRUPACIONES (SE MANTIENEN IGUAL)
+           ============================================================ */
 
-        // Producción por turno
         var produccionPorTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.Turno.Trim())
@@ -1577,7 +1606,6 @@ public class PiezasEscaneadasController : Controller
             .OrderBy(g => int.TryParse(g.Turno, out var t) ? t : int.MaxValue)
             .ToList();
 
-        // Producción por mesa y turno
         var produccionPorMesaYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.NuMesa) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.NuMesa.Trim())
@@ -1591,7 +1619,6 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // Producción por TM y turno
         var produccionPorTMYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.Tm) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.Tm.Trim())
@@ -1604,7 +1631,6 @@ public class PiezasEscaneadasController : Controller
                       )
             );
 
-        // Producción por Mandrel y turno
         var produccionPorMandrelYTurno = producciones
             .Where(r => !string.IsNullOrWhiteSpace(r.Mandrel) && !string.IsNullOrWhiteSpace(r.Turno))
             .GroupBy(r => r.Mandrel.Trim())
@@ -1619,8 +1645,8 @@ public class PiezasEscaneadasController : Controller
             );
 
         /* ============================================================
-           6) VIEWBAGS PARA CHART.JS
-        ============================================================ */
+           7) VIEWBAGS PARA CHARTS
+           ============================================================ */
 
         ViewBag.MandrelLabels = produccionPorMandrelYTurno.Keys.ToList();
         ViewBag.Turno1PorMandrel = produccionPorMandrelYTurno.Values.Select(m => m.ContainsKey("1") ? m["1"] : 0).ToList();
@@ -1640,7 +1666,8 @@ public class PiezasEscaneadasController : Controller
         ViewBag.ProduccionTurnoLabels = produccionPorTurno.Select(x => $"Turno {x.Turno}").ToList();
         ViewBag.ProduccionTurnoData = produccionPorTurno.Select(x => x.Total).ToList();
 
-        ViewBag.FechaSeleccionada = fechaSeleccionada.ToString("yyyy-MM-dd");
+        ViewBag.FechaInicio = inicio.ToString("yyyy-MM-dd");
+        ViewBag.FechaFin = fin.ToString("yyyy-MM-dd");
 
         return View(viewModel);
     }
@@ -1767,6 +1794,8 @@ public class PiezasEscaneadasController : Controller
 
         return Json(new { data });
     }
+
+
 
     [HttpPost]
     public IActionResult GetMandrilesPorFechaYTurno(string fechaInicio, string fechaFin, string turno)

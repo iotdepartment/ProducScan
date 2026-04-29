@@ -64,3 +64,45 @@ body {
     background: linear-gradient(178deg, rgba(130, 130, 130, 1) 0%, rgba(255, 255, 255, 1) 75%);
     color: white;
 }
+
+/* PRIMARY — Azul a morado */
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #0d6efd, #6f42c1);
+    color: #fff;
+}
+
+/* SUCCESS — Verde a turquesa */
+.bg-gradient-success {
+    background: linear-gradient(135deg, #198754, #20c997);
+    color: #fff;
+}
+
+/* DANGER — Rojo a naranja */
+.bg-gradient-danger {
+    background: linear-gradient(135deg, #dc3545, #fd7e14);
+    color: #fff;
+}
+
+/* WARNING — Amarillo a rojo */
+.bg-gradient-warning {
+    background: linear-gradient(135deg, #ffc107, #dc3545);
+    color: #212529;
+}
+
+/* INFO — Celeste a azul */
+.bg-gradient-info {
+    background: linear-gradient(135deg, #0dcaf0, #0d6efd);
+    color: #fff;
+}
+
+/* DARK — Gris a negro */
+.bg-gradient-dark {
+    background: linear-gradient(135deg, #6c757d, #000000);
+    color: #fff;
+}
+
+/* SECONDARY — Gris claro a gris oscuro */
+.bg-gradient-secondary {
+    background: linear-gradient(135deg, #adb5bd, #6c757d);
+    color: #fff;
+}

@@ -6,173 +6,354 @@
 }
 
 <style>
+    /* ============================================================
+           ANIMACIÓN GENERAL DEL CARD
+           ============================================================ */
     .card-hover {
-        transition: all 0.3s ease; /* animación suave */
+        transition: all 0.35s ease;
+        transform-origin: center;
     }
 
         .card-hover:hover {
             cursor: pointer;
-            box-shadow: 0 0.75rem 1.25rem rgba(0,0,0,.25); /* sombra más fuerte */
-            transform: translateY(-3px); /* efecto de levantar */
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: 0 1rem 2rem rgba(0,0,0,.35);
         }
 
-        /* Colores vivos en hover */
-        .card-hover.bg-primary-subtle:hover {
-            background-color: var(--bs-primary) !important;
+            /* ============================================================
+           TEXTO CLARO EN HOVER
+           ============================================================ */
+            .card-hover:hover h5,
+            .card-hover:hover h6,
+            .card-hover:hover h3,
+            .card-hover:hover p,
+            .card-hover:hover span,
+            .card-hover:hover i {
+                color: var(--bs-light) !important;
+            }
+
+    /* ============================================================
+           ANIMACIÓN GENERAL DEL CARD
+           ============================================================ */
+    .card-hover {
+        transition: all 0.35s ease;
+        transform-origin: center;
+    }
+
+        .card-hover:hover {
+            cursor: pointer;
+            transform: translateY(-6px) scale(1.03);
+            box-shadow: 0 1rem 2rem rgba(0,0,0,.35);
         }
 
-        .card-hover.bg-success-subtle:hover {
-            background-color: var(--bs-success) !important;
+    /* ============================================================
+           ICONO GRANDE DECORATIVO
+           ============================================================ */
+    .card-icon-big {
+        position: absolute;
+        right: 12px;
+        bottom: 12px;
+        font-size: 4.5rem;
+        opacity: 0.18;
+        color: rgba(255,255,255,0.85);
+        pointer-events: none;
+        transition: opacity .3s ease, transform .3s ease;
+    }
+
+    .card-hover:hover .card-icon-big {
+        opacity: 0.28;
+        transform: scale(1.05);
+    }
+
+    .card {
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* ============================================================
+           GRADIENT SUCCESS (SUAVE)
+           ============================================================ */
+    .bg-gradient-success {
+        background: linear-gradient(135deg, #7acfa3, #9be8c0);
+        background-size: 200% 200%;
+        animation: gradientIdle 6s ease infinite;
+        color: #fff;
+    }
+
+    .card-hover.bg-gradient-success:hover {
+        background: linear-gradient(135deg, #0f8a4b, #1ad68a) !important;
+        background-size: 200% 200%;
+        animation: gradientHover 1.2s ease infinite;
+    }
+
+    /* ============================================================
+           GRADIENT PRIMARY (SUAVE)
+           ============================================================ */
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #7aa7ff, #b28dff);
+        background-size: 200% 200%;
+        animation: gradientIdle 6s ease infinite;
+        color: #fff;
+    }
+
+    .card-hover.bg-gradient-primary:hover {
+        background: linear-gradient(135deg, #0a58ff, #8a2be2) !important;
+        background-size: 200% 200%;
+        animation: gradientHover 1.2s ease infinite;
+    }
+
+    /* ============================================================
+           GRADIENT DANGER (SUAVE)
+           ============================================================ */
+    .bg-gradient-danger {
+        background: linear-gradient(135deg, #ff8a8a, #ffb38a);
+        background-size: 200% 200%;
+        animation: gradientIdle 6s ease infinite;
+        color: #fff;
+    }
+
+    .card-hover.bg-gradient-danger:hover {
+        background: linear-gradient(135deg, #d90429, #ff6b35) !important;
+        background-size: 200% 200%;
+        animation: gradientHover 1.2s ease infinite;
+    }
+
+    /* ============================================================
+           KEYFRAMES (CON @@ PARA RAZOR)
+           ============================================================ */
+    @@keyframes gradientIdle {
+        0% {
+            background-position: 0% 50%;
         }
 
-        .card-hover.bg-danger-subtle:hover {
-            background-color: var(--bs-danger) !important;
+        50% {
+            background-position: 100% 50%;
         }
 
-        /* Forzar texto claro en hover */
-        .card-hover:hover h5,
-        .card-hover:hover h6,
-        .card-hover:hover h3,
-        .card-hover:hover p {
-            color: var(--bs-light) !important;
+        100% {
+            background-position: 0% 50%;
         }
-    </style>
+    }
 
+    @@keyframes gradientHover {
+        0% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
+
+        100% {
+            background-position: 0% 50%;
+        }
+    }
+
+</style>
 <div class="container  mt-4">
 
-<div class="row">
+    <div class="row">
 
         <form method="get">
             <div class="row mb-3 d-flex justify-content-start">
+
+                <!-- Fecha Inicio -->
                 <div class="col-md-6 col-lg-3">
-                    <h6 for="fecha" class="fw-bold">Fecha:</h6>
-                    <input type="date" id="fecha" name="fecha" class="form-control w-100 rounded-pill"
-                           value="@ViewBag.FechaSeleccionada"
+                    <h6 class="fw-bold">Fecha Inicio:</h6>
+                    <input type="date"
+                           id="fechaInicio"
+                           name="fechaInicio"
+                           class="form-control w-100 rounded-pill"
+                           value="@ViewBag.FechaInicio"
                            max="@TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)")).ToString("yyyy-MM-dd")" />
                 </div>
-                <div class="mt-2 col-md-6 col-xl-2 d-flex align-items-end ">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill"> <i class="bi bi-search"></i> Buscar</button>
+
+                <!-- Fecha Fin -->
+                <div class="col-md-6 col-lg-3">
+                    <h6 class="fw-bold">Fecha Fin:</h6>
+                    <input type="date"
+                           id="fechaFin"
+                           name="fechaFin"
+                           class="form-control w-100 rounded-pill"
+                           value="@ViewBag.FechaFin"
+                           max="@TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, TimeZoneInfo.FindSystemTimeZoneById("Central Standard Time (Mexico)")).ToString("yyyy-MM-dd")" />
                 </div>
+
+                <!-- Botón -->
+                <div class="mt-2 col-md-6 col-xl-2 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill btn-lg">
+                        <i class="bi bi-search"></i> Buscar
+                    </button>
+                </div>
+
             </div>
         </form>
 
-</div>
+    </div>
+     
+    @* CARDS DE INFOS *@    
 
 <div class="row mb-4">
+
+        <!-- 🔵 Piezas Inspeccionadas -->
         <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
-            <div class="card  card-hover bg-primary-subtle shadow-sm border-0 text-white rounded-4">
+            <div class="card bg-gradient-primary card-hover shadow-sm border-0 rounded-4">
                 <div class="card-body m-1">
-                    <h5 class="fw-bold text-primary-emphasis"><i class="bi bi-box-seam me-2"></i>Piezas Inspeccionadas</h5>
-                    <h3 class="fw-bold text-primary-emphasis">@Model.TotalPiezas</h3>
+                    <h5 class="fw-bold text-white">
+                        <i class="bi bi-box-seam me-2"></i>Piezas Inspeccionadas
+                    </h5>
+
+                    <!-- FORMATEADO -->
+                    <h3 class="fw-bold text-white">@Model.TotalPiezasFmt</h3>
+
+                    <i class="bi bi-box-seam card-icon-big"></i>
                 </div>
             </div>
         </div>
-        <!-- ✅ CARD: Total Piezas Buenas -->
+
+        <!-- 🟢 Total Piezas Buenas -->
         <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
-            <a asp-controller="PiezasEscaneadas" asp-action="Index"
-               class="text-decoration-none">
-                <div class="card bg-success-subtle shadow-sm border-0 rounded-4 card-hover">
+            <a asp-controller="PiezasEscaneadas" asp-action="Index" class="text-decoration-none">
+                <div class="card bg-gradient-success shadow-sm border-0 rounded-4 card-hover">
                     <div class="card-body m-1">
-                        <h5 class="fw-bold text-success-emphasis d-flex align-items-center">
-                            <i class="bi bi-check-circle me-2"></i>
-                            Total Piezas Buenas
+                        <h5 class="fw-bold text-white d-flex align-items-center">
+                            <i class="bi bi-check-circle-fill me-2"></i>Total Piezas Buenas
                             <i class="bi bi-box-arrow-up-right ms-2 small"></i>
                         </h5>
-                        <h3 class="fw-bold text-success-emphasis">@Model.TotalPiezasBuenas</h3>
+
+                        <!-- FORMATEADO -->
+                        <h3 class="fw-bold text-white">@Model.TotalBuenasFmt</h3>
+
+                        <i class="bi bi-check-circle-fill card-icon-big"></i>
                     </div>
                 </div>
             </a>
         </div>
 
-        <!-- ✅ CARD: Total Defectos -->
+        <!-- 🔴 Total Defectos -->
         <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
-            <a asp-controller="RegistrodeDefectos" asp-action="Index"
-               class="text-decoration-none">
-                <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+            <a asp-controller="RegistrodeDefectos" asp-action="Index" class="text-decoration-none">
+                <div class="card bg-gradient-danger shadow-sm border-0 rounded-4 card-hover">
                     <div class="card-body m-1">
-                        <h5 class="fw-bold text-danger-emphasis d-flex align-items-center">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
+                        <h5 class="fw-bold text-white d-flex align-items-center">
+                            <i class="bi bi-exclamation-triangle-fill me-2"></i>
                             Total Defectos
                             <i class="bi bi-box-arrow-up-right ms-2 small"></i>
                         </h5>
-                        <h3 class="fw-bold text-danger-emphasis">@Model.TotalDefectos</h3>
+
+                        <!-- FORMATEADO -->
+                        <h3 class="fw-bold text-white">@Model.TotalDefectosFmt</h3>
+
+                        <i class="bi bi-exclamation-triangle-fill card-icon-big"></i>
                     </div>
                 </div>
             </a>
         </div>
 
-</div>
+    </div>
+
 
     <div class="row mb-4 justify-content-center d-flex">
 
+        <!-- 🟢 FPY -->
         <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
-            <div class="card bg-success-subtle shadow-sm border-0 rounded-4 card-hover">
+            <div class="card bg-gradient-success shadow-sm border-0 rounded-4 card-hover">
                 <div class="card-body m-1">
-                    <h5 class="fw-bold text-success-emphasis">
+                    <h5 class="fw-bold text-white">
                         <i class="bi bi-graph-up-arrow me-2"></i> FPY
                     </h5>
-                    <h3 class="fw-bold text-success-emphasis">@Model.FPY.ToString("F2") %</h3>
+
+                    <!-- FORMATEADO -->
+                    <h3 class="fw-bold text-white">@Model.FPYFmt</h3>
+
+                    <i class="bi bi-graph-up-arrow card-icon-big"></i>
                 </div>
             </div>
         </div>
+
+        <!-- 🔴 Porcentaje de Defectos -->
         <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
-            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+            <div class="card bg-gradient-danger shadow-sm border-0 rounded-4 card-hover">
                 <div class="card-body m-1">
-                    <h6 class="fw-bold text-danger-emphasis">
+                    <h6 class="fw-bold text-white">
                         <i class="bi bi-trash me-2"></i> Porcentaje de Defectos
                     </h6>
-                    <h3 class="fw-bold text-danger-emphasis">@Model.Scrap.ToString("F2") %</h3>
+
+                    <!-- FORMATEADO -->
+                    <h3 class="fw-bold text-white">@Model.ScrapFmt</h3>
+
+                    <i class="bi bi-trash card-icon-big"></i>
                 </div>
             </div>
         </div>
 
     </div>
+
 
     <div class="row mb-3">
-        <div class="mb-4 mb-xl-4 mb-xxl-0 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
-            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+
+        <!-- 🔴 Defecto 1 -->
+        <div class="mb-4 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
+            <div class="card bg-gradient-danger shadow-sm border-0 rounded-4 card-hover">
                 <div class="card-body m-1">
-                    <h6 class="fw-bold text-danger-emphasis">
-                        <i class="bi bi-eye-slash me-2"></i> Without Print Illegible
+                    <h6 class="fw-bold text-white">
+                        <i class="bi bi-eye-slash-fill card-icon-big"></i>
+                        Without Print Illegible
                     </h6>
-                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajePrintIllegible.ToString("F2") %</h3>
+
+                    <!-- FORMATEADO -->
+                    <h3 class="fw-bold text-white">@Model.PrintIllegibleFmt</h3>
                 </div>
             </div>
         </div>
 
-        <div class="mb-4 mb-xl-4 mb-xxl-0 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
-            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+        <!-- 🔴 Defecto 2 -->
+        <div class="mb-4 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
+            <div class="card bg-gradient-danger shadow-sm border-0 rounded-4 card-hover">
                 <div class="card-body m-1">
-                    <h6 class="fw-bold text-danger-emphasis">
-                        <i class="bi bi-droplet-half me-2"></i> Without Material With Lub
+                    <h6 class="fw-bold text-white">
+                        <i class="bi bi-droplet-half card-icon-big"></i>
+                        Without Material With Lub
                     </h6>
-                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajeMaterialLub.ToString("F2") %</h3>
+
+                    <!-- FORMATEADO -->
+                    <h3 class="fw-bold text-white">@Model.MaterialLubFmt</h3>
                 </div>
             </div>
         </div>
 
-        <div class="mb-4 mb-xl-4 mb-xxl-0 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
-            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+        <!-- 🔴 Defecto 3 -->
+        <div class="mb-4 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
+            <div class="card bg-gradient-danger shadow-sm border-0 rounded-4 card-hover">
                 <div class="card-body m-1">
-                    <h6 class="fw-bold text-danger-emphasis">
-                        <i class="bi bi-fire me-2"></i> Without Vulcanization
+                    <h6 class="fw-bold text-white">
+                        <i class="bi bi-fire card-icon-big"></i>
+                        Without Vulcanization
                     </h6>
-                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajeVulcanization.ToString("F2") %</h3>
+
+                    <!-- FORMATEADO -->
+                    <h3 class="fw-bold text-white">@Model.VulcanizationFmt</h3>
                 </div>
             </div>
         </div>
 
-        <div class="mb-4 mb-xl-4 mb-xxl-0 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
-            <div class="card bg-danger-subtle shadow-sm border-0 rounded-4 card-hover">
+        <!-- 🔴 Defecto 4 -->
+        <div class="mb-4 col-12 col-sm-6 col-md-6 col-lg-6 col-xl-4 col-xxl-3">
+            <div class="card bg-gradient-danger shadow-sm border-0 rounded-4 card-hover">
                 <div class="card-body m-1">
-                    <h6 class="fw-bold text-danger-emphasis">
-                        <i class="bi bi-x-circle me-2"></i> Without Uncured
+                    <h6 class="fw-bold text-white">
+                        <i class="bi bi-x-circle-fill card-icon-big"></i>
+                        Without Uncured
                     </h6>
-                    <h3 class="fw-bold text-danger-emphasis">@Model.PorcentajeUncured.ToString("F2") %</h3>
+
+                    <!-- FORMATEADO -->
+                    <h3 class="fw-bold text-white">@Model.UncuredFmt</h3>
                 </div>
             </div>
         </div>
+
     </div>
+
 <hr />
 
     <!-- Título bonito arriba del select y la gráfica -->
@@ -270,7 +451,8 @@
 
             });
         }
-                    function actualizarGrafica(tipo) {
+        
+        function actualizarGrafica(tipo) {
             if (tipo === "mesa") {
                 renderStackedBar(mesaLabels, [
                     { label: 'Turno 1', data: turno1PorMesa, backgroundColor: '#4e73df' },
