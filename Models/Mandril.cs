@@ -1,8 +1,11 @@
-﻿namespace ProducScan.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+
+namespace ProducScan.Models
 {
     public class Mandril
     {
         public int Id { get; set; }
+        [Column("Mandril")]
         public string? MandrilNombre { get; set; }
         public string? CentrodeCostos { get; set; }
         public string? CantidaddeEmpaque { get; set; }

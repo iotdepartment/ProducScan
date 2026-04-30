@@ -25,7 +25,7 @@ public class MesasController : Controller
             .Select(m => new
             {
                 m.IdMesa,
-                m.ID,
+                m.Id,
                 m.Mesas,
                 m.NumerodeMesa,
                 m.Meta

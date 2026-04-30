@@ -1050,11 +1050,11 @@ namespace ProducScan.Controllers
                 .Where(m => m.Area == "INSPECCION")
                 .Select(m => new
                 {
-                    m.MandrilNombre,
+                    Mandril = m.MandrilNombre,
                     Costo = m.Costo ?? 0d,
                     Familia = m.Familia ?? "SIN FAMILIA"
                 })
-                .ToDictionary(m => m.MandrilNombre, m => new { m.Costo, m.Familia });
+                .ToDictionary(m => m.Mandril, m => new { m.Costo, m.Familia });
 
             //   Rango de fechas "bruto" en SQL (incluye posible día anterior por turno 3)
             var fechaMin = DateOnly.FromDateTime(inicio.AddDays(-1));
@@ -1871,6 +1871,7 @@ namespace ProducScan.Controllers
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 $"ReporteCompleto_{inicio}_{fin}.xlsx");
         }
+
 
         private void GenerarHojaIngenieria(XLWorkbook workbook, DateOnly inicio, DateOnly fin)
         {

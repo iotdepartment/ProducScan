@@ -1,18 +1,19 @@
-﻿// Models/Usuario.cs
-using System.ComponentModel.DataAnnotations.Schema;
+﻿using System;
+using System.Collections.Generic;
 
-namespace ProducScan.Models
+namespace ProducScan.Models;
+
+public partial class Usuario
 {
+    public int Id { get; set; }
 
-    [Table("Usuarios")]
+    public string NombreUsuario { get; set; } = null!;
 
-    public class Usuario
-    {
-        public int Id { get; set; }
-        public string NombreUsuario { get; set; } = string.Empty;
-        public string PasswordHash { get; set; } = string.Empty;
-        public string Rol { get; set; } = "Visual";
-        public DateTime FechaAlta { get; set; } = DateTime.Now;
-        public string SecurityStamp { get; set; } = Guid.NewGuid().ToString();
-    }
+    public string PasswordHash { get; set; } = null!;
+
+    public string Rol { get; set; } = null!;
+
+    public DateTime FechaAlta { get; set; }
+
+    public string SecurityStamp { get; set; } = null!;
 }

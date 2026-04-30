@@ -2063,7 +2063,7 @@ public class PiezasEscaneadasController : Controller
         );
     }
 
-    [Authorize(Roles = "Admin,Editor")]
+    [Authorize(Roles = "Admin,Editor,Gerente,Visual")]
     [HttpGet]
     public IActionResult GetProduccionAjax(string usuario, string fechaLaboral)
     {

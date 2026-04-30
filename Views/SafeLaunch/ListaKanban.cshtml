@@ -1,0 +1,265 @@
+﻿@model List<ProducScan.Models.Kanban>
+
+@{
+    ViewData["Title"] = "Lista de Kanban";
+}
+
+<!-- DataTables CSS -->
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css" />
+<link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css" />
+
+<!-- Select2 CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" />
+
+<div class="container mt-4">
+    <div class="d-flex justify-content-start mb-3">
+        <div class="d-flex justify-content-end mb-3">
+            <button class="btn btn-success rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalCrearKanban">
+                <i class="bi bi-plus-circle"></i> Nuevo Kanban
+            </button>
+        </div>
+    </div>
+
+   @*  <!-- FILTROS AVANZADOS -->
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body">
+
+            <div class="row g-3">
+
+                <!-- Filtro por Modelo -->
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Filtrar por Modelo</label>
+                    <select id="filtroModelo" class="form-select">
+                        <option value="">Todos</option>
+                        @foreach (var modelo in Model.Select(m => m.Modelo).Distinct())
+                        {
+                            <option value="@modelo">@modelo</option>
+                        }
+                    </select>
+                </div>
+
+                <!-- Filtro por cantidad de defectos -->
+                <div class="col-md-4">
+                    <label class="form-label fw-bold">Defectos mínimos</label>
+                    <input type="number" id="filtroDefectos" class="form-control" placeholder="Ej: 5" min="0" />
+                </div>
+
+                <!-- Botón limpiar -->
+                <div class="col-md-4 d-flex align-items-end">
+                    <button id="btnLimpiar" class="btn btn-secondary w-100">
+                        Limpiar filtros
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </div> *@
+
+
+    <!-- TABLA -->
+    <table id="kanbanTable" class="table table-striped table-bordered nowrap" style="width:100%">
+        <thead class="table-dark">
+            <tr>
+                <th>Modelo</th>
+                <th>Defectos Relacionados</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var k in Model)
+            {
+                <tr>
+                    <td>@k.Modelo</td>
+                    <td>@k.SlDefectos.Count</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<!-- MODAL CREAR KANBAN -->
+<div class="modal fade" id="modalCrearKanban" tabindex="-1" aria-labelledby="modalCrearKanbanLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title" id="modalCrearKanbanLabel">
+                    <i class="bi bi-plus-circle"></i> Crear nuevo Kanban
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body">
+                <form id="formCrearKanban">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Modelo</label>
+                        <input type="text" class="form-control" id="Modelo" name="Modelo" required />
+                    </div>
+
+                </form>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-success rounded-pill" id="btnGuardarKanban">
+                    <i class="bi bi-save"></i> Guardar
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- DataTables -->
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <!-- Responsive -->
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
+    <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+
+    <!-- Buttons -->
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/pdfmake.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.2.7/vfs_fonts.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.html5.min.js"></script>
+    <script src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.print.min.js"></script>
+
+    <!-- Select2 (DEBE IR AQUÍ) -->
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            $('#filtroModelo').select2({
+                placeholder: "Selecciona un modelo",
+                allowClear: true,
+                width: "100%"
+            });
+
+            var table = $('#kanbanTable').DataTable({
+                ajax: {
+                    url: '/SafeLaunch/GetKanbanAjax',
+                    dataSrc: 'data'
+                },
+                columns: [
+                    { data: 'modelo' },
+                    { data: 'defectos' }
+                ],
+                responsive: true,
+                pageLength: 10,
+                lengthMenu: [5, 10, 25, 50, 100],
+                pagingType: "full_numbers",
+                // dom: 'Bfrtip',
+                // buttons: [
+                //     { extend: 'copy', text: 'Copiar' },
+                //     { extend: 'excel', text: 'Excel' },
+                //     { extend: 'csv', text: 'CSV' },
+                //     { extend: 'pdf', text: 'PDF' },
+                //     { extend: 'print', text: 'Imprimir' }
+                // ],
+                language: {
+                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
+                }
+            });
+
+            $('#filtroModelo').on('change', function () {
+                table.column(1).search(this.value).draw();
+            });
+
+            $('#filtroDefectos').on('keyup change', function () {
+                var min = parseInt(this.value) || 0;
+
+                table.rows().every(function () {
+                    var defectos = parseInt(this.data()[2]);
+                    if (defectos < min) {
+                        $(this.node()).hide();
+                    } else {
+                        $(this.node()).show();
+                    }
+                });
+            });
+
+            $('#btnLimpiar').click(function () {
+                $('#filtroModelo').val('').trigger('change');
+                $('#filtroDefectos').val('');
+                table.search('').columns().search('').draw();
+                table.rows().every(function () { $(this.node()).show(); });
+            });
+
+        });
+    </script>
+
+    <script>
+        $(document).ready(function () {
+
+            // Guardar Kanban desde el modal
+                    // Guardar Kanban desde el modal
+        $('#btnGuardarKanban').click(function () {
+
+            let modelo = $('#Modelo').val().trim();
+
+            if (modelo === "") {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Campo requerido',
+                    text: 'El modelo es obligatorio',
+                    toast: true,
+                    position: 'top-end',
+                    timer: 2500,
+                    showConfirmButton: false
+                });
+                return;
+            }
+
+            $.ajax({
+                url: '/SafeLaunch/CrearKanbanAjax',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({ Modelo: modelo }),
+                success: function () {
+
+                    // Cerrar modal
+                    $('#modalCrearKanban').modal('hide');
+
+                    // Limpiar campo
+                    $('#Modelo').val('');
+
+                    // Toast de éxito
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Kanban creado correctamente',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+
+                    // Recargar DataTable
+                    $('#kanbanTable').DataTable().ajax.reload(null, false);
+                },
+                error: function () {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al guardar',
+                        text: 'No se pudo crear el Kanban',
+                        toast: true,
+                        position: 'top-end',
+                        timer: 2500,
+                        showConfirmButton: false
+                    });
+                }
+            });
+
+        });
+
+        });
+    </script>
+}
