@@ -1,0 +1,78 @@
+﻿@{
+    ViewData["Title"] = "Detalle OVEN";
+    var oven = Context.Request.Query["oven"];
+}
+
+<h2 class="mb-4">OVEN: @oven</h2>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Fecha Inicio</label>
+        <input type="date" id="fechaInicio" class="form-control rounded-pill" />
+    </div>
+
+    <div class="col-md-4">
+        <label class="form-label fw-bold">Fecha Fin</label>
+        <input type="date" id="fechaFin" class="form-control rounded-pill" />
+    </div>
+
+    <div class="col-md-4 d-flex align-items-end">
+        <button class="btn btn-primary rounded-pill w-100" onclick="cargarTopMandrilesOven()">
+            Cargar Datos
+        </button>
+    </div>
+</div>
+
+<h4 class="mt-4">Top Mandriles por Costo</h4>
+<ul id="listaTopMandrilesOven" class="list-group"></ul>
+
+<script>
+    function cargarTopMandrilesOven() {
+        const fechaInicio = $('#fechaInicio').val();
+        const fechaFin = $('#fechaFin').val();
+        const oven = "@oven";
+
+        $.ajax({
+            url: '/Oven/GetTopMandrilesPorOven',
+            type: 'POST',
+            data: { fechaInicio, fechaFin, oven },
+            success: function (data) {
+                const lista = $("#listaTopMandrilesOven");
+                lista.empty();
+
+                if (!data || data.length === 0) {
+                    lista.append('<li class="list-group-item text-muted text-center">No hay datos</li>');
+                    return;
+                }
+
+                data.forEach((item, index) => {
+                    let badgeClass = "bg-success";
+                    if (index === 0) badgeClass = "bg-danger";
+                    else if (index <= 2) badgeClass = "bg-warning text-dark";
+
+                    const mandrilItem = $(`
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-bold">${item.mandril}</span>
+                                <span class="badge ${badgeClass}">USD $${item.totalCosto.toLocaleString()}</span>
+                            </div>
+                            <ul class="text-muted small mt-2 ps-3"></ul>
+                        </li>
+                    `);
+
+                    const subLista = mandrilItem.find("ul");
+                    item.defectos.forEach(def => {
+                        subLista.append(`
+                            <li class="d-flex justify-content-between">
+                                <span>${def.codigo} - ${def.nombre}</span>
+                                <span class="badge bg-secondary rounded-pill">${def.total}</span>
+                            </li>
+                        `);
+                    });
+
+                    lista.append(mandrilItem);
+                });
+            }
+        });
+    }
+</script>

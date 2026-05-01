@@ -11,15 +11,24 @@
 <!-- Partial con modal Create/Edit -->
 @await Html.PartialAsync("_CreateEditMandrilModal")
 
-<div class="row">
+<div class="row mb-3">
     <div class="col-3">
-
-        <button class="btn btn-success mb-3 rounded rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#createEditModal"
+        <button class="btn btn-success rounded-pill w-100"
+                data-bs-toggle="modal" data-bs-target="#createEditModal"
                 onclick="openCreateModal()">
-            <i class="bi bi-plus-circle"></i>
-            Nuevo Mandril
+            <i class="bi bi-plus-circle"></i> Nuevo Mandril
+        </button>
+    </div>
+
+    <div class="col-9 d-flex justify-content-end gap-2">
+
+        <button id="btnDeleteSelected" class="btn btn-danger rounded-pill">
+            <i class="bi bi-trash-fill me-1"></i> Eliminar seleccionados
         </button>
 
+        <button id="btnEditSelected" class="btn btn-warning rounded-pill">
+            <i class="bi bi-pencil-square me-1"></i> Editar seleccionados
+        </button>
 
     </div>
 </div>
@@ -106,10 +115,12 @@
     <script src="https://cdn.datatables.net/buttons/2.4.1/js/buttons.print.min.js"></script>
 
     <script>
-                var table;
+        
+        var table;
 
         $(document).ready(function () {
-                    table = $('#mandrilesTable').DataTable({
+
+               table = $('#mandrilesTable').DataTable({
             select: {
                 style: 'multi',
                 items: 'row',
@@ -122,10 +133,6 @@
                 datatype: "json"
             },
 
-            // 🟩 Layout moderno: botones izquierda, buscador derecha
-            dom: "<'row mb-3'<'col-md-6 dt-buttons'B><'col-md-6'f>>" +
-                 "rt" +
-                 "<'row'<'col-md-6'i><'col-md-6'p>>",
 
             columns: [
                 { data: "mandrilNombre" },
@@ -133,20 +140,21 @@
                 { data: "estacion" },
                 { data: "familia" },
                 { data: "proceso" },
-                { data: "imagen",
+                {
+                    data: "imagen",
                     render: function (data) {
                         if (!data) {
                             return `<div class="text-center text-muted">Sin imagen</div>`;
                         }
 
-                       return `
+                        return `
                             <div style="display:flex; justify-content:center; width:100%;">
                                 <img src="/images/mandriles/${data}"
                                      class="img-thumbnail shadow-sm"
                                      style="width:55px; height:55px; object-fit:cover; border-radius:8px;">
                             </div>
                         `;
-                            }
+                    }
                 },
                 {
                     data: "lTester",
@@ -191,41 +199,36 @@
             ],
 
             pageLength: 10,
-            lengthMenu: [10, 20, 50, 100],
+            lengthMenu: [10, 20, 50, 100, 200],
+
             ordering: false,
-
-            buttons: [
-                {
-                    text: '<i class="bi bi-trash-fill me-1"></i> Eliminar seleccionados',
-                    className: 'btn btn-danger rounded-pill me-1',
-                    action: function () {
-                        const rows = table.rows({ selected: true }).data();
-                        if (!rows.length) {
-                            alert("Selecciona al menos un registro");
-                            return;
-                        }
-
-                        const ids = rows.pluck("id").toArray();
-                        $("#deleteId").val(ids.join(","));
-                        $("#deleteModal .modal-body p").text(
-                            `¿Seguro que deseas eliminar ${rows.length} registros seleccionados?`
-                        );
-
-                        $("#deleteModal").modal("show");
-                    }
-                },
-
-                {
-                    text: '<i class="bi bi-pencil-square me-1"></i> Editar seleccionados',
-                    className: 'btn btn-warning rounded-pill',
-                    action: function () {
-                        openEditMultipleModal();
-                    }
-                }
-            ],
 
             language: { url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json" }
         });
+
+        // 🟥 Eliminar seleccionados
+        $("#btnDeleteSelected").click(function () {
+            const rows = table.rows({ selected: true }).data();
+            if (!rows.length) {
+                alert("Selecciona al menos un registro");
+                return;
+            }
+
+            const ids = rows.pluck("id").toArray();
+            $("#deleteId").val(ids.join(","));
+            $("#deleteModal .modal-body p").text(
+                `¿Seguro que deseas eliminar ${rows.length} registros seleccionados?`
+            );
+
+            $("#deleteModal").modal("show");
+        });
+
+        // 🟨 Editar seleccionados
+        $("#btnEditSelected").click(function () {
+            openEditMultipleModal();
+        });
+
+
         const editFields = {
             editMandrilNombre: "mandrilNombre",
             editCentroCostos: "centrodeCostos",

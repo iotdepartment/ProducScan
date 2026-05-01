@@ -17,7 +17,7 @@
 
 @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
 {
-    <div class="row g-3 align-items-stretch">
+    <div class="row g-3 align-items-stretch mb-4">
 
         <!-- Grupo de botones de creación -->
         <div class="col-12 col-md-6 col-lg-4 col-xxl-4">
@@ -25,16 +25,16 @@
 
                 @if (User.IsInRole("Admin"))
                 {
-                    <button class="btn btn-danger rounded-start-pill" id="btnNuevoDefecto">
+                    <button class="btn btn-danger rounded-start-pill btn-lg" id="btnNuevoDefecto">
                         + Nuevo Defecto
                     </button>
-                    <button class="btn btn-success rounded-end-pill" id="btnNuevo">
+                    <button class="btn btn-success rounded-end-pill btn-lg" id="btnNuevo">
                         + Nuevo Registro
                     </button>
                 }
                 else if (User.IsInRole("Editor"))
                 {
-                    <button class="btn btn-success rounded-pill w-100" id="btnNuevo">
+                    <button class="btn btn-success rounded-pill btn-lg w-100" id="btnNuevo">
                         + Nuevo Registro
                     </button>
                 }
@@ -43,11 +43,11 @@
         </div>
 
         <!-- Botón Excel alineado a la derecha -->
-        <div class="col-12 col-md-6 col-lg-8 col-xxl-8 d-flex">
+        <div class="col-12 col-md-6 col-lg-8 col-xxl-8 d-flex align-items-center">
             <a asp-action="ExportProduccionDiaLaboral"
                asp-route-fecha="@ViewBag.FechaSeleccionada"
                asp-route-turno="@ViewBag.TurnoSeleccionado"
-               class="btn btn-outline-success rounded-pill ms-auto px-xxl-5">
+               class="btn btn-outline-success rounded-pill btn-lg ms-auto px-xxl-5">
                 <i class="bi bi-file-earmark-excel"></i> Exportar a Excel
             </a>
         </div>

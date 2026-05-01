@@ -21,7 +21,7 @@ namespace ProducScan.Controllers
         public IActionResult ListaKanban()
         {
             var kanban = _context.Kanbans
-                .Include(k => k.SlDefectos) // si quieres incluir los defectos relacionados
+                .Include(k => k.SlDefectos)
                 .ToList();
 
             return View(kanban);
