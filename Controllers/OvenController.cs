@@ -56,61 +56,158 @@ namespace ProducScan.Controllers
             return Ok(new { success = true });
         }
 
-        [Authorize(Roles = "Admin,Gerente")]
-        [HttpPost]
-        public IActionResult GetTopMandrilesPorOven(DateTime fechaInicio, DateTime fechaFin, string oven)
+        [HttpGet]
+        public IActionResult Detalle(string oven)
         {
-            var inicio = DateOnly.FromDateTime(fechaInicio);
-            var fin = DateOnly.FromDateTime(fechaFin);
+            if (string.IsNullOrWhiteSpace(oven))
+                return RedirectToAction("Mandriles");
 
-            // Mandriles asignados a este OVEN
-            var mandrilesOven = _context.Mandriles
+            ViewBag.Oven = oven;
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult GetDefectosPorOven(string oven)
+        {
+            // 1. Obtener mandriles asignados al OVEN
+            var mandriles = _context.Mandriles
                 .Where(m => m.Area == "OVEN" && m.Estacion == oven)
-                .Select(m => new { m.MandrilNombre, Costo = m.Costo ?? 0 })
-                .ToDictionary(m => m.MandrilNombre, m => m.Costo);
-
-            if (!mandrilesOven.Any())
-                return Json(new List<object>());
-
-            var defectosRaw = _context.RegistrodeDefectos
-                .Where(d => d.Fecha >= inicio.AddDays(-1) && d.Fecha <= fin.AddDays(1))
-                .Where(d => mandrilesOven.Keys.Contains(d.Mandrel))
+                .Select(m => m.MandrilNombre)
                 .ToList();
 
-            var defectos = defectosRaw
-                .Select(d => {
-                    var fechaEvento = d.Fecha.ToDateTime(d.Hora);
-                    var fechaLaboral = ProduccionHelper.GetFechaProduccion(fechaEvento).Date;
+            if (!mandriles.Any())
+                return Json(new { mandriles = new List<object>() });
 
-                    return new
-                    {
-                        FechaLaboral = fechaLaboral,
-                        d.Mandrel,
-                        d.CodigodeDefecto,
-                        d.Defecto
-                    };
-                })
-                .Where(x => x.FechaLaboral >= inicio.ToDateTime(TimeOnly.MinValue).Date &&
-                            x.FechaLaboral <= fin.ToDateTime(TimeOnly.MinValue).Date)
+            // 2. Obtener defectos de esos mandriles
+            var defectos = _context.RegistrodeDefectos
+                .Where(d => mandriles.Contains(d.Mandrel))
                 .ToList();
 
+            // 3. Agrupar defectos por mandril
             var resultado = defectos
-                .GroupBy(x => x.Mandrel)
-                .Select(g => new {
+                .GroupBy(d => d.Mandrel)
+                .Select(g => new
+                {
                     Mandril = g.Key,
-                    TotalCosto = g.Count() * mandrilesOven[g.Key],
-                    Defectos = g.GroupBy(d => new { d.CodigodeDefecto, d.Defecto })
-                                .Select(dg => new {
+                    Defectos = g.GroupBy(x => new { x.CodigodeDefecto, x.Defecto })
+                                .Select(dg => new
+                                {
                                     Codigo = dg.Key.CodigodeDefecto,
                                     Nombre = dg.Key.Defecto,
                                     Total = dg.Count()
                                 })
-                                .OrderByDescending(d => d.Total)
-                                .Take(3)
+                                .OrderByDescending(x => x.Total)
                                 .ToList()
                 })
-                .OrderByDescending(x => x.TotalCosto)
-                .Take(10)
+                .ToList();
+
+            return Json(resultado);
+        }
+
+        
+        [HttpGet]
+        public IActionResult GetTop5MandrilesPorOvenTurno(string oven)
+        {
+            if (string.IsNullOrWhiteSpace(oven))
+                return Json(new { data = new List<object>() });
+
+            // Hora local Matamoros
+            DateTime ahora = ProduccionHelper.GetMatamorosTime();
+
+            // Turno actual
+            string turno = ProduccionHelper.GetTurno(ahora);
+
+            // Fecha laboral actual
+            DateTime fechaLaboralDT = ProduccionHelper.GetFechaProduccion(ahora);
+            DateOnly fechaLaboral = DateOnly.FromDateTime(fechaLaboralDT);
+
+            // Rango de horas del turno
+            TimeSpan inicioTurno, finTurno;
+
+            if (turno == "1")
+            {
+                inicioTurno = new TimeSpan(7, 0, 0);
+                finTurno = new TimeSpan(15, 44, 59);
+            }
+            else if (turno == "2")
+            {
+                inicioTurno = new TimeSpan(15, 45, 0);
+                finTurno = new TimeSpan(23, 49, 59);
+            }
+            else // turno 3
+            {
+                // Turno 3 tiene dos segmentos
+                // 23:50 → 23:59 (día actual)
+                // 00:00 → 07:09 (día anterior)
+                // PERO tu helper ya ajusta la fecha laboral
+                inicioTurno = new TimeSpan(0, 0, 0);
+                finTurno = new TimeSpan(23, 59, 59);
+            }
+
+            // 1. Mandriles del OVEN
+            var mandrilesOven = _context.Mandriles
+                .Where(m => m.Area == "OVEN" && m.Estacion == oven)
+                .GroupBy(m => m.MandrilNombre.Trim())
+                .Select(g => g.First())
+                .ToDictionary(
+                    m => m.MandrilNombre.Trim(),
+                    m => m.Costo ?? 0
+                );
+
+            if (!mandrilesOven.Any())
+                return Json(new { data = new List<object>() });
+
+            // 2. Defectos del turno actual
+            var defectos = _context.RegistrodeDefectos
+                .AsEnumerable()
+                .Where(d =>
+                {
+                    DateTime fechaEvento = d.Fecha.ToDateTime(d.Hora);
+                    DateTime fechaLaboralEvento = ProduccionHelper.GetFechaProduccion(fechaEvento);
+
+                    // Fecha laboral debe coincidir
+                    if (DateOnly.FromDateTime(fechaLaboralEvento) != fechaLaboral)
+                        return false;
+
+                    // Mandril debe pertenecer al OVEN
+                    string mandril = d.Mandrel.Trim();
+                    if (!mandrilesOven.ContainsKey(mandril))
+                        return false;
+
+                    // Hora dentro del turno
+                    TimeSpan hora = fechaEvento.TimeOfDay;
+
+                    if (turno == "3")
+                    {
+                        // Turno 3 tiene dos segmentos
+                        return (hora >= new TimeSpan(23, 50, 0) && hora <= new TimeSpan(23, 59, 59))
+                            || (hora >= TimeSpan.Zero && hora <= new TimeSpan(7, 9, 59));
+                    }
+
+                    return hora >= inicioTurno && hora <= finTurno;
+                })
+                .ToList();
+
+            // 3. Agrupar por mandril
+            var resultado = defectos
+                .GroupBy(d => d.Mandrel.Trim())
+                .Select(g => new
+                {
+                    Mandril = g.Key,
+                    CostoTotal = g.Count() * mandrilesOven[g.Key],
+                    TopDefectos = g.GroupBy(x => new { x.CodigodeDefecto, x.Defecto })
+                                   .Select(dg => new
+                                   {
+                                       Codigo = dg.Key.CodigodeDefecto,
+                                       Nombre = dg.Key.Defecto,
+                                       Total = dg.Count()
+                                   })
+                                   .OrderByDescending(x => x.Total)
+                                   .Take(3)
+                                   .ToList()
+                })
+                .OrderByDescending(x => x.CostoTotal)
+                .Take(5)
                 .ToList();
 
             return Json(resultado);
