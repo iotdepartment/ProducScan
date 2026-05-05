@@ -66,45 +66,6 @@ namespace ProducScan.Controllers
             return View();
         }
 
-        [HttpPost]
-        public IActionResult GetDefectosPorOven(string oven)
-        {
-            // 1. Obtener mandriles asignados al OVEN
-            var mandriles = _context.Mandriles
-                .Where(m => m.Area == "OVEN" && m.Estacion == oven)
-                .Select(m => m.MandrilNombre)
-                .ToList();
-
-            if (!mandriles.Any())
-                return Json(new { mandriles = new List<object>() });
-
-            // 2. Obtener defectos de esos mandriles
-            var defectos = _context.RegistrodeDefectos
-                .Where(d => mandriles.Contains(d.Mandrel))
-                .ToList();
-
-            // 3. Agrupar defectos por mandril
-            var resultado = defectos
-                .GroupBy(d => d.Mandrel)
-                .Select(g => new
-                {
-                    Mandril = g.Key,
-                    Defectos = g.GroupBy(x => new { x.CodigodeDefecto, x.Defecto })
-                                .Select(dg => new
-                                {
-                                    Codigo = dg.Key.CodigodeDefecto,
-                                    Nombre = dg.Key.Defecto,
-                                    Total = dg.Count()
-                                })
-                                .OrderByDescending(x => x.Total)
-                                .ToList()
-                })
-                .ToList();
-
-            return Json(resultado);
-        }
-
-        
         [HttpGet]
         public IActionResult GetTop5MandrilesPorOvenTurno(string oven)
         {
@@ -136,10 +97,6 @@ namespace ProducScan.Controllers
             }
             else // turno 3
             {
-                // Turno 3 tiene dos segmentos
-                // 23:50 → 23:59 (día actual)
-                // 00:00 → 07:09 (día anterior)
-                // PERO tu helper ya ajusta la fecha laboral
                 inicioTurno = new TimeSpan(0, 0, 0);
                 finTurno = new TimeSpan(23, 59, 59);
             }
@@ -147,39 +104,33 @@ namespace ProducScan.Controllers
             // 1. Mandriles del OVEN
             var mandrilesOven = _context.Mandriles
                 .Where(m => m.Area == "OVEN" && m.Estacion == oven)
-                .GroupBy(m => m.MandrilNombre.Trim())
-                .Select(g => g.First())
-                .ToDictionary(
-                    m => m.MandrilNombre.Trim(),
-                    m => m.Costo ?? 0
-                );
+                .Select(m => new { Nombre = m.MandrilNombre.Trim(), Costo = m.Costo ?? 0 })
+                .ToList();
 
-            if (!mandrilesOven.Any())
+            var nombresMandriles = mandrilesOven.Select(m => m.Nombre).ToList();
+
+            if (!nombresMandriles.Any())
                 return Json(new { data = new List<object>() });
 
-            // 2. Defectos del turno actual
-            var defectos = _context.RegistrodeDefectos
-                .AsEnumerable()
+            // 2. Traer SOLO defectos de esos mandriles (SQL sí puede)
+            var defectosSQL = _context.RegistrodeDefectos
+                .Where(d => nombresMandriles.Contains(d.Mandrel.Trim()))
+                .ToList(); // <-- AQUÍ ya estamos en memoria
+
+            // 3. Filtrar por fecha laboral y turno (en memoria)
+            var defectos = defectosSQL
                 .Where(d =>
                 {
                     DateTime fechaEvento = d.Fecha.ToDateTime(d.Hora);
                     DateTime fechaLaboralEvento = ProduccionHelper.GetFechaProduccion(fechaEvento);
 
-                    // Fecha laboral debe coincidir
                     if (DateOnly.FromDateTime(fechaLaboralEvento) != fechaLaboral)
                         return false;
 
-                    // Mandril debe pertenecer al OVEN
-                    string mandril = d.Mandrel.Trim();
-                    if (!mandrilesOven.ContainsKey(mandril))
-                        return false;
-
-                    // Hora dentro del turno
-                    TimeSpan hora = fechaEvento.TimeOfDay;
+                    TimeSpan hora = d.Hora.ToTimeSpan();
 
                     if (turno == "3")
                     {
-                        // Turno 3 tiene dos segmentos
                         return (hora >= new TimeSpan(23, 50, 0) && hora <= new TimeSpan(23, 59, 59))
                             || (hora >= TimeSpan.Zero && hora <= new TimeSpan(7, 9, 59));
                     }
@@ -188,23 +139,28 @@ namespace ProducScan.Controllers
                 })
                 .ToList();
 
-            // 3. Agrupar por mandril
+            // 4. Agrupar por mandril
             var resultado = defectos
                 .GroupBy(d => d.Mandrel.Trim())
-                .Select(g => new
+                .Select(g =>
                 {
-                    Mandril = g.Key,
-                    CostoTotal = g.Count() * mandrilesOven[g.Key],
-                    TopDefectos = g.GroupBy(x => new { x.CodigodeDefecto, x.Defecto })
-                                   .Select(dg => new
-                                   {
-                                       Codigo = dg.Key.CodigodeDefecto,
-                                       Nombre = dg.Key.Defecto,
-                                       Total = dg.Count()
-                                   })
-                                   .OrderByDescending(x => x.Total)
-                                   .Take(3)
-                                   .ToList()
+                    var costo = mandrilesOven.First(m => m.Nombre == g.Key).Costo;
+
+                    return new
+                    {
+                        Mandril = g.Key,
+                        CostoTotal = g.Count() * costo,
+                        TopDefectos = g.GroupBy(x => new { x.CodigodeDefecto, x.Defecto })
+                                       .Select(dg => new
+                                       {
+                                           Codigo = dg.Key.CodigodeDefecto,
+                                           Nombre = dg.Key.Defecto,
+                                           Total = dg.Count()
+                                       })
+                                       .OrderByDescending(x => x.Total)
+                                       .Take(3)
+                                       .ToList()
+                    };
                 })
                 .OrderByDescending(x => x.CostoTotal)
                 .Take(5)

@@ -5,11 +5,48 @@
     ViewData["Subtitle"] = "Mandriles organizados por costos.";
 }
 
-<h2 class="mb-4">Top 5 Mandriles del Oven @oven</h2>
+<div class="container-fluid mb-2">
+   
+    <div class="row">
+        <div class="col-4">
 
-<ul id="listaTopMandriles" class="list-group"></ul>
+            <div class="card rounded-pill text-center shadow-sm">
+                <div class="card-body">
+                    <h2 class="mb-0 fw-bold">Oven @oven</h2>
+
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+</div>
+
+<hr />
+
+<div class="container-fluid mb-2">
+
+    <div class="row">
+        <div class="col-3">
+            <ul id="listaTopMandriles" class="list-group"></ul>
+        </div>
+
+        <div class="col-9">
+            <div class="card shadow-sm p-3">
+                <h4 class="fw-bold text-center">Gráfica – Top 3 defectos por mandril</h4>
+                <canvas id="graficaMandriles" height="580"></canvas>
+            </div>
+        </div>
+    </div>
+
+</div>
+
 
 @section Scripts {
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
     <script>
         $(document).ready(function () {
 
@@ -33,15 +70,20 @@
                         return;
                     }
 
-                    data.forEach(m => {
+                    // ===============================
+                    //   LISTA DE MANDRILES
+                    // ===============================
+                    data.forEach((m, index) => {
+
+                        let colorClass = "";
+                        if (index === 0) colorClass = "bg-gradient-danger text-white";
+                        else if (index === 1) colorClass = "bg-gradient-warning text-white";
 
                         const mandrilItem = $(`
-                            <li class="list-group-item">
-                                <div class="fw-bold">
-                                    ${m.mandril}
-                                </div>
+                            <li class="list-group-item ${colorClass} rounded-4 shadow-sm mb-2">
+                                <div class="fw-bold fs-5">${m.mandril}</div>
 
-                                <div class="mt-2 small text-muted">Top 3 defectos:</div>
+                                <div class="mt-2 small text-muted fw-bold">Top 3 defectos:</div>
                                 <ul class="mt-1 ps-3 small"></ul>
                             </li>
                         `);
@@ -59,6 +101,83 @@
 
                         lista.append(mandrilItem);
                     });
+
+                       // ===============================
+                        //   GRAFICA STACKED BAR DINÁMICA
+                        // ===============================
+
+                        // 1. Etiquetas = mandriles
+                        const labels = data.map(x => x.mandril);
+
+                        // 2. Obtener TODOS los defectos únicos de todos los mandriles
+                        let defectosUnicos = new Set();
+
+                        data.forEach(m => {
+                            m.topDefectos.forEach(d => {
+                                defectosUnicos.add(d.nombre);
+                            });
+                        });
+
+                        defectosUnicos = Array.from(defectosUnicos);
+
+                        // 3. Generar colores automáticos
+                        function color(i) {
+                            const colores = [
+                                "rgba(220, 53, 69, 0.85)",   // rojo
+                                "rgba(255, 193, 7, 0.85)",   // amarillo
+                                "rgba(13, 110, 253, 0.85)",  // azul
+                                "rgba(25, 135, 84, 0.85)",   // verde
+                                "rgba(111, 66, 193, 0.85)",  // morado
+                                "rgba(255, 133, 27, 0.85)"   // naranja
+                            ];
+                            return colores[i % colores.length];
+                        }
+
+                        // 4. Crear datasets dinámicos
+                        const datasets = defectosUnicos.map((defecto, index) => ({
+                            label: defecto,
+                            backgroundColor: color(index),
+                            data: data.map(m => {
+                                const encontrado = m.topDefectos.find(d => d.nombre === defecto);
+                                return encontrado ? encontrado.total : 0;
+                            })
+                        }));
+
+                        // 5. Renderizar gráfica
+                        const ctx = document.getElementById("graficaMandriles").getContext("2d");
+
+                                new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: { position: "top" },
+                    datalabels: {
+                        color: "#fff",
+                        anchor: "center",
+                        align: "center",
+                        font: {
+                            weight: "bold",
+                            size: 12
+                        },
+                        formatter: function (value) {
+                            return value > 0 ? value : "";
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true },
+                    y: { stacked: true }
+                }
+            },
+            plugins: [ChartDataLabels]
+        });
+
                 }
             });
 

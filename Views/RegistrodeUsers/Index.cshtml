@@ -2,67 +2,73 @@
     ViewData["Title"] = "Team Members";
     ViewData["Subtitle"] = "Team Members registrados en el Sistema de escaneo de Inspección.";
 }
+<div class="mt-4 container-fluid">
 
-<div class="row">
-    <div class="col-3">
 
-        <button class="btn btn-success mb-3 rounded rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#createEditModal"
-                onclick="openCreateModal()">
-            <i class="bi bi-person-plus"></i>
-            Nuevo Team Member
-        </button>
+    <div class="row">
+        <div class="col-3">
 
+            <button class="btn btn-success mb-3 rounded rounded-pill w-100" data-bs-toggle="modal" data-bs-target="#createEditModal"
+                    onclick="openCreateModal()">
+                <i class="bi bi-person-plus"></i>
+                Nuevo Team Member
+            </button>
+
+        </div>
     </div>
-</div>
 
 
-<table id="usersTable" class="table table-striped table-bordered">
-    <thead class="table-dark">
-        <tr>
-            <th>Número de Empleado</th>
-            <th>Nombre</th>
-            <th class="text-center">Acciones</th>
-        </tr>
-    </thead>
-</table>
+    <table id="usersTable" class="table table-striped table-bordered w-100">
+        <thead class="table-dark">
+            <tr>
+                <th>Número de Empleado</th>
+                <th>Nombre</th>
+                <th class="text-center">Acciones</th>
+            </tr>
+        </thead>
+    </table>
 
 
-<!-- Toast único -->
-<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
-    <div id="mainToast" class="toast align-items-center border-0" role="alert">
-        <div class="d-flex">
-            <div class="toast-body" id="toastMessage">
-                Mensaje aquí
+    <!-- Toast único -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 2000">
+        <div id="mainToast" class="toast align-items-center border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMessage">
+                    Mensaje aquí
+                </div>
+                <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
             </div>
-            <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast"></button>
         </div>
     </div>
-</div>
 
-<!-- Partial con modal Create/Edit -->
-@await Html.PartialAsync("_CreateEditModal")
+    <!-- Partial con modal Create/Edit -->
+    @await Html.PartialAsync("_CreateEditModal")
 
-<!-- Modal Delete -->
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <form id="deleteForm" asp-action="Delete" method="post">
-                <div class="modal-header">
-                    <h5 class="modal-title">Eliminar Usuario</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="deleteId" name="id" />
-                    <p>¿Seguro que deseas eliminar este usuario?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="submit" class="btn btn-danger">Eliminar</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                </div>
-            </form>
+    <!-- Modal Delete -->
+    <div class="modal fade" id="deleteModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form id="deleteForm" asp-action="Delete" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Eliminar Usuario</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" id="deleteId" name="id" />
+                        <p>¿Seguro que deseas eliminar este usuario?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger">Eliminar</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
+
+
 </div>
+
 
 
 
