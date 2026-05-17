@@ -2402,7 +2402,7 @@ namespace ProducScan.Controllers
             // 1. Defectos excluidos
             var defectosExcluidos = new HashSet<string>
     {
-        "17a", "17b", "21", "54", "59", "46", "24", "23"
+        "17a", "17b", "21", "54", "59", "46", "24", "23","17A", "17B"
     };
 
             // 2. Catálogo mandriles
@@ -2608,7 +2608,7 @@ namespace ProducScan.Controllers
             // ============================
             var defectosExcluidos = new HashSet<string>
     {
-        "17a", "17b", "21", "54", "59", "46", "24", "23"
+       "17a", "17b", "21", "54", "59", "46", "24", "23","17A", "17B"
     };
 
             // ============================
@@ -2780,7 +2780,7 @@ namespace ProducScan.Controllers
             // ============================
             var defectosExcluidos = new HashSet<string>
     {
-        "17a", "17b", "21", "54", "59", "46", "24", "23"
+        "17a", "17b", "21", "54", "59", "46", "24", "23","17A", "17B"
     };
 
             // ============================
