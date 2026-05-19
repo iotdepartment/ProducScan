@@ -1388,7 +1388,7 @@ public class PiezasEscaneadasController : Controller
                 }
             }
 
-            r.SegundosPorPieza = segundosPorPieza; // 👈 Nueva propiedad en tu ViewModel
+            r.SegundosPorPieza = segundosPorPieza; 
             anterior = r;
         }
 
@@ -1490,8 +1490,6 @@ public class PiezasEscaneadasController : Controller
     }
 
 
-
-
     //DASHBOARD DINAMICO
     // DASHBOARD DINÁMICO POR RANGO DE FECHAS
     public IActionResult Dashboard(DateTime? fechaInicio, DateTime? fechaFin)
@@ -1554,10 +1552,10 @@ public class PiezasEscaneadasController : Controller
         /* ============================================================
            4) DEFECTOS POR CATEGORÍA
            ============================================================ */
-        int defectosPrintIllegible = defectos.Count(d => !new[] { "17a", "17b", "21" }.Contains(d.CodigodeDefecto));
-        int defectosMaterialLub = defectos.Count(d => !new[] { "17a", "17b", "21", "54" }.Contains(d.CodigodeDefecto));
-        int defectosVulcanization = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24" }.Contains(d.CodigodeDefecto));
-        int defectosUncured = defectos.Count(d => !new[] { "17a", "17b", "21", "54", "59", "46", "24", "23" }.Contains(d.CodigodeDefecto));
+        int defectosPrintIllegible = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21" }.Contains(d.CodigodeDefecto));
+        int defectosMaterialLub = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21", "54" }.Contains(d.CodigodeDefecto));
+        int defectosVulcanization = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21", "54", "59", "46", "24" }.Contains(d.CodigodeDefecto));
+        int defectosUncured = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21", "54", "59", "46", "24", "23" }.Contains(d.CodigodeDefecto));
 
         double porcPrintIllegible = totalPiezas > 0 ? (double)defectosPrintIllegible / totalPiezas * 100 : 0;
         double porcMaterialLub = totalPiezas > 0 ? (double)defectosMaterialLub / totalPiezas * 100 : 0;
@@ -1794,6 +1792,7 @@ public class PiezasEscaneadasController : Controller
 
         return Json(new { data });
     }
+
 
 
 
