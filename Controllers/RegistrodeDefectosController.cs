@@ -200,7 +200,7 @@ namespace ProducScan.Controllers
                     return Json(new { success = false, message = "Debes seleccionar un defecto válido." });
 
                 var partes = CodigodeDefecto.Split('|');
-                var codigo = partes[0].Trim();
+                var codigo = partes[0].Trim().ToUpper();
                 var defecto = partes[1].Trim();
 
                 var registro = _context.RegistrodeDefectos.FirstOrDefault(d => d.Id == model.Id);
@@ -252,6 +252,8 @@ namespace ProducScan.Controllers
                 // Solo registrar log si hubo cambios
                 if (cambios.Any())
                 {
+                    var ip = HttpContext.Connection.RemoteIpAddress?.ToString();
+
                     var log = new Log
                     {
                         Fecha = DateTime.Now,
@@ -259,8 +261,10 @@ namespace ProducScan.Controllers
                         Accion = "Actualizar Defecto",
                         Nivel = "Info",
                         Categoria = "Producción",
-                        Detalles = $"Defecto ID {registro.Id} actualizado. Cambios: {string.Join("; ", cambios)}"
+                        Detalles = $"Defecto ID {registro.Id} actualizado.",
+                        Ip = ip ?? "N/A"
                     };
+
                     _context.Logs.Add(log);
                     _context.SaveChanges();
                 }
@@ -269,8 +273,10 @@ namespace ProducScan.Controllers
             }
             catch (Exception ex)
             {
-                return Json(new { success = false, message = "Error al guardar: " + ex.Message });
+                var error = ex.InnerException?.Message ?? ex.Message;
+                return Json(new { success = false, message = "Error al guardar: " + error });
             }
+
         }
 
         [Authorize(Roles = "Admin,Editor")]
@@ -309,6 +315,19 @@ namespace ProducScan.Controllers
             {
                 return Json(new { success = false, message = "Error al borrar: " + ex.Message });
             }
+        }
+
+        [HttpPost]
+        public IActionResult EliminarMultiples([FromBody] List<int> ids)
+        {
+            var registros = _context.RegistrodeDefectos
+                .Where(r => ids.Contains(r.Id))
+                .ToList();
+
+            _context.RegistrodeDefectos.RemoveRange(registros);
+            _context.SaveChanges();
+
+            return Json(new { success = true, message = "Registros eliminados correctamente" });
         }
 
         [HttpGet]
@@ -373,6 +392,7 @@ namespace ProducScan.Controllers
         [HttpGet]
         public IActionResult DetalleDefectosPorUsuarios(DateOnly fecha, string usuario, string turno)
         {
+            //Declaración de viewbags para filtros y selects
             ViewBag.DefectosCatalogo = _context.Defectos
                 .Select(c => new
                 {
@@ -385,7 +405,7 @@ namespace ProducScan.Controllers
             var registros = _context.RegistrodeDefectos
                 .Where(r => r.Fecha >= fecha.AddDays(-1) && r.Fecha <= fecha.AddDays(1)
                          && r.Tm != null && r.Tm.Trim() == usuario.Trim())
-                .ToList() // 👈 materializamos
+                .ToList()
                 .Where(r => ProduccionHelper.GetFechaProduccion(r.Fecha.ToDateTime(r.Hora)).Date
                             == fecha.ToDateTime(TimeOnly.MinValue).Date
                          && (string.IsNullOrWhiteSpace(turno) || r.Turno.Trim().Equals(turno.Trim(), StringComparison.OrdinalIgnoreCase)))
@@ -394,7 +414,7 @@ namespace ProducScan.Controllers
                 .Select(r => new RegistroDefectoViewModel
                 {
                     Id = r.Id,
-                    Fecha = r.Fecha, // fecha real
+                    Fecha = r.Fecha,
                     Tm = r.Tm,
                     NuMesa = r.NuMesa,
                     Turno = r.Turno,
@@ -409,7 +429,7 @@ namespace ProducScan.Controllers
             var vm = new DetalleDefectosPorUsuarioViewModel
             {
                 Usuario = usuario,
-                Fecha = fecha.ToString("yyyy-MM-dd"), // Fecha laboral
+                Fecha = fecha.ToString("yyyy-MM-dd"),
                 Defectos = registros
             };
 
@@ -445,6 +465,8 @@ namespace ProducScan.Controllers
             return query;
         }
 
+       
+        
         // METODOS PARA LA VISTA REGISTRO DE DEFECTOS
 
         private string ObtenerDescripcionDefecto(string codigo)

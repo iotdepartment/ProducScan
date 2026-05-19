@@ -20,8 +20,6 @@ namespace ProducScan.ViewModels
         public string CodigodeDefecto { get; set; }
         public string Defecto { get; set; }
         public TimeOnly Hora { get; set; }
-
-        // 👇 Nueva propiedad para distinguir fecha laboral
         public DateTime FechaLaboral { get; set; }
     }
 }

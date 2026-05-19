@@ -10,6 +10,13 @@
     ViewData["PageDescription"] = "Defectos desglozados por día del TM.";
 }
 
+<style>
+    table.dataTable tbody tr.selected {
+        background-color: #ffc107 !important;
+        color: black;
+    }
+</style>
+
 @if (Model.Defectos.Any())
 {
 <div class="card mb-3">
@@ -19,7 +26,13 @@
         <p class="card-text"><strong>Team Member:</strong> @Model.Usuario</p>
     </div>
 </div>
-    <table class="table table-bordered">
+    @if (User.IsInRole("Admin"))
+    {
+        <button id="btnEliminarSeleccionados" class="btn rounded-pill btn-danger mb-2">
+            <i class="bi bi-trash"></i> Eliminar seleccionados
+        </button>
+    }
+    <table id="tablaDefectos" class="table table-bordered">
         <thead class="table-dark">
             <tr>
                 <th>Fecha laboral</th>
@@ -62,7 +75,6 @@
                                         data-defecto="@d.Defecto"
                                         data-hora="@d.Hora.ToString("HH:mm")"
                                         data-tm="@d.Tm">
-                                    <!-- 👈 corregido: data-tm en minúsculas -->
                                     <i class="bi bi-pencil-fill"></i>
                                 </button>
                             }
@@ -119,26 +131,110 @@ else
 <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
 
 @section Scripts {
+
+    <link href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap5.min.css" rel="stylesheet" />
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.datatables.net/select/1.7.0/js/select.bootstrap5.min.js"></script>
+
     <script>
+                var tabla;
+
+        $(document).ready(function () {
+            tabla = $('#tablaDefectos').DataTable({
+                select: {
+                    style: 'multi'
+                },
+                language: {
+                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-MX.json'
+                }
+            });
+        });
+    </script>
+
+    <script>
+
+        $("#btnEliminarSeleccionados").on("click", function () {
+
+            var filas = tabla.rows({ selected: true });
+            var ids = [];
+
+            filas.every(function () {
+                var row = this.node();
+                var id = $(row).attr("id").replace("row-", "");
+                ids.push(parseInt(id));
+            });
+
+            if (ids.length === 0) {
+                mostrarToast("warning", "Selecciona al menos un registro");
+                return;
+            }
+
+            if (!confirm("¿Eliminar registros seleccionados?")) return;
+
+            $.ajax({
+                url: '/RegistrodeDefectos/EliminarMultiples',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(ids),
+                success: function (resp) {
+                    if (resp.success) {
+
+                        filas.remove().draw(); // 🔥 elimina directo en DataTables
+
+                        mostrarToast("success", resp.message);
+                    } else {
+                        mostrarToast("danger", resp.message);
+                    }
+                },
+                error: function () {
+                    mostrarToast("danger", "Error al eliminar registros");
+                }
+            });
+        });
+
         // Abrir modal de edición de defecto
-        $(document).on("click", ".btnEditarDefecto", function () {
+               $(document).on("click", ".btnEditarDefecto", function () {
+
             var btn = $(this);
-            var valor = btn.data("codigodefecto") + "|" + btn.data("defecto");
+
+            var codigo = (btn.data("codigodefecto") || "").toString().toUpperCase().trim();
+            var defecto = (btn.data("defecto") || "").toString().trim();
+
+            var valorBuscado = codigo + "|" + defecto;
 
             $("#editId").val(btn.data("id"));
             $("#editMesa").val(btn.data("mesa"));
             $("#editTurno").val(btn.data("turno"));
             $("#editMandrel").val(btn.data("mandrel"));
-            $("#editDefectoSelect").val(valor);
             $("#editHora").val(btn.data("hora"));
-            $("#editTm").val(btn.data("tm")); // 👈 nuevo campo TM
+            $("#editTm").val(btn.data("tm"));
+
+            // 🔥 Buscar manualmente el option correcto ignorando mayúsculas
+            let encontrado = false;
+
+            $("#editDefectoSelect option").each(function () {
+                const val = $(this).val();
+
+                if (val && val.toUpperCase() === valorBuscado.toUpperCase()) {
+                    $(this).prop("selected", true);
+                    encontrado = true;
+                    return false; // break
+                }
+            });
+
+            if (!encontrado) {
+                $("#editDefectoSelect").val(""); // fallback
+            }
 
             const modal = new bootstrap.Modal(document.getElementById('editarDefectoModal'));
             modal.show();
         });
 
         // Guardar cambios
-                // Guardar cambios
         $(document).on("submit", "#formEditarDefecto", function (e) {
             e.preventDefault();
 
@@ -192,6 +288,8 @@ else
             });
         });
 
+
+
         // Autocomplete para Mandrel
         $(document).on("keyup", "#editMandrel", function () {
             var query = $(this).val();
@@ -213,6 +311,8 @@ else
                 }
             });
         });
+
+
 
         // Al hacer clic en una sugerencia de mandrel
         $(document).on("click", ".mandrel-option", function () {
@@ -250,6 +350,8 @@ else
             $("#tmSuggestions").empty();
         });
 
+
+
         // Toast helper
         function mostrarToast(tipo, mensaje) {
             var toastId = "toast-" + Date.now();
@@ -273,12 +375,16 @@ else
             });
         }
 
+
+
         // Capturar id al abrir modal de borrar
         var borrarModal = document.getElementById('borrarDefectoModal');
         borrarModal.addEventListener('show.bs.modal', function (event) {
             var button = event.relatedTarget;
             document.getElementById('deleteId').value = button.getAttribute('data-id');
         });
+
+
 
         // Enviar por AJAX el borrado
         $(document).on("submit", "#formBorrarDefecto", function (e) {
