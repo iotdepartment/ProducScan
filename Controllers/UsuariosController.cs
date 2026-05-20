@@ -22,7 +22,7 @@ namespace ProducScan.Controllers
         public IActionResult Index()
         {
             var usuarios = _context.Usuarios.ToList();
-            return View(usuarios); // 👈 ahora sí coincide con @model IEnumerable<Usuario>
+            return View(usuarios); 
         }
 
         // GET: Modal Crear
@@ -38,19 +38,33 @@ namespace ProducScan.Controllers
         }
 
         [HttpPost]
-        public IActionResult Crear(Usuario model, string password)
+        public IActionResult Crear(Usuario model, string Password)
         {
-            if (_context.Usuarios.Any(u => u.NombreUsuario == model.NombreUsuario))
+            try
             {
-                _log.Registrar("Error crear usuario", $"Intento duplicado: {model.NombreUsuario}", "Error", categoria: "Sistema");
-                return Json(new { success = false, message = "El nombre de usuario ya existe." });
+                if (string.IsNullOrWhiteSpace(Password))
+                {
+                    return Json(new { success = false, message = "La contraseña es requerida" });
+                }
+
+                model.PasswordHash = BCrypt.Net.BCrypt.HashPassword(Password);
+
+                model.FechaAlta = DateTime.Now;
+                model.SecurityStamp = Guid.NewGuid().ToString();
+
+                _context.Usuarios.Add(model);
+                _context.SaveChanges();
+
+                return Json(new { success = true, message = "Usuario creado correctamente" });
             }
-
-            _context.Usuarios.Add(model);
-            _context.SaveChanges();
-
-            _log.Registrar("Crear usuario", $"Usuario creado: {model.NombreUsuario}");
-            return Json(new { success = true, message = "Usuario creado correctamente." });
+            catch (Exception ex)
+            {
+                return Json(new
+                {
+                    success = false,
+                    message = ex.InnerException?.Message ?? ex.Message
+                });
+            }
         }
 
         // GET: Modal Editar

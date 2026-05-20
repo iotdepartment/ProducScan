@@ -1865,7 +1865,6 @@ namespace ProducScan.Controllers
 
 
 
-
         // Metodo para generar el reporte de 3 hojas y los 3 metodos para cada hoja :)     //REPORTE
         [Authorize(Roles = "Admin,Gerente")]
         [HttpGet]
@@ -2950,7 +2949,7 @@ namespace ProducScan.Controllers
         }
 
 
-
+        [Authorize(Roles = "Admin")]
         //BOTON UNICO ----
         [HttpPost]
         [ValidateAntiForgeryToken]

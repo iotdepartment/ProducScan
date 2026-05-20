@@ -1,77 +1,100 @@
 ﻿@model IEnumerable<ProducScan.Models.Usuario>
+
 @{
     ViewData["Title"] = "Administrar Usuarios";
-     ViewData["Subtitle"] = "Team Members registrados en el Sistema de escaneo de Inspección.";
+    ViewData["Subtitle"] = "Team Members registrados en el Sistema de escaneo de Inspección.";
 }
-
-
 
 <div class="row">
     <div class="col-3">
 
-            <button class="btn btn-success rounded-pill w-100 mb-3" id="btnNuevo">
-                <i class="bi bi-person-plus"></i> Nuevo Usuario
-            </button>
-
-
+        <button class="btn btn-success rounded-pill w-100 mb-3" id="btnNuevo">
+            <i class="bi bi-person-plus"></i> Nuevo Usuario
+        </button>
 
     </div>
 </div>
-
 
 <div id="tablaUsuariosContainer">
     @await Html.PartialAsync("_TablaUsuarios", Model)
 </div>
 
-<!-- Modal genérico -->
-<div class="modal fade" id="modalUsuario" tabindex="-1" aria-hidden="true">
+<!-- Modal -->
+<div class="modal fade" id="modalUsuario" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" id="modalContent">
-            <!-- Aquí se carga el partial -->
-        </div>
+        <div class="modal-content" id="modalContent"></div>
     </div>
 </div>
 
 <!-- Toasts -->
 <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
-    <div id="toastSuccess" class="toast align-items-center text-bg-success border-0" role="alert">
+    <div id="toastSuccess" class="toast text-bg-success border-0">
         <div class="d-flex">
             <div class="toast-body"></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            <button class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
         </div>
     </div>
-    <div id="toastError" class="toast align-items-center text-bg-danger border-0" role="alert">
+
+    <div id="toastError" class="toast text-bg-danger border-0">
         <div class="d-flex">
             <div class="toast-body"></div>
-            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            <button class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
         </div>
     </div>
 </div>
 
 @section Scripts {
+
+    <!-- ✅ DataTables Bootstrap -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/select/1.7.0/css/select.bootstrap5.min.css" />
+
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+
+    <script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+    <script src="https://cdn.datatables.net/select/1.7.0/js/select.bootstrap5.min.js"></script>
+
     <script>
+
+        var tabla;
         const modal = new bootstrap.Modal(document.getElementById('modalUsuario'));
         const toastSuccess = new bootstrap.Toast(document.getElementById('toastSuccess'));
         const toastError = new bootstrap.Toast(document.getElementById('toastError'));
 
+        // ✅ Inicializar DataTable
+                tabla = $('#tablaUsuarios').DataTable({
+            order: [[1, 'asc']], // 👈 columna 1 = Rol
+            language: {
+                url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-MX.json'
+            },
+            pageLength: 15,
+            lengthMenu: [15, 25, 50, 100]
+        });
+
+        $(document).ready(function () {
+            inicializarDataTable();
+        });
+
+        // ✅ Toast helper
         function showToast(success, message) {
             if (success) {
-                document.querySelector("#toastSuccess .toast-body").innerText = message;
+                $("#toastSuccess .toast-body").text(message);
                 toastSuccess.show();
             } else {
-                document.querySelector("#toastError .toast-body").innerText = message;
+                $("#toastError .toast-body").text(message);
                 toastError.show();
             }
         }
 
-        // Nuevo usuario
+        // ✅ Nuevo usuario
         $("#btnNuevo").click(function () {
             $("#modalContent").load("/Usuarios/Crear", function () {
                 modal.show();
             });
         });
 
-        // Editar usuario
+        // ✅ Editar usuario
         $(document).on("click", ".btnEditar", function () {
             let id = $(this).data("id");
             $("#modalContent").load("/Usuarios/Editar/" + id, function () {
@@ -79,7 +102,7 @@
             });
         });
 
-        // Eliminar usuario
+        // ✅ Eliminar usuario
         $(document).on("click", ".btnEliminar", function () {
             let id = $(this).data("id");
             $("#modalContent").load("/Usuarios/Eliminar/" + id, function () {
@@ -87,15 +110,22 @@
             });
         });
 
+        // ✅ Recargar tabla + reactivar DataTable
         function refreshTabla() {
-            $("#tablaUsuariosContainer").load("/Usuarios/TablaUsuarios");
+            $("#tablaUsuariosContainer").load("/Usuarios/TablaUsuarios", function () {
+                inicializarDataTable(); // 🔥 clave
+            });
         }
 
+        // ✅ Submit AJAX
         $(document).on("submit", "form.ajaxForm", function (e) {
             e.preventDefault();
+
             let form = $(this);
+
             $.post(form.attr("action"), form.serialize())
                 .done(function (res) {
+
                     if (res.success) {
                         modal.hide();
                         refreshTabla();
@@ -103,10 +133,12 @@
                     } else {
                         showToast(false, res.message);
                     }
+
                 })
                 .fail(function () {
                     showToast(false, "Error en la petición.");
                 });
         });
+
     </script>
 }
