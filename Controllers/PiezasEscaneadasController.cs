@@ -15,6 +15,7 @@ using System.Drawing;
 using System.Globalization;
 using System.IO;
 using System.Linq.Dynamic.Core;
+using System.Text;
 
 [Authorize]
 public class PiezasEscaneadasController : Controller
@@ -2068,13 +2069,22 @@ public class PiezasEscaneadasController : Controller
     {
         var fechaFiltro = DateOnly.Parse(fechaLaboral);
 
+        // ✅ Paso 1: traer rango de datos real desde SQL
         var registros = _context.RegistrodePiezasEscaneadas
-            .Where(x => x.Tm == usuario)
+            .Where(x => x.Fecha >= fechaFiltro.AddDays(-1)
+                     && x.Fecha <= fechaFiltro.AddDays(1)
+                     && x.Tm != null
+                     && x.Tm.ToUpper().Contains(usuario.ToUpper())) // 👈 tolerante
             .ToList()
-            .Where(x => ProduccionHelper.GetFechaProduccion(x.Fecha.ToDateTime(x.Hora)).Date
-                        == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
+
+            // ✅ Paso 2: aplicar lógica real de fecha laboral (igual que defectos)
+            .Where(x => ProduccionHelper.GetFechaProduccion(
+                            x.Fecha.ToDateTime(x.Hora)
+                        ).Date == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
+
             .OrderBy(x => x.Fecha)
             .ThenBy(x => x.Hora)
+
             .Select(x => new ProduccionDetalleViewModel
             {
                 Id = x.Id,
@@ -2091,6 +2101,7 @@ public class PiezasEscaneadasController : Controller
             })
             .ToList();
 
+        // ✅ Paso 3: cálculo de tiempo (igual que tenías)
         ProduccionDetalleViewModel anterior = null;
 
         foreach (var r in registros)
@@ -2104,7 +2115,6 @@ public class PiezasEscaneadasController : Controller
 
                 if (anterior != null)
                 {
-                    // Diferencia contra el registro anterior
                     var tiempoAnterior = anterior.Fecha.ToDateTime(anterior.Hora);
                     var segundos = (tiempoActual - tiempoAnterior).TotalSeconds;
 
@@ -2113,7 +2123,6 @@ public class PiezasEscaneadasController : Controller
                 }
                 else
                 {
-                    // Primer registro → calcular contra inicio del turno
                     TimeSpan inicioTurno = r.Turno switch
                     {
                         "1" => new TimeSpan(7, 10, 0),
@@ -2124,9 +2133,8 @@ public class PiezasEscaneadasController : Controller
 
                     var segundos = (tiempoActual.TimeOfDay - inicioTurno).TotalSeconds;
 
-                    // Ajuste turno 3 que cruza medianoche
                     if (r.Turno == "3" && segundos < 0)
-                        segundos += 24 * 3600;
+                        segundos += 86400;
 
                     if (segundos > 0)
                         segundosPorPieza = Math.Round(segundos / piezas, 2);
@@ -2139,6 +2147,7 @@ public class PiezasEscaneadasController : Controller
 
         return Json(new { data = registros });
     }
+
 
     [Authorize(Roles = "Admin,Editor")]
     [HttpPost]

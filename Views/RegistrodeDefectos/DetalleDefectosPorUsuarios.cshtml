@@ -32,6 +32,8 @@
             <i class="bi bi-trash"></i> Eliminar seleccionados
         </button>
     }
+
+
     <table id="tablaDefectos" class="table table-bordered">
         <thead class="table-dark">
             <tr>
@@ -141,15 +143,12 @@ else
     <script src="https://cdn.datatables.net/select/1.7.0/js/select.bootstrap5.min.js"></script>
 
     <script>
-                var tabla;
+        var tabla;
 
         $(document).ready(function () {
             tabla = $('#tablaDefectos').DataTable({
                 select: {
                     style: 'multi'
-                },
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-MX.json'
                 }
             });
         });

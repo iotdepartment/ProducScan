@@ -2995,6 +2995,100 @@ namespace ProducScan.Controllers
             return RedirectToAction("Index");
         }
 
+        [HttpGet]
+        public IActionResult GetDefectosAjax(DateOnly fecha, string usuario, string turno)
+        {
+            var usuarioSafe = usuario?.Trim() ?? "";
+
+            // ✅ PRIMER FILTRO EN SQL
+            var registrosDb = _context.RegistrodeDefectos
+                .Where(r =>
+                    r.Fecha >= fecha.AddDays(-1) &&
+                    r.Fecha <= fecha.AddDays(1) &&
+                    r.Tm != null &&
+                    r.Tm.Trim() == usuarioSafe
+                )
+                .ToList(); // 🔥 AQUÍ SEPARAS
+
+            // ✅ SEGUNDO FILTRO EN MEMORIA
+            var registros = registrosDb
+                .Where(r =>
+                    ProduccionHelper.GetFechaProduccion(
+                        r.Fecha.ToDateTime(r.Hora)
+                    ).Date == fecha.ToDateTime(TimeOnly.MinValue).Date
+                )
+                .Where(r =>
+                    string.IsNullOrWhiteSpace(turno) ||
+                    (r.Turno != null &&
+                     r.Turno.Trim().Equals(turno.Trim(), StringComparison.OrdinalIgnoreCase))
+                )
+                .OrderBy(r => r.Fecha)
+                .ThenBy(r => r.Hora)
+                .Select(r => new
+                {
+                    id = r.Id,
+                    fechaLaboral = ProduccionHelper.GetFechaProduccion(
+                        r.Fecha.ToDateTime(r.Hora)),
+                    fechaReal = r.Fecha,
+                    hora = r.Hora,
+                    nuMesa = r.NuMesa,
+                    turno = r.Turno,
+                    mandrel = r.Mandrel,
+                    codigodeDefecto = r.CodigodeDefecto,
+                    defecto = r.Defecto
+                })
+                .ToList();
+
+            return Json(new { data = registros });
+        }
+
+        private string NormalizarMesa(string mesa)
+        {
+            if (string.IsNullOrWhiteSpace(mesa))
+                return null;
+
+            mesa = mesa.ToUpper()
+                .Replace("MESA#", "")
+                .Replace("MESA", "")
+                .Replace("#", "")
+                .Trim();
+
+            return "MESA#" + mesa;
+        }
+
+        [HttpPost]
+        public IActionResult EditMultiple([FromBody] EditMultipleDefectosViewModel model)
+        {
+            if (model?.Ids == null || !model.Ids.Any())
+                return Json(new { success = false, message = "Sin registros" });
+
+            var registros = _context.RegistrodeDefectos
+                .Where(x => model.Ids.Contains(x.Id))
+                .ToList();
+
+            foreach (var r in registros)
+            {
+                if (!string.IsNullOrWhiteSpace(model.NuMesa))
+                    r.NuMesa = NormalizarMesa(model.NuMesa);
+
+                if (!string.IsNullOrWhiteSpace(model.Turno))
+                    r.Turno = model.Turno.Trim();
+
+                if (!string.IsNullOrWhiteSpace(model.Mandrel))
+                    r.Mandrel = model.Mandrel.Trim();
+
+                if (!string.IsNullOrWhiteSpace(model.CodigodeDefecto) &&
+                    !string.IsNullOrWhiteSpace(model.Defecto))
+                {
+                    r.CodigodeDefecto = model.CodigodeDefecto.Trim();
+                    r.Defecto = model.Defecto.Trim();
+                }
+            }
+
+            _context.SaveChanges();
+
+            return Json(new { success = true, message = "Actualizados correctamente" });
+        }
 
     }
 

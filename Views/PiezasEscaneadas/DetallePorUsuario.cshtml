@@ -243,20 +243,25 @@
             /* ============================
                DATATABLE AJAX
             ============================ */
+
+        var usuario = @Html.Raw(Json.Serialize(ViewBag.Usuario));
+        var fecha = '@ViewBag.FechaLaboral';
+
+
             var table = $('#produccionTable').DataTable({
-                       select: {
-            style: 'multi',
-            items: 'row',
-            selector: 'td:not(:last-child)'
-        },
-                ajax: {
-                    url: "/PiezasEscaneadas/GetProduccionAjax",
-                    type: "GET",
-                    data: {
-                        usuario: "@ViewBag.Usuario",
-                        fechaLaboral: "@ViewBag.FechaLaboral"
-                    }
+                select: {
+                    style: 'multi',
+                    items: 'row',
+                    selector: 'td:not(:last-child)'
                 },
+                       ajax: {
+            url: "/PiezasEscaneadas/GetProduccionAjax",
+            type: "GET",
+            data: function (d) {
+                d.usuario = usuario;
+                d.fechaLaboral = fecha;
+            }
+        },
                 columns: [
                     { data: "fechaLaboral", render: d => new Date(d).toISOString().split("T")[0] },
                     { data: "fechaReal", render: d => new Date(d).toISOString().split("T")[0] },
@@ -270,11 +275,9 @@
                 ordering: false,
                 paging: true,
                 searching: true,
-                info: true,
-                language: {
-                    url: "//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json"
-                }
+                info: true
             });
+
 
             /* ============================
                BOTONES
@@ -346,22 +349,31 @@
                MESA NORMALIZADA
             ============================ */
             function setMultiValueMesa(values) {
+
                 const normalized = values.map(v => {
                     if (!v) return "";
-                    return v.replace("MESA#", "").trim();
+
+                    v = v.toString().toUpperCase().trim();
+
+                    v = v.replace("MESA#", "")
+                         .replace("MESA", "")
+                         .replace("#", "")
+                         .trim();
+
+                    return v;
                 });
 
                 const clean = [...new Set(normalized.filter(v => v !== ""))];
 
                 if (clean.length === 1) {
-                    $("#editMesa").val(clean[0]);
+                    $("#editMesa").val(clean[0]).trigger("change");
                 } else {
-                    $("#editMesa").val("");
+                    $("#editMesa").val("").trigger("change");
                 }
             }
 
             /* ============================
-               ABRIR MODAL EDICIÓN MÚLTIPLE
+                ABRIR MODAL EDICIÓN MÚLTIPLE
             ============================ */
             function openEditMultipleModal() {
                 const rows = table.rows({ selected: true }).data();
@@ -396,7 +408,7 @@
                     ids: $("#editIds").val().split(",")
                 };
                 payload["Tm"] = $("#editTM").val() || null;
-                payload["NuMesa"] = $("#editMesa").val() ? "MESA#" + $("#editMesa").val() : null;
+                payload["NuMesa"] = $("#editMesa").val() ? "Mesa#" + $("#editMesa").val() : null;
                 payload["Turno"] = $("#editTurno").val() || null;
                 payload["Mandrel"] = $("#editMandril").val() || null;
                 payload["Ndpiezas"] = $("#editPiezas").val() || null;
