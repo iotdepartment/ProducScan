@@ -42,5 +42,8 @@
         public string MaterialLubFmt { get; set; } = string.Empty;
         public string VulcanizationFmt { get; set; } = string.Empty;
         public string UncuredFmt { get; set; } = string.Empty;
+
+        public double PorcentajeDefectosSinExcluidos { get; set; }
+        public string DefectosSinExcluidosFmt { get; set; } = string.Empty;
     }
 }

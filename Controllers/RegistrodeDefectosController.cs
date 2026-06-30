@@ -2628,9 +2628,9 @@ namespace ProducScan.Controllers
             // 1. Defectos a excluir
             // ============================
             var defectosExcluidos = new HashSet<string>
-    {
-       "17a", "17b", "21", "54", "59", "46", "24", "23","17A", "17B"
-    };
+            {
+               "17a", "17b", "21", "54", "59", "46", "24", "23","17A", "17B"
+            };
 
             // ============================
             // 2. Cargar costos de mandriles
@@ -2994,52 +2994,47 @@ namespace ProducScan.Controllers
             TempData["Success"] = $"{Cantidad} defectos registrados correctamente.";
             return RedirectToAction("Index");
         }
-
         [HttpGet]
-        public IActionResult GetDefectosAjax(DateOnly fecha, string usuario, string turno)
+        public IActionResult ObtenerDefectos(string usuario, string fechaLaboral)
         {
-            var usuarioSafe = usuario?.Trim() ?? "";
+            var fechaFiltro = DateOnly.Parse(fechaLaboral);
 
-            // ✅ PRIMER FILTRO EN SQL
-            var registrosDb = _context.RegistrodeDefectos
-                .Where(r =>
-                    r.Fecha >= fecha.AddDays(-1) &&
-                    r.Fecha <= fecha.AddDays(1) &&
-                    r.Tm != null &&
-                    r.Tm.Trim() == usuarioSafe
-                )
-                .ToList(); // 🔥 AQUÍ SEPARAS
+            var defectos = _context.RegistrodeDefectos
+                .Where(x => x.Fecha >= fechaFiltro.AddDays(-1)
+                         && x.Fecha <= fechaFiltro.AddDays(1)
+                         && x.Tm != null
+                         && x.Tm.ToUpper().Contains(usuario.ToUpper())) // ✅ FILTRO CLAVE
 
-            // ✅ SEGUNDO FILTRO EN MEMORIA
-            var registros = registrosDb
-                .Where(r =>
-                    ProduccionHelper.GetFechaProduccion(
-                        r.Fecha.ToDateTime(r.Hora)
-                    ).Date == fecha.ToDateTime(TimeOnly.MinValue).Date
-                )
-                .Where(r =>
-                    string.IsNullOrWhiteSpace(turno) ||
-                    (r.Turno != null &&
-                     r.Turno.Trim().Equals(turno.Trim(), StringComparison.OrdinalIgnoreCase))
-                )
-                .OrderBy(r => r.Fecha)
-                .ThenBy(r => r.Hora)
-                .Select(r => new
+                .ToList()
+
+                // ✅ lógica de fecha laboral (igual que producción)
+                .Where(x => ProduccionHelper.GetFechaProduccion(
+                                x.Fecha.ToDateTime(x.Hora)
+                            ).Date == fechaFiltro.ToDateTime(TimeOnly.MinValue).Date)
+
+                .OrderBy(x => x.Fecha)
+                .ThenBy(x => x.Hora)
+
+                .Select(x => new
                 {
-                    id = r.Id,
+                    id = x.Id,
                     fechaLaboral = ProduccionHelper.GetFechaProduccion(
-                        r.Fecha.ToDateTime(r.Hora)),
-                    fechaReal = r.Fecha,
-                    hora = r.Hora,
-                    nuMesa = r.NuMesa,
-                    turno = r.Turno,
-                    mandrel = r.Mandrel,
-                    codigodeDefecto = r.CodigodeDefecto,
-                    defecto = r.Defecto
+                                        x.Fecha.ToDateTime(x.Hora)
+                                   ).ToString("yyyy-MM-dd"),
+
+                    fecha = x.Fecha.ToString("yyyy-MM-dd"),
+                    hora = x.Hora.ToString(@"HH\:mm"),
+                    nuMesa = x.NuMesa,
+                    turno = x.Turno,
+                    mandrel = x.Mandrel,
+                    codigodefecto = x.CodigodeDefecto,
+                    defecto = x.Defecto,
+                    defectoTexto = (x.CodigodeDefecto ?? "") + " - " + (x.Defecto ?? ""),
+                    tm = x.Tm
                 })
                 .ToList();
 
-            return Json(new { data = registros });
+            return Json(new { data = defectos });
         }
 
         private string NormalizarMesa(string mesa)

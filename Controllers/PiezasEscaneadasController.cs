@@ -1493,26 +1493,23 @@ public class PiezasEscaneadasController : Controller
 
     //DASHBOARD DINAMICO
     // DASHBOARD DINÁMICO POR RANGO DE FECHAS
+
     public IActionResult Dashboard(DateTime? fechaInicio, DateTime? fechaFin)
     {
-        // Fecha actual en Matamoros
         var ahora = ProduccionHelper.GetMatamorosTime();
 
-        // Si no envían fechas, usar hoy como rango
         var inicio = fechaInicio ?? ProduccionHelper.GetFechaProduccion(ahora).Date;
         var fin = fechaFin ?? ProduccionHelper.GetFechaProduccion(ahora).Date;
 
-        // Convertir a DateOnly
         var inicioSQL = DateOnly.FromDateTime(inicio);
         var finSQL = DateOnly.FromDateTime(fin);
 
-        // Extender 1 día para capturar fechas laborales cruzadas
         var inicioExtendido = inicioSQL.AddDays(-1);
         var finExtendido = finSQL.AddDays(1);
 
         /* ============================================================
-           1) PRODUCCIONES (FILTRADAS EN SQL)
-           ============================================================ */
+           1) PRODUCCIÓN
+        ============================================================ */
         var produccionesRaw = _context.RegistrodePiezasEscaneadas
             .Where(r => r.Fecha >= inicioExtendido && r.Fecha <= finExtendido)
             .ToList();
@@ -1526,8 +1523,8 @@ public class PiezasEscaneadasController : Controller
             .ToList();
 
         /* ============================================================
-           2) DEFECTOS (FILTRADOS EN SQL)
-           ============================================================ */
+           2) DEFECTOS
+        ============================================================ */
         var defectosRaw = _context.RegistrodeDefectos
             .Where(d => d.Fecha >= inicioExtendido && d.Fecha <= finExtendido)
             .ToList();
@@ -1542,7 +1539,7 @@ public class PiezasEscaneadasController : Controller
 
         /* ============================================================
            3) TOTALES
-           ============================================================ */
+        ============================================================ */
         var totalBuenas = producciones.Sum(r => int.TryParse(r.Ndpiezas, out var n) ? n : 0);
         var totalDefectos = defectos.Count;
         var totalPiezas = totalBuenas + totalDefectos;
@@ -1551,36 +1548,48 @@ public class PiezasEscaneadasController : Controller
         double scrap = totalPiezas > 0 ? (double)totalDefectos / totalPiezas * 100 : 0;
 
         /* ============================================================
-           4) DEFECTOS POR CATEGORÍA
-           ============================================================ */
+           5) DEFECTOS POR CATEGORÍA (TU LÓGICA ORIGINAL)
+        ============================================================ */
+        var codigosExcluidos = new[] { "17a", "17b", "17B", "17B", "21", "54" };
         int defectosPrintIllegible = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21" }.Contains(d.CodigodeDefecto));
         int defectosMaterialLub = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21", "54" }.Contains(d.CodigodeDefecto));
         int defectosVulcanization = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21", "54", "59", "46", "24" }.Contains(d.CodigodeDefecto));
         int defectosUncured = defectos.Count(d => !new[] { "17a", "17b", "17A", "17B", "21", "54", "59", "46", "24", "23" }.Contains(d.CodigodeDefecto));
+        
+        var defectosSinExcluidos = defectos.Count(d =>
+            !codigosExcluidos.Contains((d.CodigodeDefecto ?? "").ToLower())
+        );
 
+        double porcDefectosSinExcluidos = totalPiezas > 0 ? (double)defectosSinExcluidos / totalPiezas * 100 : 0;
         double porcPrintIllegible = totalPiezas > 0 ? (double)defectosPrintIllegible / totalPiezas * 100 : 0;
         double porcMaterialLub = totalPiezas > 0 ? (double)defectosMaterialLub / totalPiezas * 100 : 0;
         double porcVulcanization = totalPiezas > 0 ? (double)defectosVulcanization / totalPiezas * 100 : 0;
         double porcUncured = totalPiezas > 0 ? (double)defectosUncured / totalPiezas * 100 : 0;
 
         /* ============================================================
-           5) VIEWMODEL CON FORMATO (N0, N2, pz)
-           ============================================================ */
+           6) VIEWMODEL
+        ============================================================ */
         var viewModel = new DashboardResumenViewModel
         {
             TotalPiezas = totalPiezas,
             TotalDefectos = totalDefectos,
             FPY = fpy,
             Scrap = scrap,
+
             PorcentajePrintIllegible = porcPrintIllegible,
             PorcentajeMaterialLub = porcMaterialLub,
             PorcentajeVulcanization = porcVulcanization,
             PorcentajeUncured = porcUncured,
 
-            // FORMATO CON COMAS Y SUFIJO "pz"
+            // ✅ NUEVO
+            PorcentajeDefectosSinExcluidos = porcDefectosSinExcluidos,
+            DefectosSinExcluidosFmt = string.Format("{0:N2} %", porcDefectosSinExcluidos),
+
+            // FORMATOS
             TotalPiezasFmt = string.Format("{0:N0} pz", totalPiezas),
             TotalBuenasFmt = string.Format("{0:N0} pz", totalBuenas),
             TotalDefectosFmt = string.Format("{0:N0} pz", totalDefectos),
+
             FPYFmt = string.Format("{0:N2} %", fpy),
             ScrapFmt = string.Format("{0:N2} %", scrap),
 
@@ -1793,9 +1802,6 @@ public class PiezasEscaneadasController : Controller
 
         return Json(new { data });
     }
-
-
-
 
     [HttpPost]
     public IActionResult GetMandrilesPorFechaYTurno(string fechaInicio, string fechaFin, string turno)

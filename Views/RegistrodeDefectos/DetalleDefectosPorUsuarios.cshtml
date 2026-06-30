@@ -33,7 +33,6 @@
         </button>
     }
 
-
     <table id="tablaDefectos" class="table table-bordered">
         <thead class="table-dark">
             <tr>
@@ -44,55 +43,14 @@
                 <th>Turno</th>
                 <th>Mandrel</th>
                 <th>Defecto</th>
-  
+
                 @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
                 {
                     <th>Acciones</th>
                 }
             </tr>
         </thead>
-        <tbody>
-            @foreach (var d in Model.Defectos)
-            {
-                <tr id="row-@d.Id">
-                    <td>@d.FechaLaboral.ToString("yyyy-MM-dd")</td>
-                    <td>@d.Fecha.ToString("yyyy-MM-dd")</td>
-                    <td class="col-hora">@d.Hora</td>
-                    <td class="col-mesa">@d.NuMesa</td>
-                    <td class="col-turno">@d.Turno</td>
-                    <td class="col-mandrel">@d.Mandrel</td>
-                    <td class="col-defecto">@d.CodigodeDefecto - @d.Defecto</td>
-                    @if (User.IsInRole("Admin") || User.IsInRole("Editor"))
-                    {
-                        <td>
-                            @if (User.IsInRole("Admin"))
-                            {
-                                <!-- Botón Editar -->
-                                <button class="btnEditarDefecto btn btn-sm btn-warning rounded-circle"
-                                        data-id="@d.Id"
-                                        data-mesa="@d.NuMesa"
-                                        data-turno="@d.Turno"
-                                        data-mandrel="@d.Mandrel"
-                                        data-codigodefecto="@d.CodigodeDefecto"
-                                        data-defecto="@d.Defecto"
-                                        data-hora="@d.Hora.ToString("HH:mm")"
-                                        data-tm="@d.Tm">
-                                    <i class="bi bi-pencil-fill"></i>
-                                </button>
-                            }
-
-                            <!-- Botón Borrar -->
-                            <button class="btn btn-sm btn-danger rounded-circle"
-                                    data-bs-toggle="modal"
-                                    data-bs-target="#borrarDefectoModal"
-                                    data-id="@d.Id">
-                                <i class="bi bi-trash-fill"></i>
-                            </button>
-                        </td>
-                    }
-                </tr>
-            }
-        </tbody>
+        <tbody></tbody>
     </table>
 }
 else
@@ -143,19 +101,90 @@ else
     <script src="https://cdn.datatables.net/select/1.7.0/js/select.bootstrap5.min.js"></script>
 
     <script>
-        var tabla;
+        
+        //DATATABLES SIN AJAX
 
-        $(document).ready(function () {
-            tabla = $('#tablaDefectos').DataTable({
-                select: {
-                    style: 'multi'
-                }
+        // ✅ VARIABLES PRIMERO
+            var esAdmin = '@User.IsInRole("Admin")' === 'True';
+            var esEditor = '@User.IsInRole("Editor")' === 'True';
+
+            const urlParams = new URLSearchParams(window.location.search);
+            var usuario = urlParams.get('usuario');
+            var fecha = urlParams.get('fecha');
+
+            console.log("Usuario:", usuario);
+            console.log("Fecha:", fecha);
+
+            // ✅ DESPUÉS DataTable
+            var tableDefectos = $('#tablaDefectos').DataTable({
+                ajax: {
+                    url: "/RegistrodeDefectos/ObtenerDefectos",
+                    type: "GET",
+                    data: function (d) {
+                        d.usuario = usuario;
+                        d.fechaLaboral = fecha;
+                    },
+                    dataSrc: "data"
+                },
+                columns: [
+                    { data: "fechaLaboral" },
+                    { data: "fecha" },
+                    { data: "hora" },
+                    { data: "nuMesa" },
+                    { data: "turno" },
+                    { data: "mandrel" },
+                    { data: "defectoTexto" },
+
+                    {
+                        data: "id",
+                        visible: (esAdmin || esEditor),
+                        render: function (data, type, row) {
+
+                            var botones = '';
+
+                            if (esAdmin) {
+                                botones += `
+                                    <button class="btnEditarDefecto btn btn-sm btn-warning rounded-circle"
+                                        data-id="${row.id}">
+                                        <i class="bi bi-pencil-fill"></i>
+                                    </button>
+                                `;
+                            }
+
+                            botones += `
+                                <button class="btn btn-sm btn-danger rounded-circle"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#borrarDefectoModal"
+                                    data-id="${row.id}">
+                                    <i class="bi bi-trash-fill"></i>
+                                </button>
+                            `;
+
+                            return botones;
+                        }
+                    }
+                ]
             });
+
+               $(document).on('click', '.btnEditarDefecto', function () {
+
+            var row = tableDefectos.row($(this).closest('tr')).data();
+
+            console.log(row); // 🔥 aquí verás todo correctamente
+
+            $('#editId').val(row.id);
+            $('#editMesa').val(row.nuMesa);
+            $('#editTurno').val(row.turno);
+            $('#editMandrel').val(row.mandrel);
+            $('#editCodigo').val(row.codigodefecto);
+            $('#editDefecto').val(row.defecto);
+            $('#editHora').val(row.hora);
+            $('#editTm').val(row.tm);
+
+            $('#editarDefectoModal').modal('show');
         });
-    </script>
 
-    <script>
-
+        //SUBMIT PARA ELIMINAR DEFECTOS
         $("#btnEliminarSeleccionados").on("click", function () {
 
             var filas = tabla.rows({ selected: true });
@@ -182,7 +211,7 @@ else
                 success: function (resp) {
                     if (resp.success) {
 
-                        filas.remove().draw(); // 🔥 elimina directo en DataTables
+                        filas.remove().draw();
 
                         mostrarToast("success", resp.message);
                     } else {
@@ -195,45 +224,45 @@ else
             });
         });
 
-        // Abrir modal de edición de defecto
-               $(document).on("click", ".btnEditarDefecto", function () {
+        //BOTON PARA ABRIR EL MODAL DE EDITAR DEFECTOS
+        // $(document).on("click", ".btnEditarDefecto", function () {
 
-            var btn = $(this);
+        //     var btn = $(this);
 
-            var codigo = (btn.data("codigodefecto") || "").toString().toUpperCase().trim();
-            var defecto = (btn.data("defecto") || "").toString().trim();
+        //     var codigo = (btn.data("codigodefecto") || "").toString().toUpperCase().trim();
+        //     var defecto = (btn.data("defecto") || "").toString().trim();
 
-            var valorBuscado = codigo + "|" + defecto;
+        //     var valorBuscado = codigo + "|" + defecto;
 
-            $("#editId").val(btn.data("id"));
-            $("#editMesa").val(btn.data("mesa"));
-            $("#editTurno").val(btn.data("turno"));
-            $("#editMandrel").val(btn.data("mandrel"));
-            $("#editHora").val(btn.data("hora"));
-            $("#editTm").val(btn.data("tm"));
+        //     $("#editId").val(btn.data("id"));
+        //     $("#editMesa").val(btn.data("mesa"));
+        //     $("#editTurno").val(btn.data("turno"));
+        //     $("#editMandrel").val(btn.data("mandrel"));
+        //     $("#editHora").val(btn.data("hora"));
+        //     $("#editTm").val(btn.data("tm"));
 
-            // 🔥 Buscar manualmente el option correcto ignorando mayúsculas
-            let encontrado = false;
+        //     // 🔥 Buscar manualmente el option correcto ignorando mayúsculas
+        //     let encontrado = false;
 
-            $("#editDefectoSelect option").each(function () {
-                const val = $(this).val();
+        //     $("#editDefectoSelect option").each(function () {
+        //         const val = $(this).val();
 
-                if (val && val.toUpperCase() === valorBuscado.toUpperCase()) {
-                    $(this).prop("selected", true);
-                    encontrado = true;
-                    return false; // break
-                }
-            });
+        //         if (val && val.toUpperCase() === valorBuscado.toUpperCase()) {
+        //             $(this).prop("selected", true);
+        //             encontrado = true;
+        //             return false; // break
+        //         }
+        //     });
 
-            if (!encontrado) {
-                $("#editDefectoSelect").val(""); // fallback
-            }
+        //     if (!encontrado) {
+        //         $("#editDefectoSelect").val(""); // fallback
+        //     }
 
-            const modal = new bootstrap.Modal(document.getElementById('editarDefectoModal'));
-            modal.show();
-        });
+        //     const modal = new bootstrap.Modal(document.getElementById('editarDefectoModal'));
+        //     modal.show();
+        // });
 
-        // Guardar cambios
+        //SUBMIT PARA GUARDAR CAMBIOS DE DEFECTOS
         $(document).on("submit", "#formEditarDefecto", function (e) {
             e.preventDefault();
 
@@ -287,9 +316,7 @@ else
             });
         });
 
-
-
-        // Autocomplete para Mandrel
+        //FUNCION PARA AUTOCOMPLETAR EL MODELO DEL MANDRIL
         $(document).on("keyup", "#editMandrel", function () {
             var query = $(this).val();
             if (query.length < 2) {
@@ -311,16 +338,14 @@ else
             });
         });
 
-
-
-        // Al hacer clic en una sugerencia de mandrel
+        //Al hacer clic en una sugerencia de mandrel
         $(document).on("click", ".mandrel-option", function () {
             var value = $(this).text();
             $("#editMandrel").val(value);
             $("#mandrelSuggestions").empty();
         });
 
-        // Autocomplete para TM
+        //FUNCION PARA AUTOCOMPLETAR EL TEAM MEMBER
         $(document).on("keyup", "#editTm", function () {
             var query = $(this).val();
             if (query.length < 2) {
@@ -342,16 +367,21 @@ else
             });
         });
 
-        // Al hacer clic en una sugerencia de TM
+        //Al hacer clic en una sugerencia de TM
         $(document).on("click", ".tm-option", function () {
             var value = $(this).text();
             $("#editTm").val(value);
             $("#tmSuggestions").empty();
         });
 
-
-
-        // Toast helper
+        //CAPTURAR EL ID AL ABRIR EL MODAL DE BORRAR
+        var borrarModal = document.getElementById('borrarDefectoModal');
+        borrarModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            document.getElementById('deleteId').value = button.getAttribute('data-id');
+        });
+        
+        // TOAST SUCCESS/ERROR
         function mostrarToast(tipo, mensaje) {
             var toastId = "toast-" + Date.now();
             var toastHtml = `
@@ -374,42 +404,34 @@ else
             });
         }
 
+        //AJAX SUBMIT PARA BORRAR DEFECTOS
+        // $(document).on("submit", "#formBorrarDefecto", function (e) {
+        //     e.preventDefault();
 
+        //     $.ajax({
+        //         url: '/RegistrodeDefectos/BorrarDefecto', //
+        //         type: 'POST',
+        //         data: $(this).serialize(),
+        //         success: function (resp) {
+        //             $('#borrarDefectoModal').modal('hide');
 
-        // Capturar id al abrir modal de borrar
-        var borrarModal = document.getElementById('borrarDefectoModal');
-        borrarModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            document.getElementById('deleteId').value = button.getAttribute('data-id');
-        });
+        //             if (resp.success) {
+        //                 mostrarToast('success', resp.message);
 
+        //                 var id = $("#deleteId").val();
+        //                 $("#row-" + id).remove(); 
+        //             } else {
+        //                 mostrarToast('danger', resp.message);
+        //             }
+        //         },
+        //         error: function () {
+        //             $('#borrarDefectoModal').modal('hide');
+        //             mostrarToast('danger', 'Error inesperado al procesar la solicitud.');
+        //         }
+        //     });
+        // });
 
+        
 
-        // Enviar por AJAX el borrado
-        $(document).on("submit", "#formBorrarDefecto", function (e) {
-            e.preventDefault();
-
-            $.ajax({
-                url: '/RegistrodeDefectos/BorrarDefecto', //
-                type: 'POST',
-                data: $(this).serialize(),
-                success: function (resp) {
-                    $('#borrarDefectoModal').modal('hide');
-
-                    if (resp.success) {
-                        mostrarToast('success', resp.message);
-
-                        var id = $("#deleteId").val();
-                        $("#row-" + id).remove(); 
-                    } else {
-                        mostrarToast('danger', resp.message);
-                    }
-                },
-                error: function () {
-                    $('#borrarDefectoModal').modal('hide');
-                    mostrarToast('danger', 'Error inesperado al procesar la solicitud.');
-                }
-            });
-        });
     </script>
 }

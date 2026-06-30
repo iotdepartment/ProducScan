@@ -182,71 +182,9 @@
     <script>
         $(document).ready(function () {
 
-            /* ============================
-               AUTOCOMPLETE MANDRIL
-            ============================ */
-            $(document).on("keyup", "#editMandril", function () {
-                let query = $(this).val();
-
-                if (query.length < 2) {
-                    $("#mandrilSuggestions").empty();
-                    return;
-                }
-
-                $.get("/PiezasEscaneadas/BuscarMandrels", { term: query }, function (data) {
-                    let s = $("#mandrilSuggestions").empty();
-
-                    if (data.length === 0) {
-                        s.append('<div class="list-group-item">Sin resultados</div>');
-                    } else {
-                        data.forEach(m => {
-                            s.append(`<button class="list-group-item list-group-item-action mandril-option">${m}</button>`);
-                        });
-                    }
-                });
-            });
-
-            /* ============================
-                AUTOCOMPLETE TEAM MEMBER
-            ============================ */
-            $(document).on("keyup", "#editTM", function () {
-                let query = $(this).val();
-
-                if (query.length < 2) {
-                    $("#tmSuggestions").empty();
-                    return;
-                }
-
-                $.get("/PiezasEscaneadas/BuscarTM", { term: query }, function (data) {
-                    let s = $("#tmSuggestions").empty();
-
-                    if (data.length === 0) {
-                        s.append('<div class="list-group-item">Sin resultados</div>');
-                    } else {
-                        data.forEach(t => {
-                            s.append(`<button class="list-group-item list-group-item-action tm-option">${t}</button>`);
-                        });
-                    }
-                });
-            });
-
-            $(document).on("click", ".tm-option", function () {
-                $("#editTM").val($(this).text());
-                $("#tmSuggestions").empty();
-            });
-
-            $(document).on("click", ".mandril-option", function () {
-                $("#editMandril").val($(this).text());
-                $("#mandrilSuggestions").empty();
-            });
-
-            /* ============================
-               DATATABLE AJAX
-            ============================ */
-
-        var usuario = @Html.Raw(Json.Serialize(ViewBag.Usuario));
-        var fecha = '@ViewBag.FechaLaboral';
-
+            //DATATABLE AJAX
+            var usuario = @Html.Raw(Json.Serialize(ViewBag.Usuario));
+            var fecha = '@ViewBag.FechaLaboral';
 
             var table = $('#produccionTable').DataTable({
                 select: {
@@ -254,14 +192,14 @@
                     items: 'row',
                     selector: 'td:not(:last-child)'
                 },
-                       ajax: {
-            url: "/PiezasEscaneadas/GetProduccionAjax",
-            type: "GET",
-            data: function (d) {
-                d.usuario = usuario;
-                d.fechaLaboral = fecha;
-            }
-        },
+                ajax: {
+                    url: "/PiezasEscaneadas/GetProduccionAjax",
+                    type: "GET",
+                    data: function (d) {
+                        d.usuario = usuario;
+                        d.fechaLaboral = fecha;
+                    }
+                },
                 columns: [
                     { data: "fechaLaboral", render: d => new Date(d).toISOString().split("T")[0] },
                     { data: "fechaReal", render: d => new Date(d).toISOString().split("T")[0] },
@@ -278,26 +216,11 @@
                 info: true
             });
 
-
-            /* ============================
-               BOTONES
-            ============================ */
+            //BOTONES
             $("#btnEditMultiple").on("click", openEditMultipleModal);
             $("#btnDeleteMultiple").on("click", openDeleteMultipleModal);
 
-            /* ============================
-               ELIMINAR INDIVIDUAL
-            ============================ */
-            $(document).on("click", ".btnEliminar", function () {
-                const id = $(this).data("id");
-                $("#deleteIds").val(id);
-                $("#deleteCount").text(1);
-                $("#deleteMultipleModal").modal("show");
-            });
-
-            /* ============================
-               ELIMINAR MÚLTIPLES
-            ============================ */
+            //ELIMINAR MÚLTIPLES
             function openDeleteMultipleModal() {
                 const rows = table.rows({ selected: true }).data();
 
@@ -312,6 +235,7 @@
                 $("#deleteMultipleModal").modal("show");
             }
 
+            //SUBMIT DELETE MULTIPLE
             $("#deleteMultipleForm").submit(function (e) {
                 e.preventDefault();
 
@@ -330,9 +254,7 @@
                 });
             });
 
-            /* ============================
-               SET MULTI VALUE (ESTILO MANDRILES)
-            ============================ */
+            //SET MULTI VALUE (ESTILO MANDRILES)
             function setMultiValue(fieldId, values) {
                 const clean = [...new Set(values.filter(v => v != null && v !== ""))];
 
@@ -345,36 +267,7 @@
                 }
             }
 
-            /* ============================
-               MESA NORMALIZADA
-            ============================ */
-            function setMultiValueMesa(values) {
-
-                const normalized = values.map(v => {
-                    if (!v) return "";
-
-                    v = v.toString().toUpperCase().trim();
-
-                    v = v.replace("MESA#", "")
-                         .replace("MESA", "")
-                         .replace("#", "")
-                         .trim();
-
-                    return v;
-                });
-
-                const clean = [...new Set(normalized.filter(v => v !== ""))];
-
-                if (clean.length === 1) {
-                    $("#editMesa").val(clean[0]).trigger("change");
-                } else {
-                    $("#editMesa").val("").trigger("change");
-                }
-            }
-
-            /* ============================
-                ABRIR MODAL EDICIÓN MÚLTIPLE
-            ============================ */
+            //ABRIR MODAL EDICIÓN MÚLTIPLE
             function openEditMultipleModal() {
                 const rows = table.rows({ selected: true }).data();
 
@@ -396,11 +289,63 @@
                 $("#editMultipleModal").modal("show");
             }
 
+            //AUTOCOMPLETE MANDRIL
+            $(document).on("keyup", "#editMandril", function () {
+                let query = $(this).val();
 
+                if (query.length < 2) {
+                    $("#mandrilSuggestions").empty();
+                    return;
+                }
 
-            /* ============================
-               SUBMIT EDICIÓN MÚLTIPLE
-            ============================ */
+                $.get("/PiezasEscaneadas/BuscarMandrels", { term: query }, function (data) {
+                    let s = $("#mandrilSuggestions").empty();
+
+                    if (data.length === 0) {
+                        s.append('<div class="list-group-item">Sin resultados</div>');
+                    } else {
+                        data.forEach(m => {
+                            s.append(`<button class="list-group-item list-group-item-action mandril-option">${m}</button>`);
+                        });
+                    }
+                });
+            });
+
+            //CLICK EN UNA OPCION DE MANDRIL
+            $(document).on("click", ".mandril-option", function () {
+                $("#editMandril").val($(this).text());
+                $("#mandrilSuggestions").empty();
+            });
+
+            //AUTOCOMPLETE TEAM MEMBER
+            $(document).on("keyup", "#editTM", function () {
+                let query = $(this).val();
+
+                if (query.length < 2) {
+                    $("#tmSuggestions").empty();
+                    return;
+                }
+
+                $.get("/PiezasEscaneadas/BuscarTM", { term: query }, function (data) {
+                    let s = $("#tmSuggestions").empty();
+
+                    if (data.length === 0) {
+                        s.append('<div class="list-group-item">Sin resultados</div>');
+                    } else {
+                        data.forEach(t => {
+                            s.append(`<button class="list-group-item list-group-item-action tm-option">${t}</button>`);
+                        });
+                    }
+                });
+            });
+
+            //CLICK EN UNA OPCION DE TM
+            $(document).on("click", ".tm-option", function () {
+                $("#editTM").val($(this).text());
+                $("#tmSuggestions").empty();
+            });
+
+            //SUBMIT EDICIÓN MÚLTIPLE
             $("#editMultipleForm").submit(function (e) {
                 e.preventDefault();
 
@@ -426,9 +371,40 @@
                 });
             });
 
-            /* ============================
-               TOAST
-            ============================ */
+            //SUBMIT ELIMINAR INDIVIDUAL
+            $(document).on("click", ".btnEliminar", function () {
+                const id = $(this).data("id");
+                $("#deleteIds").val(id);
+                $("#deleteCount").text(1);
+                $("#deleteMultipleModal").modal("show");
+            });
+
+            //MESA NORMALIZADA
+            function setMultiValueMesa(values) {
+
+                const normalized = values.map(v => {
+                    if (!v) return "";
+
+                    v = v.toString().toUpperCase().trim();
+
+                    v = v.replace("MESA#", "")
+                         .replace("MESA", "")
+                         .replace("#", "")
+                         .trim();
+
+                    return v;
+                });
+
+                const clean = [...new Set(normalized.filter(v => v !== ""))];
+
+                if (clean.length === 1) {
+                    $("#editMesa").val(clean[0]).trigger("change");
+                } else {
+                    $("#editMesa").val("").trigger("change");
+                }
+            }
+
+            //TOAST
             function mostrarToast(tipo, mensaje) {
                 var id = "toast-" + Date.now();
                 $("#toastContainer").append(`
@@ -445,5 +421,6 @@
             }
 
         });
+
     </script>
 }

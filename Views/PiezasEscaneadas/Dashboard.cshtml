@@ -32,6 +32,23 @@
                 color: var(--bs-light) !important;
             }
 
+    
+    /* ============================================================
+       GRADIENT WARNING (SUAVE)
+       ============================================================ */
+    .bg-gradient-warning {
+        background: linear-gradient(135deg, #ffd27a, #ffecb3);
+        background-size: 200% 200%;
+        animation: gradientIdle 6s ease infinite;
+        color: #fff;
+    }
+
+    .card-hover.bg-gradient-warning:hover {
+        background: linear-gradient(135deg, #ff8c00, #ffb347) !important;
+        background-size: 200% 200%;
+        animation: gradientHover 1.2s ease infinite;
+    }
+
     /* ============================================================
            ANIMACIÓN GENERAL DEL CARD
            ============================================================ */
@@ -150,6 +167,8 @@
     }
 
 </style>
+
+
 <div class="container-fluid  mt-4">
 
     <div class="row">
@@ -263,7 +282,6 @@
                         <i class="bi bi-graph-up-arrow me-2"></i> FPY
                     </h5>
 
-                    <!-- FORMATEADO -->
                     <h3 class="fw-bold text-white">@Model.FPYFmt</h3>
 
                     <i class="bi bi-graph-up-arrow card-icon-big"></i>
@@ -279,10 +297,23 @@
                         <i class="bi bi-trash me-2"></i> Porcentaje de Defectos
                     </h6>
 
-                    <!-- FORMATEADO -->
                     <h3 class="fw-bold text-white">@Model.ScrapFmt</h3>
 
                     <i class="bi bi-trash card-icon-big"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🟠 Porcentaje de Scrap (Filtrado) -->
+        <div class="mb-4 mb-xl-0 col-md-6 col-xl-4">
+            <div class="card bg-gradient-warning shadow-sm border-0 rounded-4 card-hover ">
+                <div class="card-body m-1">
+                    <h6 class="fw-bold text-white">
+                        <i class="bi bi-bug card-icon-big"></i>
+                        Porcentaje de Scrap
+                    </h6>
+
+                    <h3 class="fw-bold text-white">@Model.DefectosSinExcluidosFmt</h3>
                 </div>
             </div>
         </div>
